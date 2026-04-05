@@ -1,0 +1,475 @@
+// =============================================================================
+// Used Car Inspector AI — Prisma Database Schema
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USERS & AUTH
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?
+  avatarUrl     String?
+  role          UserRole  @default(USER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  vehicles         Vehicle[]
+  inspections      InspectionSession[]
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  sentMessages     Message[]         @relation("SentMessages")
+  conversations    ConversationParticipant[]
+  purchases        PremiumPurchase[]
+  accessGrants     AccessGrant[]
+  paymentEvents    PaymentEvent[]
+
+  @@index([email])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// =============================================================================
+// VEHICLES
+// =============================================================================
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  userId      String
+  make        String
+  model       String
+  year        Int
+  mileage     Int?
+  askingPrice Float?
+  currency    String   @default("EUR")
+  sellerType  SellerType @default(PRIVATE)
+  sellerName  String?
+  listingUrl  String?
+  vin         String?
+  notes       String?
+  status      VehicleStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inspections      InspectionSession[]
+  photos           Photo[]
+  riskScores       RiskScore[]
+  aiResults        AIResult[]
+  vinHistory       VINHistory?
+  purchases        PremiumPurchase[]
+  posts            Post[]            @relation("VehiclePosts")
+
+  @@index([userId])
+  @@index([vin])
+  @@map("vehicles")
+}
+
+enum SellerType {
+  PRIVATE
+  DEALER
+  INDEPENDENT_DEALER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  PURCHASED
+  PASSED
+  ARCHIVED
+}
+
+// =============================================================================
+// INSPECTION
+// =============================================================================
+
+model InspectionSession {
+  id          String   @id @default(cuid())
+  userId      String
+  vehicleId   String
+  phase       InspectionPhase @default(PRE_SCREENING)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  checklistItems ChecklistItem[]
+  riskScore    RiskScore?
+
+  @@index([userId, vehicleId])
+  @@map("inspection_sessions")
+}
+
+enum InspectionPhase {
+  PRE_SCREENING
+  AI_PHOTOS
+  EXTERIOR
+  INTERIOR
+  MECHANICAL
+  TEST_DRIVE
+  VIN_DOCS
+  RISK_ANALYSIS
+  FINAL_REPORT
+}
+
+model ChecklistItem {
+  id           String      @id @default(cuid())
+  sessionId    String
+  category     ChecklistCategory
+  itemKey      String
+  itemLabel    String
+  status       ItemStatus  @default(PENDING)
+  notes        String?
+  photoUrl     String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  session      InspectionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, category])
+  @@map("checklist_items")
+}
+
+enum ChecklistCategory {
+  PRE_SCREENING
+  EXTERIOR
+  INTERIOR
+  MECHANICAL
+  TEST_DRIVE
+  DOCUMENTS
+}
+
+enum ItemStatus {
+  PENDING
+  OK
+  WARNING
+  PROBLEM
+}
+
+// =============================================================================
+// PHOTOS & AI ANALYSIS
+// =============================================================================
+
+model Photo {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  url         String
+  storageKey  String
+  angle       PhotoAngle
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime  @default(now())
+
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  aiResult    AIResult?
+
+  @@index([vehicleId])
+  @@map("photos")
+}
+
+enum PhotoAngle {
+  FRONT
+  REAR
+  LEFT_SIDE
+  RIGHT_SIDE
+  FRONT_LEFT_45
+  FRONT_RIGHT_45
+  ENGINE_BAY
+  INTERIOR
+  DETAIL
+}
+
+model AIResult {
+  id           String    @id @default(cuid())
+  vehicleId    String
+  photoId      String?   @unique
+  analysisType AIAnalysisType
+  findings     Json      // Array of AIFinding objects
+  overallScore Int       // 0-100
+  modelVersion String    @default("v1")
+  processingMs Int?
+  createdAt    DateTime  @default(now())
+
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  photo        Photo?    @relation(fields: [photoId], references: [id])
+
+  @@index([vehicleId])
+  @@map("ai_results")
+}
+
+enum AIAnalysisType {
+  PAINT_ANALYSIS
+  PANEL_GAP
+  SYMMETRY_CHECK
+  REFLECTION_SCAN
+  STRUCTURAL_INTEGRITY
+  SURFACE_ANALYSIS
+  FULL_ANALYSIS
+}
+
+// =============================================================================
+// RISK SCORING
+// =============================================================================
+
+model RiskScore {
+  id               String   @id @default(cuid())
+  vehicleId        String
+  sessionId        String?  @unique
+  buyScore         Int      // 0-100
+  riskScore        Int      // 0-100 (100 - buyScore)
+  verdict          Verdict
+  aiScore          Int
+  exteriorScore    Int
+  interiorScore    Int
+  mechanicalScore  Int
+  vinScore         Int
+  testDriveScore   Int
+  documentScore    Int
+  hasPremuimData   Boolean  @default(false)
+  breakdown        Json     // Detailed scoring breakdown
+  reasonsFor       Json     // Top 5 reasons to buy
+  reasonsAgainst   Json     // Top 5 reasons not to buy
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  session   InspectionSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([vehicleId])
+  @@map("risk_scores")
+}
+
+enum Verdict {
+  STRONG_BUY
+  BUY_WITH_CAUTION
+  HIGH_RISK
+  WALK_AWAY
+}
+
+// =============================================================================
+// VIN / HISTORY INTEGRATION
+// =============================================================================
+
+model VINHistory {
+  id             String   @id @default(cuid())
+  vehicleId      String   @unique
+  vin            String
+  provider       String   // "carvertical" | "hpi" | "mock"
+  rawData        Json?    // Original provider response (encrypted)
+  normalizedData Json     // VehicleHistoryResult (our internal type)
+  fetchedAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vin_history")
+}
+
+// =============================================================================
+// PREMIUM PAYMENTS & ACCESS CONTROL
+// =============================================================================
+
+model PremiumPurchase {
+  id            String          @id @default(cuid())
+  userId        String
+  vehicleId     String
+  productType   PremiumProduct  @default(CARVERTICAL_REPORT)
+  status        PaymentStatus   @default(NOT_PURCHASED)
+  amountCents   Int
+  currency      String          @default("EUR")
+  providerTxId  String?         // Stripe payment intent ID
+  providerRef   String?
+  purchasedAt   DateTime?
+  expiresAt     DateTime?
+  refundedAt    DateTime?
+  metadata      Json?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  accessGrant   AccessGrant?
+  paymentEvents PaymentEvent[]
+
+  @@unique([userId, vehicleId, productType])
+  @@index([userId])
+  @@index([vehicleId])
+  @@map("premium_purchases")
+}
+
+enum PremiumProduct {
+  CARVERTICAL_REPORT
+  AI_DEEP_SCAN
+  FULL_INSPECTION_BUNDLE
+}
+
+enum PaymentStatus {
+  NOT_PURCHASED
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  EXPIRED
+}
+
+model AccessGrant {
+  id          String   @id @default(cuid())
+  userId      String
+  purchaseId  String   @unique
+  productType PremiumProduct
+  vehicleId   String?
+  grantedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  isActive    Boolean  @default(true)
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchase    PremiumPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([userId, productType])
+  @@map("access_grants")
+}
+
+model PaymentEvent {
+  id          String    @id @default(cuid())
+  purchaseId  String
+  userId      String
+  eventType   String    // "charge.succeeded" | "charge.failed" | "refund.created" etc
+  provider    String
+  payload     Json
+  processedAt DateTime  @default(now())
+
+  purchase    PremiumPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id])
+
+  @@index([purchaseId])
+  @@map("payment_events")
+}
+
+// =============================================================================
+// COMMUNITY POSTS
+// =============================================================================
+
+model Post {
+  id          String   @id @default(cuid())
+  authorId    String
+  vehicleId   String?
+  title       String
+  content     String
+  images      String[] // Array of image URLs
+  tags        String[]
+  published   Boolean  @default(true)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle?  @relation("VehiclePosts", fields: [vehicleId], references: [id])
+  comments    Comment[]
+  likes       Like[]
+
+  @@index([authorId])
+  @@index([tags])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+// =============================================================================
+// MESSAGING
+// =============================================================================
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime?
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  messageType    MessageType @default(TEXT)
+  attachmentUrl  String?
+  readAt         DateTime?
+  createdAt      DateTime    @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VEHICLE_CARD
+  REPORT_SHARE
+}

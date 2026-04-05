@@ -1,0 +1,80 @@
+// =============================================================================
+// Auth Middleware — used in all API route handlers
+// Verifies JWT and returns userId or rejects with 401.
+// =============================================================================
+
+import { NextRequest } from 'next/server'
+import jwt from 'jsonwebtoken'
+
+interface AuthSuccess {
+  success: true
+  userId: string
+  email: string
+  role: string
+}
+
+interface AuthFailure {
+  success: false
+  reason: string
+}
+
+type AuthResult = AuthSuccess | AuthFailure
+
+const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-in-production'
+
+export async function requireAuth(req: NextRequest): Promise<AuthResult> {
+  const authHeader = req.headers.get('Authorization')
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { success: false, reason: 'Missing Authorization header' }
+  }
+
+  const token = authHeader.slice(7)
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      sub: string
+      email: string
+      role: string
+      iat: number
+      exp: number
+    }
+
+    return {
+      success: true,
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    }
+  } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      return { success: false, reason: 'Token expired' }
+    }
+    return { success: false, reason: 'Invalid token' }
+  }
+}
+
+/**
+ * issueTokens
+ * Creates access + refresh tokens for a user.
+ * Used in login and register routes.
+ */
+export function issueTokens(userId: string, email: string, role: string) {
+  const accessToken = jwt.sign(
+    { sub: userId, email, role },
+    JWT_SECRET,
+    { expiresIn: '15m' }
+  )
+
+  const refreshToken = jwt.sign(
+    { sub: userId, type: 'refresh' },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  )
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt: Date.now() + 15 * 60 * 1000,
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Used Car Inspector AI",
+  "short_name": "Car Inspector",
+  "description": "AI-powered used car inspection and risk scoring platform",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#080c14",
+  "theme_color": "#080c14",
+  "orientation": "portrait-primary",
+  "categories": ["automotive", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Inspection",
+      "url": "/inspection",
+      "description": "Begin a new vehicle inspection"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your inspection overview"
+    }
+  ]
+}
