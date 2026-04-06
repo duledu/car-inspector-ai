@@ -420,6 +420,41 @@ export interface ApiError {
   details?: Record<string, string[]>
 }
 
+// ─── Vehicle Research / AI Pre-Inspection Guide ───────────────────────────────
+
+export type ResearchIssueSeverity = 'high' | 'medium' | 'low'
+export type ResearchTagType = 'HIGH_ATTENTION' | 'COMMON_ISSUE' | 'EXPENSIVE_RISK' | 'VISUAL_CHECK' | 'TEST_DRIVE'
+
+export interface ResearchIssue {
+  title: string
+  description: string
+  severity: ResearchIssueSeverity
+  tags: ResearchTagType[]
+}
+
+export interface ResearchSection {
+  id: string
+  title: string
+  items: ResearchIssue[]
+}
+
+export interface VehicleResearchResult {
+  vehicleKey: string
+  generatedAt: string
+  confidence: 'high' | 'medium' | 'low'
+  summary: string
+  overallRiskLevel: 'low' | 'moderate' | 'high'
+  sections: {
+    commonProblems: ResearchSection
+    highPriorityChecks: ResearchSection
+    visualAttention: ResearchSection
+    mechanicalWatchouts: ResearchSection
+    testDriveFocus: ResearchSection
+    costAwareness: ResearchSection
+  }
+  disclaimer: string
+}
+
 // ─── UI / Form helpers ────────────────────────────────────────────────────────
 
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'

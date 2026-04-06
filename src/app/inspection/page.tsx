@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
+import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import AppShell from '../AppShell'
 
 // ─── Photo categories for camera inspection ────────────────────────────────────
@@ -475,6 +476,16 @@ export default function InspectionPage() {
               <Link href="/report" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '14px 28px', background: '#22d3ee', color: '#000', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
                 Calculate Risk Score →
               </Link>
+            </div>
+          )}
+
+          {currentPhase === 'PRE_SCREENING' && (
+            <div style={{ marginBottom: 16 }}>
+              <ModelResearchGuide
+                make={activeVehicle.make}
+                model={activeVehicle.model}
+                year={activeVehicle.year}
+              />
             </div>
           )}
 

@@ -42,6 +42,9 @@ export const env = {
   storageSecretKey: process.env.STORAGE_SECRET_KEY ?? '',
   storageBucket: process.env.STORAGE_BUCKET ?? 'uci-photos',
 
+  // Anthropic / Claude AI
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+
   // Feature flags
   features: {
     realTimeMessaging: process.env.FEATURE_REALTIME_MESSAGING === 'true',

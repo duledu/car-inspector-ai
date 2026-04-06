@@ -114,6 +114,12 @@ a, button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   50%       { opacity: 0.4; }
 }
 
+/* ─── Generic pulse for research loading dots ─────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.3); }
+}
+
 /* ─── Slide-in from bottom ────────────────────────────────────── */
 @keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
