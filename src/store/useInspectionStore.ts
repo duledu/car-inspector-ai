@@ -42,6 +42,7 @@ interface InspectionActions {
   setChecklistTab: (tab: ChecklistCategory) => void
   updateChecklistItem: (itemId: string, status: ItemStatus, notes?: string) => Promise<void>
   runAIAnalysis: (vehicleId: string, photoIds: string[]) => Promise<void>
+  pushAIResult: (result: AIAnalysisResult) => void
   setTestDriveRating: (key: string, category: string, rating: 0 | 1 | 2 | 3) => void
   getItemsByCategory: (category: ChecklistCategory) => ChecklistItem[]
   getAllFindings: () => AIFinding[]
@@ -130,6 +131,12 @@ export const useInspectionStore = create<InspectionStore>()(
           set((state) => { state.isRunningAI = false; state.error = err.message })
           throw err
         }
+      },
+
+      pushAIResult: (result) => {
+        set((state) => {
+          state.aiResults.unshift(result)
+        })
       },
 
       setTestDriveRating: (key, category, rating) => {

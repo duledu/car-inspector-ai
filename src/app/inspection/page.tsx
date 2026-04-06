@@ -357,16 +357,62 @@ export default function InspectionPage() {
   const { activeVehicle } = useVehicleStore()
   const {
     session, currentPhase, checklistItems, isLoadingChecklist, error,
-    initSession, setPhase, updateChecklistItem, getItemsByCategory,
+    initSession, setPhase, updateChecklistItem, getItemsByCategory, pushAIResult,
   } = useInspectionStore()
 
   const [photos, setPhotos]             = useState<PhotoEntry[]>([])
   const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string } | null>(null)
+  const [findingsSaved, setFindingsSaved] = useState(false)
 
   useEffect(() => {
     if (activeVehicle?.id && !session) initSession(activeVehicle.id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVehicle?.id])
+
+  // When the user reaches the RISK_ANALYSIS phase, persist all photo AI findings
+  // to the DB so the scoring service can factor them in, and push into the store
+  // so the report's "AI Findings" section is populated.
+  useEffect(() => {
+    if (currentPhase !== 'RISK_ANALYSIS') return
+    if (findingsSaved) return
+    const vehicleId = activeVehicle?.id
+    if (!vehicleId) return
+    const completed = photos.filter(p => p.aiResult && !p.aiPending)
+    if (completed.length === 0) return
+
+    setFindingsSaved(true)
+
+    const photoResults = completed.map(p => ({
+      angle:    p.key,
+      label:    p.label,
+      signal:   p.aiResult!.signal,
+      severity: p.aiResult!.severity,
+      detail:   p.aiResult!.detail,
+    }))
+
+    // Get JWT from localStorage (same pattern as apiClient interceptor)
+    let authHeader = ''
+    try {
+      const stored = localStorage.getItem('uci-user-store')
+      if (stored) {
+        const token = JSON.parse(stored)?.state?.session?.accessToken
+        if (token) authHeader = `Bearer ${token}`
+      }
+    } catch { /* ignore */ }
+
+    fetch('/api/ai-analysis/analyze', {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
+      body: JSON.stringify({ vehicleId, photoResults }),
+    })
+      .then(r => r.json())
+      .then(json => { if (json?.data) pushAIResult(json.data) })
+      .catch(err => console.error('[inspection] failed to save photo findings:', err))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPhase])
 
   const phaseIdx  = PHASES.findIndex(p => p.phase === currentPhase)
   const phaseCfg  = PHASES[phaseIdx]
