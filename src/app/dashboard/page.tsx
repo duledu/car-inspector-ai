@@ -5,18 +5,11 @@ import Link from 'next/link'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import AppShell from '../AppShell'
 
-// ─── Design atoms ─────────────────────────────────────────────
-const glass = {
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-} as React.CSSProperties
-
-const glassAccent = {
-  background: 'rgba(34,211,238,0.04)',
-  border: '1px solid rgba(34,211,238,0.14)',
-} as React.CSSProperties
+const PHASE_LABELS: Record<string, string> = {
+  PRE_SCREENING: 'Pre-Screening', AI_PHOTOS: 'AI Photos', EXTERIOR: 'Exterior',
+  INTERIOR: 'Interior', MECHANICAL: 'Mechanical', TEST_DRIVE: 'Test Drive',
+  VIN_DOCS: 'Documents', RISK_ANALYSIS: 'AI Analysis',
+}
 
 function severityColor(s: string) {
   if (s === 'critical') return '#ef4444'
@@ -24,184 +17,176 @@ function severityColor(s: string) {
   return '#22c55e'
 }
 
-const PHASE_LABELS: Record<string, string> = {
-  PRE_SCREENING: 'Pre-Screening', AI_PHOTOS: 'Photos', EXTERIOR: 'Exterior',
-  INTERIOR: 'Interior', MECHANICAL: 'Mechanical', TEST_DRIVE: 'Test Drive',
-  VIN_DOCS: 'Documents', RISK_ANALYSIS: 'AI Analysis', FINAL_REPORT: 'Complete',
-}
-
-// ─── Score ring ────────────────────────────────────────────────
+/* ── Score ring ─────────────────────────────────────────────── */
 function ScoreRing({ score }: Readonly<{ score: number }>) {
-  const r = 26
+  const r    = 28
   const circ = 2 * Math.PI * r
-  const offset = circ - (circ * score) / 100
+  const off  = circ - (circ * score) / 100
   return (
-    <div style={{ position: 'relative', width: 68, height: 68, flexShrink: 0 }}>
-      <svg width="68" height="68" viewBox="0 0 68 68">
-        <circle cx="34" cy="34" r={r} fill="none" stroke="rgba(34,211,238,0.08)" strokeWidth="4"/>
-        <circle cx="34" cy="34" r={r} fill="none"
-          stroke="url(#dash-grad)" strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          transform="rotate(-90 34 34)"
-          style={{ transition: 'stroke-dashoffset 1s ease' }}
-        />
+    <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+      <svg width="72" height="72" viewBox="0 0 72 72" style={{ display: 'block' }}>
         <defs>
-          <linearGradient id="dash-grad" x1="0" y1="0" x2="1" y2="0">
+          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#22d3ee"/>
             <stop offset="100%" stopColor="#818cf8"/>
           </linearGradient>
         </defs>
+        <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5"/>
+        <circle cx="36" cy="36" r={r} fill="none"
+          stroke="url(#ring-grad)" strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={off}
+          transform="rotate(-90 36 36)"
+          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)' }}
+        />
       </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1 }}>{score}</span>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>AI</span>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+        <span style={{ fontSize: 17, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI</span>
       </div>
     </div>
   )
 }
 
-// ─── Stat card ─────────────────────────────────────────────────
-function StatCard({ value, label, href, color = '#22d3ee', icon }: Readonly<{
-  value: string | number; label: string; href: string; color?: string; icon: React.ReactNode
-}>) {
-  return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <div style={{
-        ...glass, borderRadius: 16, padding: '14px 14px',
-        display: 'flex', flexDirection: 'column', gap: 10,
-        cursor: 'pointer', transition: 'all 0.15s',
-      }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: `${color}12`, border: `1px solid ${color}25`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color,
-        }}>
-          {icon}
-        </div>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 3, fontWeight: 500 }}>{label}</div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
-// ─── Section header ────────────────────────────────────────────
-function SectionHeader({ label, actionLabel, actionHref }: Readonly<{ label: string; actionLabel?: string; actionHref?: string }>) {
+/* ── Section label ──────────────────────────────────────────── */
+function SectionLabel({ text, action, actionHref }: Readonly<{ text: string; action?: string; actionHref?: string }>) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>{label}</span>
-      {actionLabel && actionHref && (
-        <Link href={actionHref} style={{ fontSize: 12, fontWeight: 600, color: 'rgba(34,211,238,0.65)', textDecoration: 'none' }}>
-          {actionLabel} →
+      <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        {text}
+      </span>
+      {action && actionHref && (
+        <Link href={actionHref} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(34,211,238,0.6)', textDecoration: 'none', letterSpacing: '-0.1px' }}>
+          {action} →
         </Link>
       )}
     </div>
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────
+/* ── Page ───────────────────────────────────────────────────── */
 export default function DashboardPage() {
-  const { activeVehicle, vehicles, fetchVehicles }                         = useVehicleStore()
-  const { session, currentPhase, checklistItems, aiResults, initSession }  = useInspectionStore()
-  const { fetchPurchaseHistory, purchaseHistory }                          = usePaymentStore()
+  const { activeVehicle, vehicles, fetchVehicles }                        = useVehicleStore()
+  const { session, currentPhase, checklistItems, aiResults, initSession } = useInspectionStore()
+  const { fetchPurchaseHistory, purchaseHistory }                         = usePaymentStore()
 
   useEffect(() => { fetchVehicles(); fetchPurchaseHistory() }, [])
   useEffect(() => {
-    const id = activeVehicle?.id
-    if (id && session === null) initSession(id)
+    if (activeVehicle?.id && session === null) initSession(activeVehicle.id)
   }, [activeVehicle?.id])
 
-  const pendingCount = checklistItems.filter(i => i.status === 'PENDING').length
+  const pending   = checklistItems.filter(i => i.status === 'PENDING').length
   const total     = checklistItems.length
-  const checked   = total - pendingCount
+  const checked   = total - pending
   const progress  = total > 0 ? Math.round((checked / total) * 100) : 0
   const latestAI  = aiResults[0] ?? null
   const aiScore   = latestAI?.overallScore ?? null
   const paidCount = purchaseHistory.filter(p => p.status === 'PAID').length
-  const hasNoPremiumReports = paidCount === 0
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ══ Hero card ══════════════════════════════════════════ */}
         <div style={{
-          borderRadius: 20, overflow: 'hidden',
-          background: 'linear-gradient(135deg, rgba(34,211,238,0.07) 0%, rgba(129,140,248,0.05) 100%)',
-          border: '1px solid rgba(34,211,238,0.14)',
-          padding: '20px',
-          position: 'relative',
+          borderRadius: 22, overflow: 'hidden', position: 'relative',
+          background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(129,140,248,0.06) 50%, rgba(168,85,247,0.04) 100%)',
+          border: '1px solid rgba(34,211,238,0.15)',
+          padding: '22px 20px 20px',
         }}>
-          {/* Glow orb */}
-          <div style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.08), transparent)', pointerEvents: 'none' }} />
+          {/* Ambient glow */}
+          <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.07), transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: -20, left: -20, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%)', pointerEvents: 'none' }} />
 
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, position: 'relative' }}>
+          {/* Top row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, position: 'relative', marginBottom: 18 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               {activeVehicle ? (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>
                     Active Vehicle
                   </div>
-                  <div style={{ fontSize: 19, fontWeight: 900, color: '#fff', letterSpacing: '-0.6px', lineHeight: 1.15, marginBottom: 4 }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.7px', lineHeight: 1.15, marginBottom: 6 }}>
                     {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>
-                    {activeVehicle.mileage && <span>{activeVehicle.mileage.toLocaleString()} km</span>}
-                    {activeVehicle.askingPrice && <span>{activeVehicle.askingPrice.toLocaleString()} {activeVehicle.currency}</span>}
-                    {activeVehicle.vin && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{activeVehicle.vin.slice(0, 8)}…</span>}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                    {activeVehicle.mileage && (
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>{activeVehicle.mileage.toLocaleString()} km</span>
+                    )}
+                    {activeVehicle.askingPrice && (
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>
+                        {activeVehicle.askingPrice.toLocaleString()} {activeVehicle.currency}
+                      </span>
+                    )}
+                    {activeVehicle.vin && (
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+                        {activeVehicle.vin.slice(0, 8)}…
+                      </span>
+                    )}
                   </div>
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6, letterSpacing: '-0.5px' }}>Get started</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.55 }}>Add a vehicle to begin your AI inspection.</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 7, letterSpacing: '-0.5px' }}>
+                    Get started
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, maxWidth: 280 }}>
+                    Add a vehicle to begin your AI-guided inspection.
+                  </div>
                 </>
               )}
             </div>
 
-            {/* Score or vehicle count */}
+            {/* Score / vehicle count */}
             {aiScore ? (
               <ScoreRing score={aiScore} />
             ) : (
               <div style={{
-                width: 56, height: 56, borderRadius: 16, flexShrink: 0,
-                ...glassAccent,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                width: 60, height: 60, borderRadius: 18, flexShrink: 0,
+                background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.15)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
               }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: '#22d3ee', lineHeight: 1 }}>{vehicles.length}</div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>cars</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#22d3ee', lineHeight: 1, letterSpacing: '-1px' }}>
+                  {vehicles.length}
+                </div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  cars
+                </div>
               </div>
             )}
           </div>
 
-          {/* Progress bar */}
+          {/* Progress */}
           {session && (
-            <div style={{ marginTop: 16, marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.32)', marginBottom: 6 }}>
-                <span>Phase: {PHASE_LABELS[currentPhase] ?? currentPhase}</span>
-                <span style={{ color: '#22d3ee', fontWeight: 700 }}>{progress}%</span>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
+                  Phase: <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>{PHASE_LABELS[currentPhase] ?? currentPhase}</span>
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#22d3ee' }}>{progress}%</span>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: 4, transition: 'width 0.6s ease' }}/>
+                <div style={{
+                  height: '100%', width: `${progress}%`,
+                  background: 'linear-gradient(90deg, #22d3ee, #818cf8)',
+                  borderRadius: 4, transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)',
+                  boxShadow: '0 0 8px rgba(34,211,238,0.4)',
+                }}/>
               </div>
             </div>
           )}
 
-          {/* CTA row */}
-          <div style={{ display: 'flex', gap: 8, marginTop: session ? 0 : 16 }}>
+          {/* CTAs */}
+          <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
             <Link href="/inspection" style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               padding: '13px 16px',
-              background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-              color: '#050810', borderRadius: 13,
+              background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
+              color: '#040d14', borderRadius: 14,
               fontSize: 13, fontWeight: 800, textDecoration: 'none',
-              boxShadow: '0 4px 20px rgba(34,211,238,0.28)',
-              transition: 'all 0.15s',
+              boxShadow: '0 4px 20px rgba(34,211,238,0.3), 0 1px 3px rgba(0,0,0,0.3)',
+              letterSpacing: '-0.1px',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -210,12 +195,11 @@ export default function DashboardPage() {
             </Link>
             <Link href="/vehicle" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '13px 14px',
-              ...glass, borderRadius: 13,
-              textDecoration: 'none', color: 'rgba(255,255,255,0.5)',
-              transition: 'all 0.15s',
+              padding: '13px 15px',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 14, textDecoration: 'none', color: 'rgba(255,255,255,0.55)',
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
             </Link>
@@ -223,47 +207,59 @@ export default function DashboardPage() {
         </div>
 
         {/* ══ Stats row ══════════════════════════════════════════ */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          <StatCard
-            value={vehicles.length}
-            label="Vehicles"
-            href="/vehicle"
-            color="#22d3ee"
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>}
-          />
-          <StatCard
-            value={progress > 0 ? `${progress}%` : '—'}
-            label="Progress"
-            href="/inspection"
-            color="#818cf8"
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
-          />
-          <StatCard
-            value={paidCount}
-            label="Reports"
-            href="/premium"
-            color="#a855f7"
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {[
+            {
+              value: vehicles.length, label: 'Vehicles', href: '/vehicle', color: '#22d3ee',
+              icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
+            },
+            {
+              value: progress > 0 ? `${progress}%` : '—', label: 'Progress', href: '/inspection', color: '#818cf8',
+              icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+            },
+            {
+              value: paidCount, label: 'Reports', href: '/premium', color: '#a855f7',
+              icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            },
+          ].map(s => (
+            <Link key={s.href} href={s.href} style={{ textDecoration: 'none' }} className="card-hover">
+              <div style={{
+                padding: '14px 12px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 16,
+                display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                <div style={{
+                  width: 30, height: 30, borderRadius: 9,
+                  background: `${s.color}14`, border: `1px solid ${s.color}28`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: s.color,
+                }}>
+                  {s.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
 
-        {/* ══ Checklist mini-breakdown ════════════════════════════ */}
+        {/* ══ Checklist breakdown ════════════════════════════════ */}
         {session && total > 0 && (
-          <div style={{ ...glass, borderRadius: 18, padding: '16px' }}>
-            <SectionHeader label="Inspection Breakdown" actionLabel="Continue" actionHref="/inspection" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          <div>
+            <SectionLabel text="Inspection Breakdown" action="Continue" actionHref="/inspection" />
+            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {[
-                { label: 'Total',  value: total,           color: 'rgba(255,255,255,0.55)' },
-                { label: 'Done',   value: checked,         color: '#22c55e' },
-                { label: 'Left',   value: total - checked, color: '#f59e0b' },
+                { label: 'Total', value: total,           color: 'rgba(255,255,255,0.5)' },
+                { label: 'Done',  value: checked,         color: '#22c55e' },
+                { label: 'Left',  value: total - checked, color: '#f59e0b' },
               ].map(item => (
-                <div key={item.label} style={{
-                  padding: '11px 10px',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 12, textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.value}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 500 }}>{item.label}</div>
+                <div key={item.label} style={{ textAlign: 'center', padding: '11px 8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12 }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: item.color, lineHeight: 1, letterSpacing: '-0.5px' }}>{item.value}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
                 </div>
               ))}
             </div>
@@ -272,36 +268,32 @@ export default function DashboardPage() {
 
         {/* ══ AI signals ═════════════════════════════════════════ */}
         {latestAI && latestAI.findings.length > 0 && (
-          <div style={{ ...glass, borderRadius: 18, padding: '16px' }}>
-            <SectionHeader label="AI Risk Signals" actionLabel="Full Report" actionHref="/report" />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {latestAI.findings.slice(0, 4).map((f, i) => (
-                <div key={f.id ?? `finding-${i}`} style={{
+          <div>
+            <SectionLabel text="AI Risk Signals" action="Full Report" actionHref="/report" />
+            <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
+              {latestAI.findings.slice(0, 4).map((f, i, arr) => (
+                <div key={f.id ?? `f-${i}`} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 12,
-                  padding: '10px 0',
-                  borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  padding: '13px 16px',
+                  borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                 }}>
                   <div style={{
-                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 4,
+                    width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
                     background: severityColor(f.severity),
-                    boxShadow: `0 0 6px ${severityColor(f.severity)}60`,
+                    boxShadow: `0 0 6px ${severityColor(f.severity)}70`,
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.8)', lineHeight: 1.3 }}>
-                      {f.title ?? f.area}
-                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.82)', lineHeight: 1.3 }}>{f.title ?? f.area}</div>
                     {f.description && (
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2, lineHeight: 1.45 }}>
-                        {f.description}
-                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.33)', marginTop: 2, lineHeight: 1.5 }}>{f.description}</div>
                     )}
                   </div>
                   <span style={{
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase',
                     padding: '3px 7px', borderRadius: 5, flexShrink: 0,
                     color: severityColor(f.severity),
-                    background: `${severityColor(f.severity)}12`,
-                    border: `1px solid ${severityColor(f.severity)}25`,
+                    background: `${severityColor(f.severity)}14`,
+                    border: `1px solid ${severityColor(f.severity)}28`,
                   }}>
                     {f.severity}
                   </span>
@@ -313,36 +305,35 @@ export default function DashboardPage() {
 
         {/* ══ Quick actions ═══════════════════════════════════════ */}
         <div>
-          <SectionHeader label="Quick Actions" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <SectionLabel text="Quick Actions" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {([
-              { label: 'View Report',    sub: 'Confidence verdict',  href: '/report',    color: '#22d3ee',
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
-              { label: 'Add Vehicle',    sub: 'Track a new car',     href: '/vehicle',   color: '#818cf8',
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> },
-              { label: 'Premium',        sub: 'Unlock history data', href: '/premium',   color: '#a855f7',
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
-              { label: 'Community',      sub: 'Advice from buyers',  href: '/community', color: '#22c55e',
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+              { label: 'View Report',  sub: 'Confidence score & verdict', href: '/report',    color: '#22d3ee',
+                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+              { label: 'Add Vehicle',  sub: 'Track a new car',           href: '/vehicle',   color: '#818cf8',
+                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> },
+              { label: 'Premium',      sub: 'Unlock history data',       href: '/premium',   color: '#a855f7',
+                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+              { label: 'Community',    sub: 'Ask fellow buyers',         href: '/community', color: '#22c55e',
+                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
             ] as const).map(action => (
-              <Link key={action.href} href={action.href} style={{ textDecoration: 'none' }}>
+              <Link key={action.href} href={action.href} style={{ textDecoration: 'none' }} className="card-hover">
                 <div style={{
-                  ...glass, borderRadius: 16, padding: '14px',
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  minHeight: 88,
+                  background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 16, padding: '16px 14px',
+                  display: 'flex', flexDirection: 'column', gap: 10, minHeight: 96,
                 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: 10,
-                    background: `${action.color}10`, border: `1px solid ${action.color}22`,
+                    width: 34, height: 34, borderRadius: 11,
+                    background: `${action.color}12`, border: `1px solid ${action.color}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: action.color,
                   }}>
                     {action.icon}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2, letterSpacing: '-0.1px' }}>{action.label}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontWeight: 400 }}>{action.sub}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.1px' }}>{action.label}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{action.sub}</div>
                   </div>
                 </div>
               </Link>
@@ -353,32 +344,31 @@ export default function DashboardPage() {
         {/* ══ Vehicles list ══════════════════════════════════════ */}
         {vehicles.length > 0 && (
           <div>
-            <SectionHeader label="Your Vehicles" actionLabel="Manage" actionHref="/vehicle" />
+            <SectionLabel text="Your Vehicles" action="Manage" actionHref="/vehicle" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {vehicles.slice(0, 3).map(v => {
                 const isActive = v.id === activeVehicle?.id
                 return (
                   <div key={v.id} style={{
                     padding: '14px 16px', borderRadius: 14,
-                    background: isActive ? 'rgba(34,211,238,0.04)' : 'rgba(255,255,255,0.025)',
-                    border: `1px solid ${isActive ? 'rgba(34,211,238,0.16)' : 'rgba(255,255,255,0.07)'}`,
+                    background: isActive ? 'rgba(34,211,238,0.05)' : 'rgba(255,255,255,0.025)',
+                    border: `1px solid ${isActive ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.07)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                    transition: 'all 0.15s',
                   }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
                         {v.year} {v.make} {v.model}
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                        {v.mileage ? `${v.mileage.toLocaleString()} km` : 'No mileage recorded'}
-                        {v.askingPrice ? <span> · {v.askingPrice.toLocaleString()} {v.currency}</span> : null}
+                        {v.mileage ? `${v.mileage.toLocaleString()} km` : 'No mileage'}
+                        {v.askingPrice ? ` · ${v.askingPrice.toLocaleString()} ${v.currency}` : ''}
                       </div>
                     </div>
                     {isActive && (
                       <span style={{
                         fontSize: 9, fontWeight: 800, padding: '3px 8px',
                         background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)',
-                        borderRadius: 5, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0,
+                        borderRadius: 6, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0,
                       }}>
                         Active
                       </span>
@@ -391,16 +381,16 @@ export default function DashboardPage() {
         )}
 
         {/* ══ Premium upsell ═════════════════════════════════════ */}
-        {hasNoPremiumReports && activeVehicle && (
+        {paidCount === 0 && activeVehicle && (
           <div style={{
             padding: '18px', borderRadius: 18,
-            background: 'linear-gradient(135deg, rgba(168,85,247,0.07), rgba(34,211,238,0.04))',
-            border: '1px solid rgba(168,85,247,0.18)',
+            background: 'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(34,211,238,0.04))',
+            border: '1px solid rgba(168,85,247,0.2)',
             display: 'flex', alignItems: 'center', gap: 14,
           }}>
             <div style={{
               width: 44, height: 44, borderRadius: 13, flexShrink: 0,
-              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)',
+              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.22)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -408,22 +398,24 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#a855f7', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3 }}>Optional Add-on</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2, letterSpacing: '-0.2px' }}>Unlock vehicle history</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>Ownership, accidents, service logs.</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
+                Optional Add-on
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.2px' }}>Unlock vehicle history</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>Ownership, accidents & service logs.</div>
             </div>
             <Link href="/premium" style={{
               flexShrink: 0, padding: '10px 14px',
-              background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.25)',
+              background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.28)',
               borderRadius: 11, fontSize: 12, fontWeight: 700, color: '#a855f7', textDecoration: 'none',
+              whiteSpace: 'nowrap',
             }}>
               Explore →
             </Link>
           </div>
         )}
 
-        {/* bottom breathing room */}
-        <div style={{ height: 8 }} />
+        <div style={{ height: 4 }} />
       </div>
     </AppShell>
   )

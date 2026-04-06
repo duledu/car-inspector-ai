@@ -49,7 +49,7 @@ export class CarVerticalService {
     // 3. Check DB cache
     const cached = await prisma.vINHistory.findUnique({ where: { vehicleId } })
     if (cached && new Date(cached.expiresAt) > new Date()) {
-      return cached.normalizedData as VehicleHistoryResult
+      return cached.normalizedData as unknown as VehicleHistoryResult
     }
 
     // 4. Fetch from provider

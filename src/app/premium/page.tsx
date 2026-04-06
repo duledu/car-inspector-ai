@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useVehicleStore, usePaymentStore } from '@/store'
 import { PremiumLockedState } from '@/components/payment/PremiumLockedState'
@@ -17,6 +17,14 @@ import { MyReportsPanel } from '@/components/payment/MyReportsPanel'
 import AppShell from '../AppShell'
 
 export default function PremiumPage() {
+  return (
+    <Suspense>
+      <PremiumPageContent />
+    </Suspense>
+  )
+}
+
+function PremiumPageContent() {
   const searchParams = useSearchParams()
   const { activeVehicle } = useVehicleStore()
   const { getStatus, hasAccess, pollPurchaseStatus } = usePaymentStore()

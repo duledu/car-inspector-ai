@@ -1,4 +1,4 @@
-// File: c:\Users\HP\car-inspector-ai\src\app\vehicle\page.tsx
+// File: C:\Users\Dusan\car-inspector-ai\src\app\vehicle\page.tsx
 import * as entry from '../../../../src/app/vehicle/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

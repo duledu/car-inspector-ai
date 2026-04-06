@@ -190,7 +190,7 @@ export default function ReportPage() {
         {/* ── Score hero ── */}
         {riskScore && verdict && (
           <>
-            <div style={{ padding: '24px 28px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 18, display: 'flex', alignItems: 'center', gap: 28 }}>
+            <div style={{ padding: '22px 24px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 18, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
               <ScoreRing score={riskScore.buyScore} color={verdict.color} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
@@ -221,7 +221,7 @@ export default function ReportPage() {
 
             {/* ── Dimension scores ── */}
             {dims.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
                 {dims.map(d => {
                   const dim = riskScore.dimensions[d.key]
                   return (
@@ -233,7 +233,7 @@ export default function ReportPage() {
 
             {/* ── Reasons for / against ── */}
             {(riskScore.reasonsFor.length > 0 || riskScore.reasonsAgainst.length > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                 <div style={{ padding: '18px 20px', background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.12)', borderRadius: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Reasons to Buy</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

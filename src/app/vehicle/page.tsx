@@ -174,7 +174,7 @@ export default function VehiclePage() {
             </div>
 
             {/* Row 2: Mileage / Asking Price */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
               <Field label="Mileage (km)">
                 <input style={inp} type="number" value={form.mileage ?? ''} onChange={e => set({ mileage: e.target.value ? Number.parseInt(e.target.value) : undefined })} placeholder="85 000" />
               </Field>
@@ -262,7 +262,7 @@ export default function VehiclePage() {
         {isLoading && vehicles.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[1, 2].map(n => (
-              <div key={n} style={{ height: 80, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 14 }} />
+              <div key={n} className="skeleton" style={{ height: 80, borderRadius: 14 }} />
             ))}
           </div>
         ) : vehicles.length === 0 ? (

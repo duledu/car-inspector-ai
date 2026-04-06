@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useChatStore } from '@/store'
 import { ConversationList } from '@/components/messaging/ConversationList'
@@ -13,6 +13,14 @@ import { EmptyConversation } from '@/components/messaging/EmptyConversation'
 import AppShell from '../AppShell'
 
 export default function MessagesPage() {
+  return (
+    <Suspense>
+      <MessagesPageContent />
+    </Suspense>
+  )
+}
+
+function MessagesPageContent() {
   const searchParams = useSearchParams()
   const convId = searchParams.get('conv')
 

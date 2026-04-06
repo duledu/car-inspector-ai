@@ -140,7 +140,7 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Stats ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
           <StatCard
             label="Vehicles tracked"
             value={vehicles.length || 0}

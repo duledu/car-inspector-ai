@@ -6,6 +6,7 @@
 import { prisma } from '@/config/prisma'
 import { calculateRiskScore } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
+import type { AIResult, ChecklistItem } from '.prisma/client'
 
 export class ScoringService {
   /**
@@ -33,14 +34,14 @@ export class ScoringService {
 
     // 2. Flatten AI findings from all results
     const aiFindings: AIFinding[] = aiResults.flatMap(
-      (r) => (r.findings as AIFinding[]) ?? []
+      (r: AIResult) => (r.findings as unknown as AIFinding[]) ?? []
     )
 
     // 3. Build calculation input
     const hasPremium = !!purchase
     const input: ScoreCalculationInput = {
       aiFindings,
-      checklistItems: (session?.checklistItems ?? []).map((item) => ({
+      checklistItems: (session?.checklistItems ?? []).map((item: ChecklistItem) => ({
         id: item.id,
         sessionId: item.sessionId,
         category: item.category as any,

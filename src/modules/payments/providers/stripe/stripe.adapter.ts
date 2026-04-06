@@ -14,12 +14,16 @@ export class StripeAdapter implements PaymentProviderInterface {
   private stripe: Stripe
 
   constructor() {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    const key = process.env.STRIPE_SECRET_KEY
+    if (!key) {
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        // Build-time placeholder — no Stripe calls are made during the build.
+        this.stripe = null as unknown as Stripe
+        return
+      }
       throw new Error('STRIPE_SECRET_KEY environment variable is not set.')
     }
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-04-10',
-    })
+    this.stripe = new Stripe(key, { apiVersion: '2024-04-10' })
   }
 
   async createCheckoutSession(payload: {
@@ -97,7 +101,7 @@ export class StripeAdapter implements PaymentProviderInterface {
     const event = this.stripe.webhooks.constructEvent(payload, signature, webhookSecret)
     return {
       type: event.type,
-      data: event.data.object as Record<string, unknown>,
+      data: event.data.object as unknown as Record<string, unknown>,
     }
   }
 }

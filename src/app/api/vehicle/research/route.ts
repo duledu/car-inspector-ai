@@ -123,39 +123,44 @@ Respond ONLY with valid JSON matching this exact structure:
 Generate 3–5 items per section. Be specific to the ${vehicleDesc}. Prioritize the most genuinely common and impactful issues real owners face.`
 }
 
-// ─── Call Anthropic API ───────────────────────────────────────────────────────
+// ─── Call OpenAI API ─────────────────────────────────────────────────────────
 
-async function callClaude(prompt: string): Promise<VehicleResearchResult> {
-  const apiKey = env.anthropicApiKey
+async function callOpenAI(prompt: string): Promise<VehicleResearchResult> {
+  const apiKey = env.openaiApiKey
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured')
+    throw new Error('OPENAI_API_KEY is not configured')
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'gpt-4o',
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert automotive advisor. Always respond with valid JSON only — no markdown, no prose, no code fences.',
+        },
+        { role: 'user', content: prompt },
+      ],
     }),
   })
 
   if (!response.ok) {
     const err = await response.text()
-    throw new Error(`Anthropic API error ${response.status}: ${err}`)
+    throw new Error(`OpenAI API error ${response.status}: ${err}`)
   }
 
   const result = await response.json()
-  const text: string = result.content?.[0]?.text ?? ''
+  const text: string = result.choices?.[0]?.message?.content ?? ''
 
-  // Extract JSON — Claude may wrap it in markdown code fences
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, text]
-  const jsonStr = (jsonMatch[1] ?? text).trim()
+  // Strip any accidental code fences
+  const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
   try {
     return JSON.parse(jsonStr) as VehicleResearchResult
@@ -186,11 +191,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const prompt = buildPrompt(make, model, year, engine, trim)
-    const research = await callClaude(prompt)
+    const research = await callOpenAI(prompt)
     return NextResponse.json({ data: research })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Research failed'
     console.error('[vehicle/research] Error:', err)
-    return NextResponse.json({ message, code: 'RESEARCH_ERROR' }, { status: 500 })
+    const isConfigError = message.includes('not configured')
+    return NextResponse.json(
+      { message: isConfigError ? 'AI research is not available (API key not configured)' : message, code: 'RESEARCH_ERROR' },
+      { status: isConfigError ? 503 : 500 }
+    )
   }
 }

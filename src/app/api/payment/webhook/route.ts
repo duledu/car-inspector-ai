@@ -7,9 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { paymentService } from '@/modules/payments/payment.service'
 
-// Tell Next.js not to parse the body — Stripe needs the raw bytes for signature verification
-export const config = { api: { bodyParser: false } }
-
+// In the App Router, request bodies are not auto-parsed, so no config needed.
+// req.text() reads the raw bytes Stripe needs for signature verification.
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
 

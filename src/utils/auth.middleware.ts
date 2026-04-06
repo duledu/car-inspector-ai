@@ -20,9 +20,14 @@ interface AuthFailure {
 
 type AuthResult = AuthSuccess | AuthFailure
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET ?? ''
 
 export async function requireAuth(req: NextRequest): Promise<AuthResult> {
+  if (!JWT_SECRET) {
+    console.error('[auth] JWT_SECRET environment variable is not set')
+    return { success: false, reason: 'Server configuration error' }
+  }
+
   const authHeader = req.headers.get('Authorization')
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -60,6 +65,8 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
  * Used in login and register routes.
  */
 export function issueTokens(userId: string, email: string, role: string) {
+  if (!JWT_SECRET) throw new Error('JWT_SECRET is not configured')
+
   const accessToken = jwt.sign(
     { sub: userId, email, role },
     JWT_SECRET,

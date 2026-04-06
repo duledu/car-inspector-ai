@@ -6,7 +6,8 @@
 
 function requireEnv(key: string): string {
   const value = process.env[key]
-  if (!value && process.env.NODE_ENV === 'production') {
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build'
+  if (!value && process.env.NODE_ENV === 'production' && !isBuild) {
     throw new Error(`Required environment variable "${key}" is not set.`)
   }
   return value ?? ''
@@ -42,8 +43,8 @@ export const env = {
   storageSecretKey: process.env.STORAGE_SECRET_KEY ?? '',
   storageBucket: process.env.STORAGE_BUCKET ?? 'uci-photos',
 
-  // Anthropic / Claude AI
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  // OpenAI
+  openaiApiKey: process.env.OPENAI_API_KEY ?? '',
 
   // Feature flags
   features: {

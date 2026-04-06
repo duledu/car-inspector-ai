@@ -11,7 +11,14 @@ import { PrismaClient } from '@prisma/client'
 
 function buildDatabaseUrl(): string {
   const base = process.env.DATABASE_URL
-  if (!base) throw new Error('DATABASE_URL is not set')
+  if (!base) {
+    // During `next build`, no DB connection is made — return a placeholder so
+    // the PrismaClient can be instantiated without crashing the build.
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return 'postgresql://build:build@localhost:5432/build'
+    }
+    throw new Error('DATABASE_URL is not set')
+  }
 
   const override = process.env.DB_PORT
   if (!override) return base

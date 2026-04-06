@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Moved from experimental.serverComponentsExternalPackages (deprecated in Next.js 14.1)
-  serverExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken', 'stripe'],
+  // In Next.js 14.2, serverComponentsExternalPackages is still under experimental
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken', 'stripe'],
+  },
 
   images: {
     remotePatterns: [
