@@ -247,7 +247,7 @@ function Hero() {
               AI-guided inspection, smart risk scoring, and premium vehicle history — everything a serious buyer needs before signing anything.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 40 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
               <Link href="/inspection" style={{
                 padding: '15px 30px', borderRadius: 14,
                 background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
@@ -277,13 +277,13 @@ function Hero() {
             </div>
 
             {/* Trust strip */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap', rowGap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0 }}>
               {[{ v: '124K+', l: 'Inspections' }, { v: '96%', l: 'Accuracy' }, { v: '31K', l: 'Reports' }].map((t, i) => (
-                <div key={t.l} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                  {i > 0 && <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 16px' }} />}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.v}</span>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{t.l}</span>
+                <div key={t.l} style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
+                  {i > 0 && <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.1)', margin: '0 10px' }} />}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: 'clamp(14px, 3.8vw, 18px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.v}</span>
+                    <span style={{ fontSize: 'clamp(9px, 2.4vw, 11px)', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{t.l}</span>
                   </div>
                 </div>
               ))}
