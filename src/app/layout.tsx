@@ -37,9 +37,9 @@ export const metadata: Metadata = {
     title: 'Car Inspector AI',
   },
   icons: {
-    icon:      '/icons/app-icon.png',
-    apple:     '/icons/app-icon.png',
-    shortcut:  '/icons/app-icon.png',
+    icon:     '/icons/favicon_used_cars_doctor.png',
+    apple:    '/icons/favicon_used_cars_doctor.png',
+    shortcut: '/icons/favicon_used_cars_doctor.png',
   },
   openGraph: {
     title: 'Used Car Inspector AI',
