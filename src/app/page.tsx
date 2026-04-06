@@ -148,16 +148,46 @@ function Hero() {
           backgroundSize: '40px 40px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 80%)',
         }} />
-        {/* Subtle car silhouette — dark, blurred, premium */}
-        <div style={{ position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: 900, opacity: 0.055, filter: 'blur(2px)', pointerEvents: 'none' }}>
-          <svg viewBox="0 0 900 300" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%' }}>
-            <path d="M60 220 C60 220 100 220 120 210 L200 160 C230 140 280 118 360 112 L540 108 C600 108 660 118 700 138 L780 178 C800 188 820 200 830 210 L840 220 Z" fill="white"/>
-            <ellipse cx="200" cy="224" rx="52" ry="24" fill="white"/>
-            <ellipse cx="680" cy="224" rx="52" ry="24" fill="white"/>
-            <path d="M210 160 L240 120 C255 104 280 96 320 94 L540 90 C580 90 620 100 650 120 L680 160 Z" fill="white" opacity="0.6"/>
-            <path d="M295 158 L310 118 L420 114 L420 158 Z" fill="#080c14" opacity="0.8"/>
-            <path d="M430 158 L430 112 L560 112 L580 130 L580 158 Z" fill="#080c14" opacity="0.8"/>
-          </svg>
+        {/* Cinematic car photo — dark studio, layered gradient fades */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          {/* Real car photo */}
+          <img
+            src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1600&q=75&auto=format&fit=crop"
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '75%',
+              maxWidth: 900,
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center center',
+              opacity: 0.38,
+              filter: 'blur(0.5px) brightness(0.72) saturate(0.85)',
+            }}
+          />
+          {/* Bottom fade — merges into page background */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%',
+            background: 'linear-gradient(to top, #080c14 0%, #080c14 10%, transparent 100%)',
+          }} />
+          {/* Left fade — protects text area */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%',
+            background: 'linear-gradient(to right, #080c14 0%, #080c14 20%, transparent 100%)',
+          }} />
+          {/* Right edge fade */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, right: 0, width: '12%',
+            background: 'linear-gradient(to left, #080c14 0%, transparent 100%)',
+          }} />
+          {/* Top fade */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '30%',
+            background: 'linear-gradient(to bottom, #080c14 0%, transparent 100%)',
+          }} />
         </div>
       </div>
 
