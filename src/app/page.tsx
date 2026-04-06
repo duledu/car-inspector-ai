@@ -148,6 +148,17 @@ function Hero() {
           backgroundSize: '40px 40px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 80%)',
         }} />
+        {/* Subtle car silhouette — dark, blurred, premium */}
+        <div style={{ position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: 900, opacity: 0.055, filter: 'blur(2px)', pointerEvents: 'none' }}>
+          <svg viewBox="0 0 900 300" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%' }}>
+            <path d="M60 220 C60 220 100 220 120 210 L200 160 C230 140 280 118 360 112 L540 108 C600 108 660 118 700 138 L780 178 C800 188 820 200 830 210 L840 220 Z" fill="white"/>
+            <ellipse cx="200" cy="224" rx="52" ry="24" fill="white"/>
+            <ellipse cx="680" cy="224" rx="52" ry="24" fill="white"/>
+            <path d="M210 160 L240 120 C255 104 280 96 320 94 L540 90 C580 90 620 100 650 120 L680 160 Z" fill="white" opacity="0.6"/>
+            <path d="M295 158 L310 118 L420 114 L420 158 Z" fill="#080c14" opacity="0.8"/>
+            <path d="M430 158 L430 112 L560 112 L580 130 L580 158 Z" fill="#080c14" opacity="0.8"/>
+          </svg>
+        </div>
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', position: 'relative' }}>
@@ -208,13 +219,14 @@ function Hero() {
             </div>
 
             {/* Trust strip */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-              <div style={{ height: 1, width: 32, background: 'rgba(255,255,255,0.12)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap', rowGap: 10 }}>
               {[{ v: '124K+', l: 'Inspections' }, { v: '96%', l: 'Accuracy' }, { v: '31K', l: 'Reports' }].map((t, i) => (
-                <div key={t.l} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                  {i > 0 && <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', marginRight: 18 }} />}
-                  <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.v}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', fontWeight: 500 }}>{t.l}</span>
+                <div key={t.l} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  {i > 0 && <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 16px' }} />}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.v}</span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{t.l}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -222,7 +234,7 @@ function Hero() {
 
           {/* Preview card */}
           <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
+            <div style={{ width: '100%', maxWidth: 360, position: 'relative', paddingBottom: 28 }}>
               <div style={{ position: 'absolute', inset: -24, background: 'radial-gradient(ellipse, rgba(34,211,238,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
               <div style={{ ...glass, borderRadius: 24, padding: 24, position: 'relative', boxShadow: '0 32px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)' }}>
@@ -340,10 +352,10 @@ function StatsSection() {
         <div style={{ position: 'absolute', top: '-30%', left: '20%', width: '40%', height: '160%', background: 'linear-gradient(110deg, transparent 40%, rgba(34,211,238,0.018) 50%, transparent 60%)', transform: 'skewX(-20deg)', pointerEvents: 'none' }} />
       </div>
 
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 0', position: 'relative' }}>
+      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 0', position: 'relative' }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 5vw, 56px)' as any }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px #22d3ee' }} />
             Platform Scale
@@ -385,7 +397,7 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered,
         position: 'relative', borderRadius: 20,
         background: 'rgba(255,255,255,0.025)',
         border: '1px solid rgba(255,255,255,0.07)',
-        padding: '28px 24px',
+        padding: 'clamp(20px, 3vw, 28px) clamp(16px, 2.5vw, 24px)',
         overflow: 'hidden',
         opacity: active ? 1 : 0,
         transform: active ? 'translateY(0)' : 'translateY(20px)',
@@ -419,11 +431,11 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered,
       </div>
 
       {/* Number */}
-      <div style={{ marginBottom: 8 }}>
-        <span style={{ fontSize: 'clamp(42px, 5vw, 52px)', fontWeight: 900, letterSpacing: '-3px', lineHeight: 1, color: '#fff' }}>
+      <div style={{ marginBottom: 8, display: 'flex', alignItems: 'baseline', gap: 2, flexWrap: 'nowrap', minWidth: 0 }}>
+        <span style={{ fontSize: 'clamp(36px, 4.5vw, 52px)', fontWeight: 900, letterSpacing: '-2px', lineHeight: 1, color: '#fff', flexShrink: 1 }}>
           {count.toLocaleString()}
         </span>
-        <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-1px', color, marginLeft: 2 }}>{suffix}</span>
+        <span style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 800, letterSpacing: '-0.5px', color, flexShrink: 0 }}>{suffix}</span>
       </div>
 
       <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 6, letterSpacing: '-0.2px' }}>{label}</div>
@@ -449,8 +461,8 @@ function Features() {
   ]
 
   return (
-    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 5vw, 56px)' as any }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>Platform Capabilities</div>
         <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>Built for serious buyers</h2>
         <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>Every layer is purpose-built to give you a cleaner, more confident view of any used vehicle.</p>
@@ -544,9 +556,9 @@ function HowItWorks() {
         }} />
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px', position: 'relative' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px', position: 'relative' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 64px)' as any }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(129,140,248,0.07)', border: '1px solid rgba(129,140,248,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#818cf8', marginBottom: 20 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
             Workflow
@@ -564,7 +576,7 @@ function HowItWorks() {
           {steps.map((step, i) => (
             <Link key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
               <div style={{
-                position: 'relative', borderRadius: 22, padding: '28px 24px',
+                position: 'relative', borderRadius: 22, padding: 'clamp(18px, 3vw, 28px) clamp(16px, 2.5vw, 24px)',
                 background: 'rgba(255,255,255,0.025)',
                 border: `1px solid rgba(255,255,255,0.07)`,
                 overflow: 'hidden', cursor: 'pointer', height: '100%',
@@ -594,26 +606,26 @@ function HowItWorks() {
                 <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: `radial-gradient(circle, ${STEP_COLORS[i]}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
 
                 {/* Step badge + icon row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                  {/* Step number — elegant, small */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(16px, 2.5vw, 24px)' as any, gap: 8 }}>
+                  {/* Step number — elegant pill */}
                   <div style={{
-                    height: 26, minWidth: 44, paddingInline: 10,
+                    height: 26, minWidth: 0, paddingInline: 10,
                     borderRadius: 100, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: `${STEP_COLORS[i]}10`, border: `1px solid ${STEP_COLORS[i]}25`,
-                    fontSize: 11, fontWeight: 800, letterSpacing: '0.08em',
-                    color: STEP_COLORS[i],
+                    fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                    color: STEP_COLORS[i], flexShrink: 1,
                   }}>
                     STEP {step.n}
                   </div>
 
                   {/* Icon in glowing circle */}
                   <div style={{
-                    width: 48, height: 48, borderRadius: 15, flexShrink: 0,
+                    width: 42, height: 42, borderRadius: 13, flexShrink: 0,
                     background: `${STEP_COLORS[i]}12`,
                     border: `1px solid ${STEP_COLORS[i]}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: STEP_COLORS[i],
-                    boxShadow: `0 0 20px ${STEP_COLORS[i]}20`,
+                    boxShadow: `0 0 16px ${STEP_COLORS[i]}20`,
                   }}>
                     {STEP_ICONS[i]}
                   </div>
@@ -621,10 +633,10 @@ function HowItWorks() {
 
                 {/* Content */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 10, letterSpacing: '-0.4px', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 'clamp(14px, 2vw, 17px)', fontWeight: 800, color: '#fff', marginBottom: 8, letterSpacing: '-0.3px', lineHeight: 1.25 }}>
                     {step.title}
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.65 }}>
                     {step.desc}
                   </p>
                 </div>
@@ -661,7 +673,7 @@ function PremiumSection() {
   const { ref, visible } = useReveal(0.15)
 
   return (
-    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 96px' }}>
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px clamp(56px, 8vw, 96px)' }}>
       <div ref={ref} style={{
         borderRadius: 24, overflow: 'hidden', position: 'relative',
         background: 'linear-gradient(135deg, rgba(34,211,238,0.05) 0%, rgba(168,85,247,0.04) 100%)',
@@ -672,7 +684,7 @@ function PremiumSection() {
         <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.07), transparent)', pointerEvents: 'none' }} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 0 }}>
-          <div style={{ padding: '48px 40px' }}>
+          <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 100, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', fontSize: 11, fontWeight: 700, color: '#a855f7', letterSpacing: '0.06em', marginBottom: 20 }}>
               OPTIONAL PREMIUM ADD-ON
             </div>
@@ -695,7 +707,7 @@ function PremiumSection() {
             </div>
           </div>
 
-          <div style={{ padding: '48px 40px', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Report Includes</div>
             {['Ownership & Title History', 'Accident & Damage Records', 'Service & Maintenance Log', 'Odometer Verification', 'Theft & Recall Alerts', 'Market Value Comparison'].map(item => (
               <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -727,8 +739,8 @@ function Testimonials() {
 
   return (
     <section style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.005)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(28px, 4vw, 48px)' as any }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>Community</div>
           <h2 style={{ margin: 0, fontSize: 'clamp(24px, 3.5vw, 38px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
             Real buyers. Real results.
@@ -772,12 +784,12 @@ function ClosingCTA() {
   const { ref, visible } = useReveal(0.2)
 
   return (
-    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 96px' }}>
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px clamp(56px, 8vw, 96px)' }}>
       <div ref={ref} style={{
         borderRadius: 24, overflow: 'hidden', position: 'relative',
         background: 'linear-gradient(135deg, rgba(34,211,238,0.05), rgba(129,140,248,0.04))',
         border: '1px solid rgba(34,211,238,0.12)',
-        padding: '80px 32px', textAlign: 'center',
+        padding: 'clamp(44px, 8vw, 80px) clamp(20px, 4vw, 32px)', textAlign: 'center',
         opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(32px)',
         transition: 'opacity 0.7s ease, transform 0.7s ease',
       }}>
@@ -797,10 +809,10 @@ function ClosingCTA() {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
             <Link href="/inspection" style={{
-              padding: '16px 32px', borderRadius: 14,
+              padding: '15px 28px', borderRadius: 14,
               background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-              color: '#050810', fontSize: 15, fontWeight: 800,
-              textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+              color: '#050810', fontSize: 14, fontWeight: 800,
+              textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
               boxShadow: '0 8px 32px rgba(34,211,238,0.35)', transition: 'transform 0.2s, box-shadow 0.2s',
             }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.5)'; }}
@@ -808,7 +820,7 @@ function ClosingCTA() {
             >
               Start Free Inspection
             </Link>
-            <Link href="/premium" style={{ padding: '16px 28px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 15, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)' }}>
+            <Link href="/premium" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap' }}>
               Explore Premium
             </Link>
           </div>
