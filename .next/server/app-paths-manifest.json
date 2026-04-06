@@ -2,5 +2,16 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js",
   "/auth/page": "app/auth/page.js",
-  "/api/auth/[action]/route": "app/api/auth/[action]/route.js"
+  "/api/auth/[action]/route": "app/api/auth/[action]/route.js",
+  "/api/vehicle/route": "app/api/vehicle/route.js",
+  "/vehicle/page": "app/vehicle/page.js",
+  "/inspection/page": "app/inspection/page.js",
+  "/report/page": "app/report/page.js",
+  "/premium/page": "app/premium/page.js",
+  "/community/page": "app/community/page.js",
+  "/api/community/posts/route": "app/api/community/posts/route.js",
+  "/messages/page": "app/messages/page.js",
+  "/api/messaging/conversations/route": "app/api/messaging/conversations/route.js",
+  "/profile/page": "app/profile/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
 }
