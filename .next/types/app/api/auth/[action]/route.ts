@@ -1,4 +1,4 @@
-// File: C:\Users\HP\car-inspector-ai\src\app\api\auth\[action]\route.ts
+// File: c:\Users\HP\car-inspector-ai\src\app\api\auth\[action]\route.ts
 import * as entry from '../../../../../../src/app/api/auth/[action]/route.js'
 import type { NextRequest } from 'next/server.js'
 

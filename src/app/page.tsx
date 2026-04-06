@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 // ══════════════════════════════════════════════════════════════
 // HOOKS
@@ -305,49 +305,59 @@ function Hero() {
 // STATS — animated counters, premium 2×2 grid
 // ══════════════════════════════════════════════════════════════
 
-function StatItem({ target, suffix, label, sub, color, delay }: Readonly<{
-  target: number; suffix: string; label: string; sub: string; color: string; delay: number;
-}> & { triggered: boolean }) {
-  // Props include triggered but it's passed via parent — use argument destructure
-  return null // placeholder, see below
-}
-void StatItem // silence unused warning
-
 function StatsSection() {
   const { ref, visible } = useReveal(0.2)
 
   const stats = [
-    { target: 124, suffix: 'K+', label: 'Inspections Analyzed', sub: 'Across all vehicle types and markets', color: '#22d3ee', delay: 0 },
-    { target: 89,  suffix: 'K',  label: 'Risk Signals Identified', sub: 'Hidden issues surfaced before purchase', color: '#818cf8', delay: 150 },
-    { target: 31,  suffix: 'K',  label: 'Premium Reports Unlocked', sub: 'Deep vehicle history accessed', color: '#a855f7', delay: 300 },
-    { target: 96,  suffix: '%',  label: 'Buyer Confidence Rate', sub: 'Decisions backed by AI intelligence', color: '#22c55e', delay: 450 },
+    {
+      target: 124, suffix: 'K+', label: 'Inspections Analyzed', sub: 'Across all vehicle types and markets', color: '#22d3ee', delay: 0,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>,
+    },
+    {
+      target: 89, suffix: 'K', label: 'Risk Signals Identified', sub: 'Hidden issues surfaced before purchase', color: '#818cf8', delay: 150,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>,
+    },
+    {
+      target: 31, suffix: 'K', label: 'Premium Reports Unlocked', sub: 'Deep vehicle history accessed', color: '#a855f7', delay: 300,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+    },
+    {
+      target: 96, suffix: '%', label: 'Buyer Confidence Rate', sub: 'Decisions backed by AI intelligence', color: '#22c55e', delay: 450,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
+    },
   ]
 
   return (
     <section style={{ position: 'relative', overflow: 'hidden', padding: '0 20px' }}>
-      {/* Section atmosphere */}
+      {/* Section atmosphere — layered depth */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 800, height: 400, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(34,211,238,0.04) 0%, transparent 65%)' }} />
-        <div style={{ position: 'absolute', inset: 0, borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 0%, rgba(8,12,20,0.7) 20%, rgba(8,12,20,0.7) 80%, transparent 100%)' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 1000, height: 500, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(34,211,238,0.05) 0%, transparent 60%)' }} />
+        <div style={{ position: 'absolute', top: '50%', right: '-10%', transform: 'translateY(-50%)', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.04) 0%, transparent 65%)' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '-10%', transform: 'translateY(-50%)', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.04) 0%, transparent 65%)' }} />
+        <div style={{ position: 'absolute', inset: 0, borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }} />
+        {/* Diagonal shimmer */}
+        <div style={{ position: 'absolute', top: '-30%', left: '20%', width: '40%', height: '160%', background: 'linear-gradient(110deg, transparent 40%, rgba(34,211,238,0.018) 50%, transparent 60%)', transform: 'skewX(-20deg)', pointerEvents: 'none' }} />
       </div>
 
       <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 0', position: 'relative' }}>
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px #22d3ee' }} />
             Platform Scale
           </div>
           <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
             Trusted by serious car buyers
           </h2>
-          <p style={{ margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.38)', maxWidth: 420, margin: '0 auto', lineHeight: 1.65 }}>
+          <p style={{ margin: '0 auto', fontSize: 15, color: 'rgba(255,255,255,0.38)', maxWidth: 420, lineHeight: 1.65 }}>
             Real data from real inspections — every number represents a buyer who made a smarter decision.
           </p>
         </div>
 
-        {/* 2×2 stat grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+        {/* 2×2 stat grid — minmax(150px) enables 2-col on mobile */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
           {stats.map((s) => (
             <AnimatedStatCard key={s.label} {...s} triggered={visible} />
           ))}
@@ -357,8 +367,8 @@ function StatsSection() {
   )
 }
 
-function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered }: Readonly<{
-  target: number; suffix: string; label: string; sub: string; color: string; delay: number; triggered: boolean;
+function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered, icon }: Readonly<{
+  target: number; suffix: string; label: string; sub: string; color: string; delay: number; triggered: boolean; icon: React.ReactNode;
 }>) {
   const [active, setActive] = useState(false)
   useEffect(() => {
@@ -375,7 +385,7 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered 
         position: 'relative', borderRadius: 20,
         background: 'rgba(255,255,255,0.025)',
         border: '1px solid rgba(255,255,255,0.07)',
-        padding: '32px 28px',
+        padding: '28px 24px',
         overflow: 'hidden',
         opacity: active ? 1 : 0,
         transform: active ? 'translateY(0)' : 'translateY(20px)',
@@ -384,28 +394,28 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered 
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement
         el.style.background = `${color}08`
-        el.style.borderColor = `${color}22`
-        el.style.transform = 'translateY(-3px)'
-        el.style.boxShadow = `0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px ${color}15`
+        el.style.borderColor = `${color}25`
+        el.style.transform = 'translateY(-4px)'
+        el.style.boxShadow = `0 24px 48px rgba(0,0,0,0.35), 0 0 0 1px ${color}18, inset 0 1px 0 ${color}12`
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement
         el.style.background = 'rgba(255,255,255,0.025)'
         el.style.borderColor = 'rgba(255,255,255,0.07)'
-        el.style.transform = ''
+        el.style.transform = active ? 'translateY(0)' : 'translateY(20px)'
         el.style.boxShadow = ''
       }}
     >
       {/* Top accent line */}
-      <div style={{ position: 'absolute', top: 0, left: 20, right: 20, height: 2, borderRadius: '0 0 4px 4px', background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, borderRadius: '0 0 2px 2px', background: `linear-gradient(90deg, transparent 10%, ${color}70 50%, transparent 90%)` }} />
       {/* Corner glow */}
-      <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, ${color}10 0%, transparent 65%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -30, right: -30, width: 130, height: 130, borderRadius: '50%', background: `radial-gradient(circle, ${color}12 0%, transparent 65%)`, pointerEvents: 'none' }} />
+      {/* Bottom left glow */}
+      <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: `radial-gradient(circle, ${color}08 0%, transparent 70%)`, pointerEvents: 'none' }} />
 
       {/* Icon */}
-      <div style={{ width: 44, height: 44, borderRadius: 13, background: `${color}10`, border: `1px solid ${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
+      <div style={{ width: 44, height: 44, borderRadius: 13, background: `${color}10`, border: `1px solid ${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color }}>
+        {icon}
       </div>
 
       {/* Number */}
@@ -514,18 +524,33 @@ function HowItWorks() {
 
   return (
     <section style={{ position: 'relative', overflow: 'hidden' }}>
-      {/* Premium section background */}
+      {/* Premium section background — layered depth */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 0%, rgba(10,15,26,0.6) 30%, rgba(10,15,26,0.6) 70%, transparent 100%)' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 500, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(129,140,248,0.05) 0%, transparent 65%)' }} />
-        {/* Subtle horizontal lines */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px)', backgroundSize: '100% 120px' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 0%, rgba(10,15,26,0.65) 20%, rgba(10,15,26,0.65) 80%, transparent 100%)' }} />
+        {/* Center indigo orb */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 1000, height: 600, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(129,140,248,0.07) 0%, transparent 60%)' }} />
+        {/* Left cyan accent */}
+        <div style={{ position: 'absolute', top: '30%', left: '-5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 65%)', animation: 'orb-drift 26s ease-in-out infinite' }} />
+        {/* Right purple accent */}
+        <div style={{ position: 'absolute', bottom: '20%', right: '-5%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 65%)' }} />
+        {/* Diagonal light */}
+        <div style={{ position: 'absolute', top: '-20%', right: '5%', width: '40%', height: '140%', background: 'linear-gradient(110deg, transparent 40%, rgba(129,140,248,0.022) 50%, transparent 60%)', transform: 'skewX(-10deg)' }} />
+        {/* Dot grid — subtle */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse 70% 50% at 50% 50%, black 20%, transparent 75%)',
+        }} />
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px', position: 'relative' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>Workflow</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(129,140,248,0.07)', border: '1px solid rgba(129,140,248,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#818cf8', marginBottom: 20 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
+            Workflow
+          </div>
           <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
             Four steps to a confident decision
           </h2>
@@ -534,8 +559,8 @@ function HowItWorks() {
           </p>
         </div>
 
-        {/* Step cards */}
-        <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+        {/* Step cards — minmax(160px) enables 2-col on mobile */}
+        <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
           {steps.map((step, i) => (
             <Link key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
               <div style={{
@@ -614,8 +639,15 @@ function HowItWorks() {
           ))}
         </div>
 
-        {/* Connector line — desktop only */}
-        <div className="desktop-only" style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.12), rgba(129,140,248,0.12), rgba(168,85,247,0.12), transparent)', pointerEvents: 'none', marginTop: 20 }} />
+        {/* Step sequence connector — desktop only, sits below cards */}
+        <div className="desktop-only" style={{ marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, opacity: 0.5 }}>
+          {(['#22d3ee', '#818cf8', '#a855f7', '#22c55e'] as const).map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 8px ${c}` }} />
+              {i < 3 && <div style={{ width: 60, height: 1, background: `linear-gradient(90deg, ${c}40, ${['#818cf8','#a855f7','#22c55e'][i]}40)` }} />}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

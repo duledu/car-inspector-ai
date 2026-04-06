@@ -80,42 +80,57 @@ async function handleLogin(body: unknown) {
     )
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
-  })
+  try {
+    console.log('[login] attempt for:', parsed.data.email)
 
-  if (!user || !user.passwordHash) {
-    return NextResponse.json(
-      { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
-      { status: 401 }
-    )
-  }
+    const user = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+    })
 
-  const passwordValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
-  if (!passwordValid) {
-    return NextResponse.json(
-      { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
-      { status: 401 }
-    )
-  }
+    console.log('[login] user found:', user ? user.id : 'null')
 
-  const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+    if (!user || !user.passwordHash) {
+      return NextResponse.json(
+        { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
+        { status: 401 }
+      )
+    }
 
-  return NextResponse.json({
-    data: {
-      accessToken,
-      refreshToken,
-      expiresAt,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        createdAt: user.createdAt.toISOString(),
+    const passwordValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
+    console.log('[login] password valid:', passwordValid)
+
+    if (!passwordValid) {
+      return NextResponse.json(
+        { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
+        { status: 401 }
+      )
+    }
+
+    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+
+    return NextResponse.json({
+      data: {
+        accessToken,
+        refreshToken,
+        expiresAt,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          role: user.role,
+          createdAt: user.createdAt.toISOString(),
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('[login] ERROR:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    return NextResponse.json(
+      { message: 'Login failed', code: 'INTERNAL_ERROR', detail: message },
+      { status: 500 }
+    )
+  }
 }
 
 async function handleRegister(body: unknown) {
