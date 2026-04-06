@@ -163,7 +163,8 @@ export default function AppShell({ children }: AppShellProps) {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '16px 16px 0',
+            /* Bottom padding clears the fixed 64px nav + safe area (iOS/Android) */
+            padding: '16px 16px calc(80px + env(safe-area-inset-bottom, 0px))',
             background: '#080c14',
           }}
         >

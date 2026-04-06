@@ -22,8 +22,8 @@ export const env = {
   // Database
   databaseUrl: requireEnv('DATABASE_URL'),
 
-  // Auth
-  jwtSecret: requireEnv('JWT_SECRET'),
+  // Auth — validated at request-time in auth.middleware.ts, not at module load
+  jwtSecret: process.env.JWT_SECRET ?? '',
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '30d',
 

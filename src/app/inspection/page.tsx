@@ -51,25 +51,31 @@ type PhotoEntry   = { key: string; label: string; file: File; previewUrl: string
 type MockAIResult = { signal: string; severity: 'ok' | 'warn' | 'flag'; detail: string }
 type ChecklistRow = { id: string; itemLabel: string; status: ItemStatus; notes?: string | null }
 
-// ─── Mock AI responses ─────────────────────────────────────────────────────────
-const AI_RESPONSES: Record<string, MockAIResult[]> = {
-  FRONT:       [{ signal: 'No obvious deformation detected',      severity: 'ok',   detail: 'Bumper alignment appears consistent with factory spec.' }],
-  REAR:        [{ signal: 'Possible minor repaint on rear bumper', severity: 'warn', detail: 'Color tone variance observed between bumper and quarter panel.' }],
-  LEFT_SIDE:   [{ signal: 'Panel gap inconsistency observed',      severity: 'flag', detail: 'Gap between front and rear door wider than factory tolerance. May indicate collision repair.' }],
-  RIGHT_SIDE:  [{ signal: 'Paint reflection consistent',           severity: 'ok',   detail: 'No visible tone variation across right side panels.' }],
-  HOOD:        [{ signal: 'Possible filler or repaint detected',   severity: 'warn', detail: 'Texture inconsistency near hood edge. Color variance may suggest repair.' }],
-  ENGINE_BAY:  [{ signal: 'Fluid residue visible',                 severity: 'warn', detail: 'Potential oil seep near valve cover. Inspection by mechanic recommended.' }],
-  FRONT_LEFT:  [{ signal: 'Headlight alignment appears normal',    severity: 'ok',   detail: 'No visible displacement or moisture in headlight housing.' }],
-  FRONT_RIGHT: [{ signal: 'No obvious impact markers',             severity: 'ok',   detail: 'Front right corner structure appears intact.' }],
-  ODOMETER:    [{ signal: 'Odometer reading captured',             severity: 'ok',   detail: 'Reading recorded for cross-reference with service history.' }],
+// ─── Real AI analysis via OpenAI Vision ───────────────────────────────────────
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload  = () => resolve((reader.result as string).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
-function runMockAI(key: string): Promise<MockAIResult> {
-  return new Promise(resolve => setTimeout(() => {
-    const results = AI_RESPONSES[key]
-    const result  = results?.[Math.floor(Math.random() * (results.length || 1))]
-    resolve(result ?? { signal: 'No anomalies detected', severity: 'ok', detail: 'Image analysed. No obvious visual issues found.' })
-  }, 1400 + Math.random() * 800))
+async function runAI(key: string, label: string, file: File): Promise<MockAIResult> {
+  try {
+    const imageBase64 = await fileToBase64(file)
+    const res = await fetch('/api/inspection/analyze-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg', angle: key, angleLabel: label }),
+    })
+    const json = await res.json()
+    if (json?.data) return json.data as MockAIResult
+    throw new Error('No data in response')
+  } catch {
+    return { signal: 'Analysis unavailable', severity: 'warn', detail: 'Could not analyse this image. Check connection and try again.' }
+  }
 }
 
 // ─── AI Badge ─────────────────────────────────────────────────────────────────
@@ -383,7 +389,7 @@ export default function InspectionPage() {
     const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: true }
     setPhotos(prev => [...prev.filter(p => p.key !== cameraTarget.key), entry])
     setCameraTarget(null)
-    const result = await runMockAI(cameraTarget.key)
+    const result = await runAI(cameraTarget.key, cameraTarget.label, file)
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
   }, [cameraTarget])
 

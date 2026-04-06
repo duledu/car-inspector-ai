@@ -1,0 +1,172 @@
+// =============================================================================
+// Analyze Photo — POST /api/inspection/analyze-photo
+// Sends a car photo to OpenAI Vision (gpt-4o) and returns structured findings.
+// =============================================================================
+
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const schema = z.object({
+  imageBase64: z.string().min(100),
+  mimeType:    z.string().default('image/jpeg'),
+  angle:       z.string().min(1),        // e.g. "FRONT", "LEFT_SIDE"
+  angleLabel:  z.string().min(1),        // human label e.g. "Front"
+})
+
+// ─── Prompt per angle ────────────────────────────────────────────────────────
+
+function buildPrompt(angle: string, angleLabel: string): string {
+  const areaGuide: Record<string, string> = {
+    FRONT:       'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
+    REAR:        'Focus on: rear bumper alignment, tail-light symmetry, trunk gap, colour tone vs quarter panels.',
+    LEFT_SIDE:   'Focus on: door panel gaps, crease line continuity, paint tone across panels, any ripple or filler signs.',
+    RIGHT_SIDE:  'Focus on: door panel gaps, crease line continuity, paint tone across panels, any ripple or filler signs.',
+    FRONT_LEFT:  'Focus on: front-left corner impact markers, headlight fit, fender-bumper gap.',
+    FRONT_RIGHT: 'Focus on: front-right corner impact markers, headlight fit, fender-bumper gap.',
+    HOOD:        'Focus on: surface texture uniformity, paint tone vs fenders, any ripple, filler, or overspray near edges.',
+    ROOF:        'Focus on: panel flatness, paint consistency, any dents or hail damage.',
+    TRUNK:       'Focus on: boot/trunk lid gap symmetry, hinge alignment, paint match vs rear.',
+    ENGINE_BAY:  'Focus on: fluid residue or stains (oil, coolant), corroded hoses or wiring, accident repair evidence, cleanliness vs mileage.',
+    INTERIOR:    'Focus on: seat wear vs claimed mileage, dashboard cracks or sun damage, water ingress stains on carpet or headliner.',
+    ODOMETER:    'Focus on: reading clearly, note the mileage value, flag if display looks tampered or reset.',
+    VIN_PLATE:   'Focus on: plate condition, signs of tampering or re-stamping.',
+    WHEELS_FL:   'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
+    WHEELS_FR:   'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
+    UNDERBODY:   'Focus on: rust patches, previous weld repairs, structural member condition, exhaust condition.',
+  }
+
+  const areaFocus = areaGuide[angle] ?? 'Inspect all visible surfaces for damage, repaints, misalignments, or anomalies.'
+
+  return `You are an expert pre-purchase car inspector analysing a photo of the vehicle's ${angleLabel} area.
+
+${areaFocus}
+
+Assess the image carefully and respond ONLY with valid JSON — no prose, no markdown fences:
+
+{
+  "signal": "One short headline finding (max 8 words)",
+  "severity": "ok" | "warn" | "flag",
+  "detail": "1-2 sentence explanation of what you see and why it matters for a buyer",
+  "confidence": 0-100
+}
+
+Severity rules:
+- "ok"   = no issues, consistent with factory condition
+- "warn" = minor concern, worth noting but not deal-breaking
+- "flag" = significant issue, should be investigated by a mechanic or used to negotiate price
+
+Be honest. Do NOT default to "ok" unless the image is genuinely clean.
+If the image is blurry, dark, or not showing the expected area, set severity "warn" and explain in detail.`
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
+
+export async function POST(req: NextRequest) {
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ message: 'Invalid JSON', code: 'BAD_REQUEST' }, { status: 400 })
+  }
+
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ message: 'Validation failed', code: 'VALIDATION_ERROR' }, { status: 422 })
+  }
+
+  const { imageBase64, mimeType, angle, angleLabel } = parsed.data
+
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    console.error('[analyze-photo] OPENAI_API_KEY is not set')
+    return NextResponse.json(
+      { message: 'AI analysis unavailable', code: 'CONFIG_ERROR' },
+      { status: 503 }
+    )
+  }
+
+  try {
+    console.log('[analyze-photo] analysing:', angle)
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 300,
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional car inspector. Respond only with valid JSON.',
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${imageBase64}`,
+                  detail: 'high',
+                },
+              },
+              {
+                type: 'text',
+                text: buildPrompt(angle, angleLabel),
+              },
+            ],
+          },
+        ],
+      }),
+    })
+
+    if (!response.ok) {
+      const err = await response.text()
+      console.error('[analyze-photo] OpenAI error:', response.status, err)
+      throw new Error(`OpenAI ${response.status}`)
+    }
+
+    const result = await response.json()
+    const text: string = result.choices?.[0]?.message?.content ?? ''
+    const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+
+    let parsed: { signal: string; severity: string; detail: string; confidence?: number }
+    try {
+      parsed = JSON.parse(jsonStr)
+    } catch {
+      throw new Error('Failed to parse AI response')
+    }
+
+    // Normalise severity to expected values
+    const sev = (['ok', 'warn', 'flag'] as const).includes(parsed.severity as 'ok' | 'warn' | 'flag')
+      ? (parsed.severity as 'ok' | 'warn' | 'flag')
+      : 'warn'
+
+    console.log('[analyze-photo] result:', angle, sev, parsed.signal)
+
+    return NextResponse.json({
+      data: {
+        signal:     parsed.signal ?? 'Analysis complete',
+        severity:   sev,
+        detail:     parsed.detail ?? '',
+        confidence: parsed.confidence ?? 80,
+      },
+    })
+  } catch (error) {
+    console.error('[analyze-photo] ERROR:', error)
+    return NextResponse.json(
+      {
+        data: {
+          signal:   'Analysis unavailable',
+          severity: 'warn',
+          detail:   'Could not analyse this image. Please check your connection and try again.',
+          confidence: 0,
+        },
+      },
+      { status: 200 } // Return 200 so UI still renders — just shows the fallback
+    )
+  }
+}
