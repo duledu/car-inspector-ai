@@ -148,46 +148,74 @@ function Hero() {
           backgroundSize: '40px 40px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 80%)',
         }} />
-        {/* Cinematic car photo — dark studio, layered gradient fades */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-          {/* Real car photo */}
+        {/* ── Cinematic car — full-bleed, mask-faded, zero hard edges ── */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+
+          {/* Photo: inset:0 so no geometric left edge exists.
+              mask-image fades it in from the right — the left is fully
+              transparent, the transition is purely gradient-controlled. */}
           <img
-            src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1600&q=75&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1800&q=75&auto=format&fit=crop"
             alt=""
             aria-hidden="true"
             style={{
               position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: '75%',
-              maxWidth: 900,
+              inset: 0,
+              width: '100%',
               height: '100%',
               objectFit: 'cover',
-              objectPosition: 'center center',
-              opacity: 0.38,
-              filter: 'blur(0.5px) brightness(0.72) saturate(0.85)',
+              objectPosition: '65% center',
+              opacity: 0.32,
+              filter: 'brightness(0.52) saturate(0.65) contrast(1.08)',
+              /* Mask: left 30% fully hidden → soft feather 30–60% → visible right side.
+                 No geometry = no hard edge, ever. */
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 30%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.88) 60%, black 80%)',
+              maskImage:       'linear-gradient(to right, transparent 0%, transparent 30%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.88) 60%, black 80%)',
             }}
           />
-          {/* Bottom fade — merges into page background */}
+
+          {/* Dark base — keeps overall scene unified and dark */}
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%',
-            background: 'linear-gradient(to top, #080c14 0%, #080c14 10%, transparent 100%)',
+            position: 'absolute', inset: 0,
+            background: 'rgba(8,12,20,0.38)',
           }} />
-          {/* Left fade — protects text area */}
+
+          {/* Bottom vignette — image sinks into page */}
           <div style={{
-            position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%',
-            background: 'linear-gradient(to right, #080c14 0%, #080c14 20%, transparent 100%)',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '58%',
+            background: 'linear-gradient(to top, #080c14 0%, #080c14 12%, rgba(8,12,20,0.72) 38%, transparent 100%)',
           }} />
-          {/* Right edge fade */}
+
+          {/* Top vignette */}
           <div style={{
-            position: 'absolute', top: 0, bottom: 0, right: 0, width: '12%',
+            position: 'absolute', top: 0, left: 0, right: 0, height: '32%',
+            background: 'linear-gradient(to bottom, #080c14 0%, rgba(8,12,20,0.55) 45%, transparent 100%)',
+          }} />
+
+          {/* Left anchor — locks text area to full dark, no bleed */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
+            background: 'linear-gradient(to right, #080c14 0%, rgba(8,12,20,0.92) 40%, transparent 100%)',
+          }} />
+
+          {/* Right edge vignette */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, right: 0, width: '18%',
             background: 'linear-gradient(to left, #080c14 0%, transparent 100%)',
           }} />
-          {/* Top fade */}
+
+          {/* Soft atmosphere bloom — makes image feel embedded, not pasted */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '30%',
-            background: 'linear-gradient(to bottom, #080c14 0%, transparent 100%)',
+            position: 'absolute', top: '10%', right: '2%', width: '60%', height: '80%',
+            background: 'radial-gradient(ellipse at 65% 45%, rgba(129,140,248,0.05) 0%, transparent 68%)',
           }} />
+
+          {/* Subtle white haze at car highlight area — adds cinematic glow */}
+          <div style={{
+            position: 'absolute', top: '20%', right: '15%', width: '45%', height: '50%',
+            background: 'radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.025) 0%, transparent 65%)',
+          }} />
+
         </div>
       </div>
 
@@ -265,9 +293,34 @@ function Hero() {
           {/* Preview card */}
           <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: 360, position: 'relative', paddingBottom: 28 }}>
-              <div style={{ position: 'absolute', inset: -24, background: 'radial-gradient(ellipse, rgba(34,211,238,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              {/* Glow halo — increased opacity + dual-tone */}
+              <div style={{ position: 'absolute', inset: -36, background: 'radial-gradient(ellipse at 55% 45%, rgba(34,211,238,0.22) 0%, rgba(129,140,248,0.08) 50%, transparent 72%)', pointerEvents: 'none' }} />
 
-              <div style={{ ...glass, borderRadius: 24, padding: 24, position: 'relative', boxShadow: '0 32px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+              <div style={{
+                ...glass,
+                /* Darker, more opaque — card reads clearly against the bg */
+                background: 'rgba(8,14,30,0.76)',
+                /* More blur = stronger glass separation */
+                backdropFilter: 'blur(28px)',
+                WebkitBackdropFilter: 'blur(28px)',
+                /* Refined border: faint top-highlight + perimeter ring */
+                border: '1px solid rgba(255,255,255,0.11)',
+                borderRadius: 24, padding: 24, position: 'relative',
+                boxShadow: [
+                  /* Dark spread — darkens scene directly behind card */
+                  '0 0 80px 24px rgba(4,8,18,0.55)',
+                  /* Deep close shadow */
+                  '0 12px 40px rgba(0,0,0,0.65)',
+                  /* Wide ambient shadow */
+                  '0 32px 80px rgba(0,0,0,0.42)',
+                  /* Cyan ambient glow — matches theme accent */
+                  '0 0 56px rgba(34,211,238,0.09)',
+                  /* Top inner highlight — glass edge */
+                  'inset 0 1px 0 rgba(255,255,255,0.11)',
+                  /* Subtle inner perimeter */
+                  'inset 0 0 0 1px rgba(255,255,255,0.04)',
+                ].join(', '),
+              }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Inspecting</div>
