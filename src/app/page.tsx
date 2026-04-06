@@ -2,599 +2,740 @@
 
 import Link from 'next/link'
 
-export default function Home() {
+// ─── Shared inline style atoms ────────────────────────────────
+const S = {
+  // Glass card
+  glass: {
+    background: 'rgba(255,255,255,0.035)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+  } as React.CSSProperties,
+
+  // Accent glass card
+  glassAccent: {
+    background: 'rgba(34,211,238,0.04)',
+    border: '1px solid rgba(34,211,238,0.15)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+  } as React.CSSProperties,
+
+  // Section label
+  eyebrow: {
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+    textTransform: 'uppercase' as const, color: '#22d3ee',
+  } as React.CSSProperties,
+}
+
+// ─── Nav ──────────────────────────────────────────────────────
+function LandingNav() {
   return (
-    <div className="min-h-screen bg-[#080c14] text-white overflow-x-hidden">
+    <nav style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      background: 'rgba(8,12,20,0.85)',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+    }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
-      {/* Background orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-cyan-500/5 blur-[120px]" />
-        <div className="absolute top-[30%] right-[-15%] w-[500px] h-[500px] rounded-full bg-blue-600/6 blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[400px] rounded-full bg-indigo-500/4 blur-[140px]" />
-      </div>
-
-      {/* NAV */}
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#080c14]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
-          <Link href="/" className="text-white font-semibold tracking-tight text-lg shrink-0">
-            <span className="text-cyan-400">Used Car</span> Inspector AI
-          </Link>
-
-          <div className="flex flex-wrap gap-1 items-center text-sm text-slate-400">
-            {[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Vehicle', href: '/vehicle' },
-              { label: 'Inspection', href: '/inspection' },
-              { label: 'Report', href: '/report' },
-              { label: 'Premium', href: '/premium' },
-              { label: 'Community', href: '/community' },
-              { label: 'Messages', href: '/messages' },
-              { label: 'Profile', href: '/profile' },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all duration-200"
-              >
-                {item.label}
-              </Link>
-            ))}
+        {/* Brand */}
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 10,
+            background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 16px rgba(34,211,238,0.3)',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#050810" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
           </div>
-
-          <div className="flex gap-2 shrink-0">
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 text-sm text-slate-300 border border-white/10 rounded-xl hover:border-white/20 hover:text-white transition-all duration-200"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/inspection"
-              className="px-4 py-2 text-sm font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 rounded-xl hover:bg-cyan-500/20 hover:border-cyan-400/40 transition-all duration-200"
-            >
-              Start Inspection
-            </Link>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Car Inspector</div>
+            <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>AI-Powered</div>
           </div>
-        </div>
-      </nav>
+        </Link>
 
-      {/* HERO — full-viewport with cinematic video background */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
-
-        {/* Cinematic video background */}
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&q=80&fit=crop"
-          className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
-        >
-          {/* Add your video source here, e.g.: <source src="/hero.mp4" type="video/mp4" /> */}
-        </video>
-
-        {/* Dark gradient overlays for legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#080c14] via-[#080c14]/90 to-[#080c14]/50 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-transparent to-[#080c14]/70 pointer-events-none" />
-
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-24 w-full">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 text-xs font-medium tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span>AI-Powered Vehicle Intelligence</span>
-              </div>
-
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08]">
-                Buy used cars<br />
-                <span className="bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 bg-clip-text text-transparent">
-                  with confidence.
-                </span>
-              </h1>
-
-              <p className="text-slate-400 text-lg leading-relaxed max-w-lg">
-                AI-guided inspection workflow, smart risk analysis, and optional premium vehicle history intelligence — all in one modular platform built for informed buyers.
-              </p>
-
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/inspection"
-                  className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm rounded-2xl transition-all duration-200 shadow-lg shadow-cyan-500/20"
-                >
-                  Start Free Inspection
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="px-6 py-3 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-sm font-medium rounded-2xl transition-all duration-200 backdrop-blur-sm bg-white/3"
-                >
-                  View Dashboard
-                </Link>
-              </div>
-
-              <p className="text-xs text-slate-600">No account required to start. Premium reports available as optional add-ons.</p>
-            </div>
-
-            {/* UI Mockup */}
-            <div className="relative hidden lg:block">
-              <div className="absolute inset-0 bg-cyan-500/8 blur-3xl rounded-full" />
-              <div className="relative space-y-3">
-                {/* Main card */}
-                <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-5 space-y-4 shadow-xl shadow-black/30">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="text-xs text-slate-500 font-medium">VEHICLE</div>
-                      <div className="text-white font-semibold">2019 BMW 3 Series</div>
-                    </div>
-                    <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-                      Risk: Low
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>AI Confidence Score</span>
-                      <span className="text-cyan-400 font-medium">87 / 100</span>
-                    </div>
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full w-[87%] bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'Engine', score: '92' },
-                      { label: 'Body', score: '78' },
-                      { label: 'Interior', score: '88' },
-                    ].map((item) => (
-                      <div key={item.label} className="rounded-xl bg-white/4 border border-white/8 p-3 text-center">
-                        <div className="text-white font-bold text-lg">{item.score}</div>
-                        <div className="text-slate-500 text-xs">{item.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Status pills row */}
-                <div className="flex gap-2">
-                  <div className="flex-1 rounded-2xl border border-white/8 bg-white/4 backdrop-blur-sm p-3 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs text-slate-400">No major issues found</span>
-                  </div>
-                  <div className="flex-1 rounded-2xl border border-amber-500/15 bg-amber-500/5 backdrop-blur-sm p-3 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span className="text-xs text-slate-400">2 minor flags</span>
-                  </div>
-                </div>
-
-                {/* Premium block */}
-                <div className="rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/8 to-blue-500/5 backdrop-blur-sm p-5 space-y-3 shadow-lg shadow-cyan-500/5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-cyan-300 tracking-wide">PREMIUM HISTORY REPORT</span>
-                    <span className="text-xs text-slate-500">Optional add-on</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['Ownership History', 'Accident Records', 'Service Log', 'Title Check'].map((item) => (
-                      <div key={item} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/60" />
-                        <span className="text-xs text-slate-400">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="h-px bg-white/5" />
-                  <div className="text-xs text-slate-500">Unlock deeper intelligence for this vehicle</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TRUST BAR */}
-      <section className="border-y border-white/5 bg-white/1">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { stat: '124K+', label: 'Inspections Analyzed', desc: 'Across all vehicle types and markets' },
-              { stat: '89K', label: 'Risk Signals Identified', desc: 'Hidden issues surfaced before purchase' },
-              { stat: '31K', label: 'Premium Reports Unlocked', desc: 'Deep history intelligence accessed' },
-              { stat: '96%', label: 'Buyer Confidence Supported', desc: 'Decisions backed by AI data' },
-            ].map((item) => (
-              <div key={item.stat} className="rounded-2xl border border-white/6 bg-white/2 p-6 space-y-2">
-                <div className="text-3xl font-bold text-white tracking-tight">{item.stat}</div>
-                <div className="text-sm font-medium text-slate-300">{item.label}</div>
-                <div className="text-xs text-slate-600 leading-relaxed">{item.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="max-w-7xl mx-auto px-6 py-28">
-        <div className="text-center space-y-4 mb-16">
-          <div className="text-xs font-medium text-cyan-400 tracking-widest uppercase">Platform Capabilities</div>
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">Built for serious buyers</h2>
-          <p className="text-slate-500 max-w-lg mx-auto text-sm leading-relaxed">
-            Every layer of the platform is designed to give you a cleaner, more confident view of any used vehicle.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Desktop nav links */}
+        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} className="desktop-only">
           {[
-            {
-              title: 'AI Risk Scoring',
-              desc: 'Our engine processes inspection inputs across dozens of vectors to produce a calibrated risk score with category breakdowns.',
-              href: '/inspection',
-              cta: 'Run inspection',
-              accent: 'cyan',
-            },
-            {
-              title: 'Guided Vehicle Inspection',
-              desc: 'A structured step-by-step inspection flow that surfaces what to look for and records your findings systematically.',
-              href: '/inspection',
-              cta: 'Start inspecting',
-              accent: 'blue',
-            },
-            {
-              title: 'Premium Vehicle History Reports',
-              desc: 'Optional deep-dive history intelligence: ownership chain, accident records, service history, and title verification.',
-              href: '/premium',
-              cta: 'Learn about premium',
-              accent: 'indigo',
-            },
-            {
-              title: 'Final Confidence Report',
-              desc: 'A compiled, exportable report combining your inspection data and optional history intelligence into one clear verdict.',
-              href: '/report',
-              cta: 'View report format',
-              accent: 'cyan',
-            },
-            {
-              title: 'Community Posts & Advice',
-              desc: 'Browse real discussions from other buyers. Share findings, ask questions, get advice on specific makes and models.',
-              href: '/community',
-              cta: 'Explore community',
-              accent: 'blue',
-            },
-            {
-              title: 'Private Messaging',
-              desc: 'Connect directly with other users — discuss vehicles, share insights, or coordinate on shared inspection data.',
-              href: '/messages',
-              cta: 'Open messages',
-              accent: 'indigo',
-            },
-          ].map((feature) => (
-            <div
-              key={feature.title}
-              className="group rounded-3xl border border-white/6 bg-white/2 hover:bg-white/4 hover:border-white/10 p-6 space-y-4 transition-all duration-300"
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Inspection', href: '/inspection' },
+            { label: 'Premium', href: '/premium' },
+            { label: 'Community', href: '/community' },
+          ].map(item => (
+            <Link key={item.href} href={item.href} style={{
+              padding: '7px 14px', borderRadius: 8,
+              fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.5)',
+              textDecoration: 'none', transition: 'all 0.15s',
+            }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.5)'; (e.target as HTMLElement).style.background = 'transparent'; }}
             >
-              <div className={`w-8 h-1 rounded-full ${
-                feature.accent === 'cyan' ? 'bg-cyan-400' :
-                feature.accent === 'blue' ? 'bg-blue-400' : 'bg-indigo-400'
-              }`} />
-              <h3 className="text-white font-semibold text-base">{feature.title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">{feature.desc}</p>
-              <Link
-                href={feature.href}
-                className={`inline-flex items-center gap-1.5 text-xs font-medium transition-colors ${
-                  feature.accent === 'cyan' ? 'text-cyan-400/70 hover:text-cyan-300' :
-                  feature.accent === 'blue' ? 'text-blue-400/70 hover:text-blue-300' : 'text-indigo-400/70 hover:text-indigo-300'
-                }`}
-              >
-                {feature.cta}
-                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-              </Link>
-            </div>
+              {item.label}
+            </Link>
           ))}
         </div>
-      </section>
 
-      {/* HOW IT WORKS */}
-      <section className="border-y border-white/5 bg-gradient-to-b from-transparent via-white/1 to-transparent">
-        <div className="max-w-7xl mx-auto px-6 py-28">
-          <div className="text-center space-y-4 mb-16">
-            <div className="text-xs font-medium text-cyan-400 tracking-widest uppercase">Workflow</div>
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">Four steps to a confident decision</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                step: '01',
-                title: 'Add your vehicle',
-                desc: 'Enter the vehicle details or select from your saved list. The platform anchors all data to this specific vehicle.',
-                href: '/vehicle',
-              },
-              {
-                step: '02',
-                title: 'Run the inspection',
-                desc: 'Work through the guided inspection flow. Your findings are recorded and scored by the AI engine in real time.',
-                href: '/inspection',
-              },
-              {
-                step: '03',
-                title: 'Unlock premium history',
-                desc: 'Optionally add a premium vehicle history report for deeper intelligence. Separate from your free inspection flow.',
-                href: '/premium',
-              },
-              {
-                step: '04',
-                title: 'Review your verdict',
-                desc: 'A final confidence report synthesizes everything. Clear, structured, and ready to inform your buying decision.',
-                href: '/report',
-              },
-            ].map((item, i) => (
-              <Link key={item.step} href={item.href} className="group">
-                <div className="rounded-3xl border border-white/6 bg-white/2 group-hover:bg-white/4 group-hover:border-white/10 p-6 space-y-4 transition-all duration-300 h-full">
-                  <div className="text-4xl font-bold text-white/6 tracking-tighter">{item.step}</div>
-                  <h3 className="text-white font-semibold">{item.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
-                  {i < 3 && (
-                    <div className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 text-white/10 text-2xl">→</div>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+        {/* CTA buttons */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <Link href="/auth" style={{
+            padding: '9px 16px', borderRadius: 10,
+            fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)',
+            border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
+            textDecoration: 'none', display: 'flex', alignItems: 'center',
+            transition: 'all 0.15s',
+          }}>
+            Sign In
+          </Link>
+          <Link href="/inspection" style={{
+            padding: '9px 18px', borderRadius: 10,
+            fontSize: 13, fontWeight: 700, color: '#050810',
+            background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+            textDecoration: 'none', display: 'flex', alignItems: 'center',
+            boxShadow: '0 4px 16px rgba(34,211,238,0.3)',
+            transition: 'all 0.15s',
+          }}>
+            Start Free
+          </Link>
         </div>
-      </section>
+      </div>
+    </nav>
+  )
+}
 
-      {/* PREMIUM REPORT */}
-      <section className="max-w-7xl mx-auto px-6 py-28">
-        <div className="rounded-3xl border border-cyan-500/15 bg-gradient-to-br from-cyan-500/4 via-transparent to-blue-500/4 overflow-hidden">
-          <div className="grid lg:grid-cols-2 gap-0">
-            <div className="p-10 lg:p-14 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium">
-                Optional Premium Add-on
-              </div>
-              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
-                Go deeper with<br />
-                <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
-                  premium history intelligence
-                </span>
-              </h2>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-md">
-                The free inspection workflow gives you a strong foundation. Premium vehicle history reports are a separate, optional layer — unlocking ownership chains, accident records, service logs, and title verification for the specific vehicle you&apos;re evaluating.
-              </p>
-              <ul className="space-y-2">
-                {[
-                  'Not required for the free inspection',
-                  'Tied to a specific vehicle record',
-                  'Unlocks historical data unavailable in inspections',
-                  'Integrated into your final confidence report',
-                  'Accessible from vehicle view or report page',
-                ].map((point) => (
-                  <li key={point} className="flex items-start gap-2.5 text-sm text-slate-400">
-                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link
-                  href="/premium"
-                  className="px-5 py-2.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-400/40 rounded-xl text-sm font-medium transition-all duration-200"
-                >
-                  Learn about Premium
-                </Link>
-                <Link
-                  href="/vehicle"
-                  className="px-5 py-2.5 border border-white/8 text-slate-400 hover:text-white hover:border-white/16 rounded-xl text-sm font-medium transition-all duration-200"
-                >
-                  View Your Vehicles
-                </Link>
-              </div>
+// ─── Hero ─────────────────────────────────────────────────────
+function Hero() {
+  return (
+    <section style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden', padding: '80px 20px' }}>
+
+      {/* Background orbs */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.06) 0%, transparent 70%)', animation: 'orb-drift 18s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '40%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.06) 0%, transparent 70%)', animation: 'orb-drift 24s ease-in-out infinite reverse' }} />
+        <div style={{ position: 'absolute', bottom: '-5%', left: '30%', width: 700, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.04) 0%, transparent 70%)' }} />
+        {/* Grid overlay */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)', backgroundSize: '64px 64px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent)' }} />
+      </div>
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', position: 'relative' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48, alignItems: 'center' }}>
+
+          {/* Left: text */}
+          <div className="animate-fade-up">
+            {/* Badge */}
+            <div style={{ marginBottom: 24 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '6px 14px', borderRadius: 100,
+                background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.2)',
+                fontSize: 12, fontWeight: 600, color: '#22d3ee',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 8px #22d3ee', animation: 'pulse-dot 2s infinite' }} />
+                AI-Powered Inspection Platform
+              </span>
             </div>
 
-            <div className="p-10 lg:p-14 flex items-center">
-              <div className="w-full space-y-3">
-                <div className="text-xs text-slate-600 font-medium tracking-wide mb-4">PREMIUM REPORT INCLUDES</div>
-                {[
-                  { label: 'Ownership & Title History', available: true },
-                  { label: 'Accident & Damage Records', available: true },
-                  { label: 'Service & Maintenance Log', available: true },
-                  { label: 'Odometer Verification', available: true },
-                  { label: 'Theft & Recall Alerts', available: true },
-                  { label: 'Market Value Comparison', available: true },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-white/4">
-                    <span className="text-sm text-slate-400">{item.label}</span>
-                    <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      Included
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            {/* Headline */}
+            <h1 style={{ margin: '0 0 20px', fontSize: 'clamp(36px, 6vw, 58px)', fontWeight: 900, letterSpacing: '-2px', lineHeight: 1.05, color: '#fff' }}>
+              Buy used cars<br />
+              <span className="gradient-text-cyan">with confidence.</span>
+            </h1>
 
-      {/* PLATFORM ACCESS */}
-      <section className="border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-28">
-          <div className="text-center space-y-4 mb-16">
-            <div className="text-xs font-medium text-cyan-400 tracking-widest uppercase">Platform</div>
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">Access every layer</h2>
-            <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
-              The platform is modular. Every section is purpose-built for a different layer of the buying process.
+            {/* Sub */}
+            <p style={{ margin: '0 0 32px', fontSize: 17, color: 'rgba(255,255,255,0.5)', lineHeight: 1.65, maxWidth: 440 }}>
+              AI-guided inspection, smart risk scoring, and premium vehicle history intelligence — everything a serious buyer needs.
             </p>
-          </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { title: 'Dashboard', href: '/dashboard', desc: 'Overview of your inspections, vehicles, and activity at a glance.' },
-              { title: 'Vehicles', href: '/vehicle', desc: 'Manage and track the vehicles you are evaluating or have inspected.' },
-              { title: 'Inspection', href: '/inspection', desc: 'Launch a guided AI inspection for any vehicle in your list.' },
-              { title: 'Reports', href: '/report', desc: 'View your compiled confidence reports with full inspection breakdowns.' },
-              { title: 'Premium', href: '/premium', desc: 'Unlock optional vehicle history intelligence for deeper analysis.' },
-              { title: 'Community', href: '/community', desc: 'Join discussions, browse advice, and share inspection findings.' },
-              { title: 'Messages', href: '/messages', desc: 'Private conversations with other users on the platform.' },
-              { title: 'Profile', href: '/profile', desc: 'Manage your account, preferences, and saved data.' },
-            ].map((card) => (
-              <Link
-                key={card.href}
-                href={card.href}
-                className="group rounded-2xl border border-white/6 bg-white/2 hover:bg-cyan-500/5 hover:border-cyan-500/20 p-5 space-y-3 transition-all duration-300"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-white font-medium text-sm">{card.title}</h3>
-                  <span className="text-white/20 group-hover:text-cyan-400/60 transition-colors text-lg">→</span>
-                </div>
-                <p className="text-slate-600 text-xs leading-relaxed group-hover:text-slate-500 transition-colors">{card.desc}</p>
+            {/* CTAs */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 36 }}>
+              <Link href="/inspection" style={{
+                padding: '14px 28px', borderRadius: 14,
+                background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+                color: '#050810', fontSize: 14, fontWeight: 800,
+                textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+                boxShadow: '0 8px 32px rgba(34,211,238,0.35)',
+                transition: 'all 0.2s',
+              }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Start Free Inspection
               </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COMMUNITY */}
-      <section className="max-w-7xl mx-auto px-6 py-16">
-        <div className="rounded-3xl border border-white/6 bg-white/2 p-10 lg:p-14">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            <div className="space-y-5">
-              <div className="text-xs font-medium text-cyan-400 tracking-widest uppercase">Community Layer</div>
-              <h2 className="text-3xl font-bold tracking-tight">Learn from others buying used cars</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                The platform includes a full community layer — discuss specific vehicles, share your inspection findings, ask questions about makes and models, and message users directly. Collective intelligence improves your individual decisions.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/community"
-                  className="px-5 py-2.5 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-sm font-medium rounded-xl transition-all duration-200"
-                >
-                  Browse Community
-                </Link>
-                <Link
-                  href="/messages"
-                  className="px-5 py-2.5 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-sm font-medium rounded-xl transition-all duration-200"
-                >
-                  Open Messages
-                </Link>
-              </div>
+              <Link href="/dashboard" style={{
+                padding: '14px 24px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600,
+                textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+                backdropFilter: 'blur(12px)',
+                transition: 'all 0.2s',
+              }}>
+                View Dashboard
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </Link>
             </div>
-            <div className="space-y-3">
+
+            {/* Trust row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center' }}>
               {[
-                { user: 'M.K.', text: 'Found hidden frame damage on a 2018 Civic using the inspection checklist. Saved me thousands.', time: '2h ago' },
-                { user: 'R.A.', text: 'The AI risk score flagged the engine before the mechanic even looked at it. Accurate.', time: '5h ago' },
-                { user: 'J.B.', text: 'Premium report showed 3 previous owners that the seller never mentioned. Worth every cent.', time: '1d ago' },
-              ].map((post) => (
-                <div key={post.user} className="rounded-2xl border border-white/5 bg-white/2 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400/30 to-blue-400/30 border border-white/10 flex items-center justify-center text-xs font-medium text-cyan-300">
-                        {post.user[0]}
-                      </div>
-                      <span className="text-xs font-medium text-slate-400">{post.user}</span>
-                    </div>
-                    <span className="text-xs text-slate-700">{post.time}</span>
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{post.text}</p>
+                { value: '124K+', label: 'Inspections' },
+                { value: '96%', label: 'Accuracy' },
+                { value: '31K', label: 'Reports' },
+              ].map(t => (
+                <div key={t.label} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.value}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{t.label}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* CLOSING CTA */}
-      <section className="max-w-7xl mx-auto px-6 py-28">
-        <div className="relative rounded-3xl border border-white/6 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/6 via-transparent to-blue-500/6" />
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-3xl rounded-full" />
-          <div className="relative text-center py-20 px-6 space-y-6">
-            <div className="text-xs font-medium text-cyan-400 tracking-widest uppercase">Get Started</div>
-            <h2 className="text-4xl lg:text-5xl font-bold tracking-tight max-w-2xl mx-auto leading-tight">
-              Your next used car decision<br />
-              <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
-                deserves better data.
-              </span>
-            </h2>
-            <p className="text-slate-500 max-w-lg mx-auto text-sm leading-relaxed">
-              Start with a free AI-guided inspection. Add premium history intelligence when you need it. Know what you&apos;re buying before you sign anything.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 pt-2">
-              <Link
-                href="/inspection"
-                className="px-7 py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm rounded-2xl transition-all duration-200 shadow-lg shadow-cyan-500/20"
-              >
-                Start Free Inspection
-              </Link>
-              <Link
-                href="/premium"
-                className="px-7 py-3.5 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-sm font-medium rounded-2xl transition-all duration-200"
-              >
-                Explore Premium
-              </Link>
+          {/* Right: app preview card */}
+          <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
+              {/* Glow behind card */}
+              <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(ellipse, rgba(34,211,238,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+              {/* Main card */}
+              <div style={{ ...S.glass, borderRadius: 24, padding: 24, position: 'relative' }}>
+                {/* Top: vehicle header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Inspecting</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px' }}>2019 BMW 3 Series</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>87 000 km · 14 500 EUR</div>
+                  </div>
+                  {/* Score ring */}
+                  <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle cx="30" cy="30" r="23" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="4"/>
+                    <circle cx="30" cy="30" r="23" fill="none" stroke="url(#scoreGrad)" strokeWidth="4"
+                      strokeLinecap="round" strokeDasharray="144.5" strokeDashoffset="18.8"
+                      transform="rotate(-90 30 30)"
+                    />
+                    <defs>
+                      <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#22d3ee"/>
+                        <stop offset="100%" stopColor="#818cf8"/>
+                      </linearGradient>
+                    </defs>
+                    <text x="30" y="34" textAnchor="middle" fontSize="14" fontWeight="900" fill="#fff">87</text>
+                  </svg>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 6 }}>
+                    <span>Inspection progress</span>
+                    <span style={{ color: '#22d3ee', fontWeight: 700 }}>73%</span>
+                  </div>
+                  <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4 }}>
+                    <div style={{ height: '100%', width: '73%', background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: 4 }}/>
+                  </div>
+                </div>
+
+                {/* Phase chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+                  {[
+                    { label: 'Exterior', done: true },
+                    { label: 'Interior', done: true },
+                    { label: 'Mechanical', done: false },
+                    { label: 'Test Drive', done: false },
+                  ].map(p => (
+                    <span key={p.label} style={{
+                      padding: '4px 10px', borderRadius: 100,
+                      fontSize: 11, fontWeight: 600,
+                      background: p.done ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${p.done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      color: p.done ? '#22c55e' : 'rgba(255,255,255,0.35)',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      {p.done && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                      {p.label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* AI findings preview */}
+                <div style={{ ...S.glassAccent, borderRadius: 14, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>AI Findings</div>
+                  {[
+                    { label: 'Left door panel gap', severity: 'warn' },
+                    { label: 'Rear bumper repaint', severity: 'warn' },
+                    { label: 'Engine bay clean', severity: 'ok' },
+                  ].map(f => (
+                    <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: f.severity === 'ok' ? '#22c55e' : '#f59e0b', boxShadow: `0 0 6px ${f.severity === 'ok' ? '#22c55e' : '#f59e0b'}60` }} />
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{f.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Floating pill */}
+              <div style={{
+                position: 'absolute', bottom: -16, left: '50%', transform: 'translateX(-50%)',
+                padding: '8px 16px', borderRadius: 100, whiteSpace: 'nowrap',
+                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)',
+                backdropFilter: 'blur(12px)', fontSize: 12, fontWeight: 700, color: '#22d3ee',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 8px #22d3ee', animation: 'pulse-dot 2s infinite' }} />
+                AI analysing photos…
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  )
+}
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-            <div className="space-y-4 lg:col-span-1">
-              <div className="text-white font-semibold tracking-tight">
-                <span className="text-cyan-400">Used Car</span> Inspector AI
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-xs">
-                AI-powered inspection intelligence for smarter used car buying decisions. Free inspection workflow. Optional premium history add-ons.
-              </p>
+// ─── Stats bar ─────────────────────────────────────────────────
+function StatsBar() {
+  const stats = [
+    { value: '124K+', label: 'Inspections Analyzed', icon: '🔍' },
+    { value: '89K',   label: 'Risk Signals Identified', icon: '⚠' },
+    { value: '31K',   label: 'Premium Reports', icon: '★' },
+    { value: '96%',   label: 'Buyer Confidence', icon: '✓' },
+  ]
+  return (
+    <section style={{ borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }} className="stats-grid">
+          {stats.map((s) => (
+            <div key={s.label} style={{ padding: '28px 24px', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 6, fontWeight: 500 }}>{s.label}</div>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
-            <div className="space-y-3">
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Inspect</div>
-              {[
+// ─── Features ──────────────────────────────────────────────────
+function Features() {
+  const features = [
+    {
+      title: 'AI Risk Scoring',
+      desc: 'Multi-vector analysis across dozens of inspection inputs delivers a calibrated risk score with full category breakdowns.',
+      href: '/inspection',
+      cta: 'Run inspection',
+      color: '#22d3ee',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      ),
+    },
+    {
+      title: 'AI Model Research',
+      desc: 'Before you inspect, AI surfaces known issues and common failure points specific to that exact make, model, and year.',
+      href: '/inspection',
+      cta: 'See it in action',
+      color: '#818cf8',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      ),
+    },
+    {
+      title: 'Photo AI Analysis',
+      desc: 'Take photos of any panel, and the AI detects repaints, panel gaps, structural deformations, and colour inconsistencies.',
+      href: '/inspection',
+      cta: 'Start capturing',
+      color: '#22d3ee',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      ),
+    },
+    {
+      title: 'Guided Inspection',
+      desc: 'A structured step-by-step flow across Exterior, Interior, Mechanical, Test Drive and Documents — nothing missed.',
+      href: '/inspection',
+      cta: 'View flow',
+      color: '#818cf8',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+      ),
+    },
+    {
+      title: 'Premium History Reports',
+      desc: 'Optional deep-dive: ownership chain, accident records, service history, odometer verification, theft and recall alerts.',
+      href: '/premium',
+      cta: 'Learn about premium',
+      color: '#a855f7',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      ),
+    },
+    {
+      title: 'Confidence Report',
+      desc: 'A final compiled report combining your inspection, AI analysis and premium history into one clear buy/pass verdict.',
+      href: '/report',
+      cta: 'View report format',
+      color: '#22c55e',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ ...S.eyebrow, justifyContent: 'center', marginBottom: 16 }}>Platform Capabilities</div>
+        <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
+          Built for serious buyers
+        </h2>
+        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.42)', maxWidth: 480, margin: '0 auto', lineHeight: 1.65 }}>
+          Every layer of the platform is purpose-built to give you a cleaner, more confident view of any used vehicle.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+        {features.map(f => (
+          <Link key={f.title} href={f.href} style={{ textDecoration: 'none' }}>
+            <div style={{
+              ...S.glass, borderRadius: 20, padding: 24,
+              height: '100%', display: 'flex', flexDirection: 'column', gap: 12,
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
+              className="card-hover-accent"
+            >
+              {/* Icon */}
+              <div style={{
+                width: 44, height: 44, borderRadius: 13,
+                background: `${f.color}12`, border: `1px solid ${f.color}25`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: f.color,
+              }}>
+                {f.icon}
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 8, letterSpacing: '-0.2px' }}>{f.title}</div>
+                <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.42)', lineHeight: 1.65 }}>{f.desc}</p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: f.color }}>
+                {f.cta}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── How it works ──────────────────────────────────────────────
+function HowItWorks() {
+  const steps = [
+    { n: '01', title: 'Add your vehicle', desc: 'Enter make, model, year — the platform anchors all AI and inspection data to this exact car.', href: '/vehicle' },
+    { n: '02', title: 'AI researches it', desc: 'Instantly surfaces known issues, common failure points, and inspection priorities for your exact model.', href: '/inspection' },
+    { n: '03', title: 'Run the inspection', desc: 'Step-by-step guided flow. Take photos. The AI analyses each one in real time for visual anomalies.', href: '/inspection' },
+    { n: '04', title: 'Get your verdict', desc: 'A final confidence report with an AI risk score, clear reasoning, and a buy / pass recommendation.', href: '/report' },
+  ]
+
+  return (
+    <section style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.01), transparent)' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{ ...S.eyebrow, justifyContent: 'center', marginBottom: 16 }}>Workflow</div>
+          <h2 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
+            Four steps to a confident decision
+          </h2>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          {steps.map((step, i) => (
+            <Link key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
+              <div style={{ ...S.glass, borderRadius: 20, padding: 24, height: '100%', cursor: 'pointer', transition: 'all 0.2s' }} className="card-hover">
+                {/* Step number */}
+                <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: '-3px', color: 'rgba(255,255,255,0.06)', marginBottom: 16, lineHeight: 1 }}>
+                  {step.n}
+                </div>
+                {/* Accent dot for current step */}
+                <div style={{ width: 32, height: 3, borderRadius: 3, background: i % 2 === 0 ? '#22d3ee' : '#818cf8', marginBottom: 16 }} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 10, letterSpacing: '-0.2px' }}>{step.title}</div>
+                <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.65 }}>{step.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Premium section ───────────────────────────────────────────
+function PremiumSection() {
+  return (
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 96px' }}>
+      <div style={{
+        borderRadius: 24,
+        background: 'linear-gradient(135deg, rgba(34,211,238,0.05) 0%, rgba(168,85,247,0.04) 100%)',
+        border: '1px solid rgba(34,211,238,0.14)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        {/* Glow */}
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.06), transparent)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 0 }}>
+          {/* Left content */}
+          <div style={{ padding: '48px 40px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 100, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', fontSize: 11, fontWeight: 700, color: '#a855f7', letterSpacing: '0.06em', marginBottom: 20 }}>
+              OPTIONAL PREMIUM ADD-ON
+            </div>
+            <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
+              Go deeper with<br />
+              <span className="gradient-text-cyan">premium history intelligence</span>
+            </h2>
+            <p style={{ margin: '0 0 28px', fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, maxWidth: 400 }}>
+              Free inspection gives you a strong foundation. Premium unlocks ownership chains, accident records, service logs, and title verification — tied to your specific vehicle.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link href="/premium" style={{
+                padding: '12px 22px', borderRadius: 12,
+                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)',
+                color: '#22d3ee', fontSize: 13, fontWeight: 700, textDecoration: 'none',
+              }}>
+                Learn about Premium
+              </Link>
+              <Link href="/vehicle" style={{
+                padding: '12px 20px', borderRadius: 12,
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+              }}>
+                View Vehicles
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: feature list */}
+          <div style={{ padding: '48px 40px', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Report Includes</div>
+            {[
+              'Ownership & Title History',
+              'Accident & Damage Records',
+              'Service & Maintenance Log',
+              'Odometer Verification',
+              'Theft & Recall Alerts',
+              'Market Value Comparison',
+            ].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Testimonials ──────────────────────────────────────────────
+function Testimonials() {
+  const posts = [
+    { initials: 'MK', name: 'M. Kovač', text: 'Found hidden frame damage on a 2018 Civic using the checklist. The AI flagged the panel gap before I even looked closely. Saved me thousands.', time: '2h ago', rating: 5 },
+    { initials: 'RA', name: 'R. Andric', text: 'The AI risk score flagged a cooling issue before the mechanic even opened the hood. Bought the car at a €1,200 discount because I had the data to negotiate.', time: '5h ago', rating: 5 },
+    { initials: 'JB', name: 'J. Berisha', text: 'Premium report showed 3 previous owners the seller never mentioned. That\'s the kind of information that changes a buying decision completely.', time: '1d ago', rating: 5 },
+  ]
+
+  return (
+    <section style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.005)' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ ...S.eyebrow, justifyContent: 'center', marginBottom: 16 }}>Community</div>
+          <h2 style={{ margin: 0, fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
+            Real buyers. Real results.
+          </h2>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+          {posts.map(p => (
+            <div key={p.initials} style={{ ...S.glass, borderRadius: 20, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Stars */}
+              <div style={{ display: 'flex', gap: 2 }}>
+                {Array.from({ length: p.rating }).map((_, i) => (
+                  <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                ))}
+              </div>
+
+              <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, flex: 1 }}>"{p.text}"</p>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(129,140,248,0.2))',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 800, color: '#22d3ee',
+                  }}>
+                    {p.initials}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>{p.name}</span>
+                </div>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>{p.time}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Closing CTA ───────────────────────────────────────────────
+function ClosingCTA() {
+  return (
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 96px' }}>
+      <div style={{
+        borderRadius: 24, overflow: 'hidden', position: 'relative',
+        background: 'linear-gradient(135deg, rgba(34,211,238,0.05), rgba(129,140,248,0.04))',
+        border: '1px solid rgba(34,211,238,0.12)',
+        padding: '72px 32px', textAlign: 'center',
+      }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.08), transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -60, left: -40, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.06), transparent)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative' }}>
+          <div style={{ ...S.eyebrow, justifyContent: 'center', marginBottom: 20 }}>Get Started</div>
+          <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', lineHeight: 1.05, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+            Your next car decision<br />
+            <span className="gradient-text-cyan">deserves better data.</span>
+          </h2>
+          <p style={{ margin: '0 auto 36px', fontSize: 15, color: 'rgba(255,255,255,0.42)', maxWidth: 440, lineHeight: 1.65 }}>
+            Start with a free inspection. Add premium history when you need it. Know what you're buying before you sign anything.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+            <Link href="/inspection" style={{
+              padding: '16px 32px', borderRadius: 14,
+              background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+              color: '#050810', fontSize: 15, fontWeight: 800,
+              textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 8px 32px rgba(34,211,238,0.35)',
+            }}>
+              Start Free Inspection
+            </Link>
+            <Link href="/premium" style={{
+              padding: '16px 28px', borderRadius: 14,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.65)', fontSize: 15, fontWeight: 600,
+              textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+              backdropFilter: 'blur(12px)',
+            }}>
+              Explore Premium
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Footer ────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 32, marginBottom: 40 }}>
+          <div style={{ gridColumn: 'span 1' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', marginBottom: 12 }}>
+              <span style={{ color: '#22d3ee' }}>Car Inspector</span> AI
+            </div>
+            <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.28)', lineHeight: 1.65, maxWidth: 200 }}>
+              AI-powered inspection intelligence for smarter used car buying decisions.
+            </p>
+          </div>
+
+          {[
+            {
+              title: 'Inspect',
+              links: [
                 { label: 'Start Inspection', href: '/inspection' },
                 { label: 'My Vehicles', href: '/vehicle' },
                 { label: 'View Reports', href: '/report' },
                 { label: 'Premium History', href: '/premium' },
-              ].map((link) => (
-                <Link key={link.href} href={link.href} className="block text-sm text-slate-600 hover:text-slate-400 transition-colors">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Platform</div>
-              {[
+              ],
+            },
+            {
+              title: 'Platform',
+              links: [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Community', href: '/community' },
                 { label: 'Messages', href: '/messages' },
                 { label: 'Profile', href: '/profile' },
-              ].map((link) => (
-                <Link key={link.href} href={link.href} className="block text-sm text-slate-600 hover:text-slate-400 transition-colors">
-                  {link.label}
-                </Link>
-              ))}
+              ],
+            },
+          ].map(col => (
+            <div key={col.title}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>{col.title}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {col.links.map(l => (
+                  <Link key={l.href} href={l.href} style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', textDecoration: 'none', transition: 'color 0.15s' }}>
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
             </div>
+          ))}
+        </div>
 
-            <div className="space-y-3">
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Account</div>
-              {[
-                { label: 'Sign In / Register', href: '/auth' },
-                { label: 'Profile Settings', href: '/profile' },
-                { label: 'Dashboard', href: '/dashboard' },
-              ].map((link) => (
-                <Link key={link.href} href={link.href} className="block text-sm text-slate-600 hover:text-slate-400 transition-colors">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-white/5 pt-6 flex flex-wrap items-center justify-between gap-4">
-            <span className="text-xs text-slate-700">Used Car Inspector AI — AI-guided automotive intelligence platform.</span>
-            <div className="flex gap-4">
-              <Link href="/auth" className="text-xs text-slate-700 hover:text-slate-500 transition-colors">Sign In</Link>
-              <Link href="/inspection" className="text-xs text-slate-700 hover:text-slate-500 transition-colors">Start Free</Link>
-            </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>Car Inspector AI — AI-guided automotive intelligence.</span>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Link href="/auth" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }}>Sign In</Link>
+            <Link href="/inspection" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }}>Start Free</Link>
           </div>
         </div>
-      </footer>
+      </div>
+    </footer>
+  )
+}
 
+// ─── Page ─────────────────────────────────────────────────────
+export default function Home() {
+  return (
+    <div style={{ minHeight: '100svh', background: '#080c14', color: '#fff', overflowX: 'hidden' }}>
+      <LandingNav />
+      <Hero />
+      <StatsBar />
+      <Features />
+      <HowItWorks />
+      <PremiumSection />
+      <Testimonials />
+      <ClosingCTA />
+      <Footer />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 // =============================================================================
-// App Shell Layout — Mobile-First
-// Mobile: top bar + bottom navigation
+// App Shell — Mobile-First Layout
+// Mobile:  glass top-bar + bottom navigation
 // Desktop: sidebar + topbar
 // =============================================================================
 
@@ -14,15 +14,15 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':  'Overview',
-  '/vehicle':    'Vehicles',
-  '/inspection': 'Inspection',
-  '/report':     'Report',
-  '/premium':    'Premium',
-  '/community':  'Community',
-  '/messages':   'Messages',
-  '/profile':    'Profile',
+const PAGE_META: Record<string, { title: string; accent?: string }> = {
+  '/dashboard':  { title: 'Overview' },
+  '/vehicle':    { title: 'Vehicles' },
+  '/inspection': { title: 'Inspection', accent: '#22d3ee' },
+  '/report':     { title: 'Report' },
+  '/premium':    { title: 'Premium', accent: '#a855f7' },
+  '/community':  { title: 'Community' },
+  '/messages':   { title: 'Messages' },
+  '/profile':    { title: 'Profile' },
 }
 
 interface AppShellProps {
@@ -34,7 +34,6 @@ export default function AppShell({ children }: AppShellProps) {
   const router   = useRouter()
   const pathname = usePathname()
 
-  // Hydration guard — Zustand persist rehydrates from localStorage client-side only.
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => { setHydrated(true) }, [])
 
@@ -47,11 +46,11 @@ export default function AppShell({ children }: AppShellProps) {
     refreshSession()
   }, [hydrated, isAuthenticated])
 
-  if (!hydrated) return <div style={{ minHeight: '100vh', background: '#080c14' }} />
+  if (!hydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (!isAuthenticated) return null
 
-  const pageTitle = PAGE_TITLES[pathname] ?? 'Used Car Inspector AI'
-  const initials  = user?.name
+  const meta    = PAGE_META[pathname] ?? { title: 'Car Inspector AI' }
+  const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
     : 'U'
 
@@ -68,7 +67,7 @@ export default function AppShell({ children }: AppShellProps) {
         style={{ height: '100vh', overflow: 'hidden', background: '#080c14' }}
       >
         <Sidebar />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#080c14' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Topbar />
           <main style={{ flex: 1, overflowY: 'auto', padding: '24px', scrollbarWidth: 'thin', background: '#080c14' }}>
             {children}
@@ -76,19 +75,19 @@ export default function AppShell({ children }: AppShellProps) {
         </div>
       </div>
 
-      {/* ── Mobile layout (< 768px) ── */}
+      {/* ── Mobile layout (<768px) ── */}
       <div
         className="mobile-only"
-        style={{ flexDirection: 'column', minHeight: '100vh', background: '#080c14' }}
+        style={{ flexDirection: 'column', minHeight: '100svh', background: '#080c14' }}
       >
-        {/* Mobile top bar */}
+        {/* ── Premium glass top bar ── */}
         <header style={{
-          height: 52,
+          height: 56,
           flexShrink: 0,
-          background: 'rgba(8,12,20,0.97)',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          background: 'rgba(8,12,20,0.95)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -97,50 +96,60 @@ export default function AppShell({ children }: AppShellProps) {
           top: 0,
           zIndex: 40,
         }}>
-          {/* Brand / page title */}
+          {/* Left: brand mark + page title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: 'linear-gradient(135deg, #22d3ee, #818cf8)',
+                width: 32, height: 32, borderRadius: 10,
+                background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
+                boxShadow: '0 0 12px rgba(34,211,238,0.25)',
               }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#050810" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
               </div>
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
-              {pageTitle}
-            </span>
+
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: 15, fontWeight: 800, color: '#fff',
+                letterSpacing: '-0.4px', lineHeight: 1.1,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {meta.title}
+              </div>
+            </div>
           </div>
 
-          {/* Right controls */}
+          {/* Right: premium badge + avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* More menu trigger */}
             <Link href="/premium" style={{
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 10px',
-              background: 'rgba(168,85,247,0.1)',
-              border: '1px solid rgba(168,85,247,0.2)',
-              borderRadius: 7,
+              background: 'rgba(168,85,247,0.08)',
+              border: '1px solid rgba(168,85,247,0.18)',
+              borderRadius: 8,
               fontSize: 11, fontWeight: 700, color: '#a855f7',
-              textDecoration: 'none',
+              textDecoration: 'none', letterSpacing: '0.02em',
             }}>
-              Premium
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#a855f7" stroke="none">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              Pro
             </Link>
-            {/* Avatar */}
+
+            {/* Avatar / logout */}
             <button
               onClick={handleLogout}
-              aria-label="Account"
+              aria-label="Sign out"
               style={{
-                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(129,140,248,0.2))',
-                border: '1.5px solid rgba(34,211,238,0.3)',
+                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(129,140,248,0.15))',
+                border: '1.5px solid rgba(34,211,238,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 800, color: '#22d3ee',
-                cursor: 'pointer',
+                cursor: 'pointer', letterSpacing: '0.02em',
               }}
             >
               {initials}
@@ -148,20 +157,19 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        {/* Mobile main content */}
+        {/* ── Main content ── */}
         <main
           className="mobile-page-content"
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '16px',
+            padding: '16px 16px 0',
             background: '#080c14',
           }}
         >
           {children}
         </main>
 
-        {/* Bottom navigation */}
         <BottomNav />
       </div>
     </>
