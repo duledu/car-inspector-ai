@@ -9,6 +9,27 @@ import { immer } from 'zustand/middleware/immer'
 import type { AuthUser, AuthSession, LoginCredentials, RegisterPayload } from '@/types'
 import { authApi } from '@/services/api/auth.api'
 
+// ─── Error message resolver ───────────────────────────────────────────────────
+function resolveAuthError(err: any, action: 'login' | 'register'): string {
+  const code: string = err?.code ?? ''
+  const status: number = err?.statusCode ?? 0
+
+  if (code === 'CONFIG_ERROR' || status === 503)
+    return 'Authentication service is temporarily unavailable. Please try again later.'
+  if (code === 'INVALID_CREDENTIALS' || status === 401)
+    return 'Invalid email or password.'
+  if (code === 'EMAIL_IN_USE' || status === 409)
+    return 'An account with this email already exists.'
+  if (code === 'VALIDATION_ERROR' || status === 422)
+    return action === 'login' ? 'Please enter a valid email and password.' : 'Please fill in all required fields correctly.'
+  if (status === 500)
+    return 'Something went wrong on our end. Please try again.'
+  if (!status)
+    return 'Cannot connect to server. Check your internet connection.'
+
+  return err?.message ?? (action === 'login' ? 'Login failed.' : 'Registration failed.')
+}
+
 interface UserState {
   user: AuthUser | null
   session: AuthSession | null
@@ -53,7 +74,7 @@ export const useUserStore = create<UserStore>()(
         } catch (err: any) {
           set((state) => {
             state.isLoading = false
-            state.error = err?.message ?? 'Login failed'
+            state.error = resolveAuthError(err, 'login')
           })
           throw err
         }
@@ -72,7 +93,7 @@ export const useUserStore = create<UserStore>()(
         } catch (err: any) {
           set((state) => {
             state.isLoading = false
-            state.error = err?.message ?? 'Registration failed'
+            state.error = resolveAuthError(err, 'register')
           })
           throw err
         }

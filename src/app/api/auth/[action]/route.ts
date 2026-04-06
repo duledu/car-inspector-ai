@@ -72,6 +72,15 @@ export async function PATCH(
 // ─── Handlers ────────────────────────────────────────────────────────────────
 
 async function handleLogin(body: unknown) {
+  // Guard: missing JWT_SECRET is a config error, not a credential error
+  if (!process.env.JWT_SECRET) {
+    console.error('[login] JWT_SECRET environment variable is not set')
+    return NextResponse.json(
+      { message: 'Authentication service is not configured. Contact support.', code: 'CONFIG_ERROR' },
+      { status: 503 }
+    )
+  }
+
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
@@ -89,7 +98,7 @@ async function handleLogin(body: unknown) {
 
     console.log('[login] user found:', user ? user.id : 'null')
 
-    if (!user || !user.passwordHash) {
+    if (!user?.passwordHash) {
       return NextResponse.json(
         { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
         { status: 401 }
@@ -127,7 +136,7 @@ async function handleLogin(body: unknown) {
     console.error('[login] ERROR:', error)
     const message = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { message: 'Login failed', code: 'INTERNAL_ERROR', detail: message },
+      { message: 'An unexpected error occurred. Please try again.', code: 'INTERNAL_ERROR', detail: message },
       { status: 500 }
     )
   }
