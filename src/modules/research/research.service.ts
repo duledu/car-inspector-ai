@@ -10,6 +10,8 @@ export interface ResearchParams {
   make: string
   model: string
   year: number
+  engineCc?: number
+  powerKw?: number
   engine?: string
   trim?: string
 }
@@ -21,17 +23,37 @@ export interface ResearchOutput extends VehicleResearchResult {
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(params: ResearchParams): string {
-  const { make, model, year, engine, trim } = params
-  const vehicleDesc = [year, make, model, trim, engine].filter(Boolean).join(' ')
+  const { make, model, year, engineCc, powerKw, engine, trim } = params
+
+  // Build a precise engine identity string when cc / kW are known.
+  // e.g. "2.0L (1995cc) 135kW" — this pins the exact variant, not just the nameplate.
+  const litres    = engineCc ? (engineCc / 1000).toFixed(1) : null
+  const ccLabel   = engineCc ? `${engineCc}cc` : null
+  const litreLabel = litres  ? `${litres}L`   : null
+  const kwLabel   = powerKw  ? `${powerKw}kW` : null
+
+  // Human-readable engine spec, e.g. "2.0L (1995cc) 135kW"
+  const engineSpec = [litreLabel && ccLabel ? `${litreLabel} (${ccLabel})` : (litreLabel ?? ccLabel), kwLabel]
+    .filter(Boolean).join(' ')
+
+  // Full vehicle description for the prompt heading
+  const vehicleDesc = [year, make, model, trim, engine || engineSpec].filter(Boolean).join(' ')
+
+  // Precision note injected when we have specific engine data — tells the AI
+  // to focus on problems for THIS variant, not the whole model range.
+  const variantNote = engineSpec
+    ? `\nEngine variant: **${engineSpec}** — focus issues on THIS specific engine/gearbox combination, not the entire model range.`
+    : ''
 
   return `You are an expert automotive advisor helping a buyer inspect a used car.
 
-The buyer is about to inspect a **${vehicleDesc}**.
+The buyer is about to inspect a **${vehicleDesc}**.${variantNote}
 
-Generate a practical pre-inspection guide based on real known issues, owner reports, and expert knowledge for this exact vehicle.
+Generate a practical pre-inspection guide based on real known issues, owner reports, and expert knowledge for this exact vehicle and engine variant.
 
 Rules:
-- Be specific to this make/model/year generation
+- Be specific to this make/model/year AND engine displacement/power where provided
+- Different engine variants have different failure modes — prioritise variant-specific problems
 - Use "commonly reported", "owners often note" language — not absolute facts
 - Focus on what a buyer physically checking this car should look for
 - Include repair cost context where it is a genuine financial risk
@@ -44,7 +66,7 @@ Respond ONLY with valid JSON. No markdown, no code fences, no prose before or af
   "generatedAt": "${new Date().toISOString()}",
   "confidence": "high",
   "overallRiskLevel": "moderate",
-  "summary": "1-2 sentence overview of reliability and what buyers should know",
+  "summary": "1-2 sentence overview of reliability for this specific variant and what buyers should know",
   "sections": {
     "commonProblems": { "id": "commonProblems", "title": "Common Problems", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["COMMON_ISSUE"] }] },
     "highPriorityChecks": { "id": "highPriorityChecks", "title": "High-Priority Checks", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["HIGH_ATTENTION"] }] },

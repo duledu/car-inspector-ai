@@ -8,6 +8,7 @@ import AppShell from '../AppShell'
 
 const EMPTY_FORM: CreateVehiclePayload = {
   make: '', model: '', year: new Date().getFullYear(),
+  engineCc: undefined, powerKw: undefined,
   mileage: undefined, askingPrice: undefined, currency: 'EUR',
   sellerType: 'PRIVATE', vin: '', notes: '',
 }
@@ -173,7 +174,39 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 2: Mileage / Asking Price */}
+            {/* Row 2: Engine CC / Power kW */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
+              <Field label="Engine (cc)">
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={inp} type="number"
+                    value={form.engineCc ?? ''}
+                    onChange={e => set({ engineCc: e.target.value ? Number.parseInt(e.target.value) : undefined })}
+                    placeholder="1995"
+                    min={500} max={10000}
+                  />
+                  {form.engineCc && (
+                    <span style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      fontSize: 11, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none',
+                    }}>
+                      {(form.engineCc / 1000).toFixed(1)}L
+                    </span>
+                  )}
+                </div>
+              </Field>
+              <Field label="Power (kW)">
+                <input
+                  style={inp} type="number"
+                  value={form.powerKw ?? ''}
+                  onChange={e => set({ powerKw: e.target.value ? Number.parseInt(e.target.value) : undefined })}
+                  placeholder="135"
+                  min={1} max={2000}
+                />
+              </Field>
+            </div>
+
+            {/* Row 3: Mileage / Asking Price */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
               <Field label="Mileage (km)">
                 <input style={inp} type="number" value={form.mileage ?? ''} onChange={e => set({ mileage: e.target.value ? Number.parseInt(e.target.value) : undefined })} placeholder="85 000" />

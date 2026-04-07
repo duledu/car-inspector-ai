@@ -53,7 +53,7 @@ function ScoreRing({ score }: Readonly<{ score: number }>) {
 function SectionLabel({ text, action, actionHref }: Readonly<{ text: string; action?: string; actionHref?: string }>) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
         {text}
       </span>
       {action && actionHref && (
@@ -88,16 +88,17 @@ export default function DashboardPage() {
     <AppShell>
       <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* ══ Hero card ══════════════════════════════════════════ */}
-        <div style={{
-          borderRadius: 22, overflow: 'hidden', position: 'relative',
-          background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(129,140,248,0.06) 50%, rgba(168,85,247,0.04) 100%)',
-          border: '1px solid rgba(34,211,238,0.15)',
-          padding: '22px 20px 20px',
-        }}>
-          {/* Ambient glow */}
-          <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.07), transparent 70%)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: -20, left: -20, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.06), transparent 70%)', pointerEvents: 'none' }} />
+        {/* ══ Hero card — 3D glass ════════════════════════════════ */}
+        <div className="glass-card-wrap">
+          <div className="glass-card-glow" />
+          <div
+            className="premium-glass-card"
+            style={{
+              padding: '22px 20px 20px',
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.07) 0%, rgba(129,140,248,0.04) 55%, rgba(168,85,247,0.03) 100%)',
+              border: '1px solid rgba(34,211,238,0.18)',
+            }}
+          >
 
           {/* Top row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, position: 'relative', marginBottom: 18 }}>
@@ -112,15 +113,15 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                     {activeVehicle.mileage && (
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>{activeVehicle.mileage.toLocaleString()} km</span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>{activeVehicle.mileage.toLocaleString()} km</span>
                     )}
                     {activeVehicle.askingPrice && (
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>
                         {activeVehicle.askingPrice.toLocaleString()} {activeVehicle.currency}
                       </span>
                     )}
                     {activeVehicle.vin && (
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.48)', fontFamily: 'var(--font-mono)' }}>
                         {activeVehicle.vin.slice(0, 8)}…
                       </span>
                     )}
@@ -131,7 +132,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 7, letterSpacing: '-0.5px' }}>
                     Get started
                   </div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, maxWidth: 280 }}>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6, maxWidth: 280 }}>
                     Add a vehicle to begin your AI-guided inspection.
                   </div>
                 </>
@@ -150,7 +151,7 @@ export default function DashboardPage() {
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#22d3ee', lineHeight: 1, letterSpacing: '-1px' }}>
                   {vehicles.length}
                 </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   cars
                 </div>
               </div>
@@ -161,8 +162,8 @@ export default function DashboardPage() {
           {session && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)' }}>
-                  Phase: <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>{PHASE_LABELS[currentPhase] ?? currentPhase}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>
+                  Phase: <span style={{ color: 'rgba(255,255,255,0.82)', fontWeight: 500 }}>{PHASE_LABELS[currentPhase] ?? currentPhase}</span>
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#22d3ee' }}>{progress}%</span>
               </div>
@@ -204,7 +205,8 @@ export default function DashboardPage() {
               </svg>
             </Link>
           </div>
-        </div>
+          </div>{/* /premium-glass-card */}
+        </div>{/* /glass-card-wrap */}
 
         {/* ══ Stats row ══════════════════════════════════════════ */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>

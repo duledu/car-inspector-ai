@@ -120,8 +120,8 @@ export function Sidebar() {
                   padding: '8px 12px',
                   borderRadius: 9,
                   fontSize: 13,
-                  fontWeight: active ? 600 : 400,
-                  color: active ? '#22d3ee' : 'rgba(255,255,255,0.38)',
+                  fontWeight: active ? 600 : 450,
+                  color: active ? '#22d3ee' : 'rgba(255,255,255,0.68)',
                   background: active ? 'rgba(34,211,238,0.07)' : 'transparent',
                   border: active ? '1px solid rgba(34,211,238,0.14)' : '1px solid transparent',
                   transition: 'all 0.15s ease',
@@ -131,7 +131,7 @@ export function Sidebar() {
                   gap: 9,
                 }}
               >
-                <span style={{ opacity: active ? 1 : 0.6, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ opacity: active ? 1 : 0.78, flexShrink: 0 }}>{item.icon}</span>
                 {item.label}
               </div>
             </Link>
@@ -146,7 +146,7 @@ export function Sidebar() {
             style={{
               padding: '7px 12px',
               fontSize: 11,
-              color: 'rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.42)',
               borderRadius: 8,
               letterSpacing: '0.01em',
               display: 'flex',
