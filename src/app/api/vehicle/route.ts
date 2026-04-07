@@ -11,6 +11,8 @@ const CreateSchema = z.object({
   askingPrice: z.number().positive().optional(),
   currency: z.string().default('EUR'),
   sellerType: z.enum(['PRIVATE', 'DEALER', 'INDEPENDENT_DEALER']).default('PRIVATE'),
+  engineCc: z.number().int().positive().max(10000).optional(),
+  powerKw:  z.number().int().positive().max(2000).optional(),
   vin: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -24,7 +26,18 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'desc' },
   })
 
-  return NextResponse.json({ data: vehicles })
+  // Decode engine spec from notes for vehicles created before the DB migration.
+  const decoded = vehicles.map(v => {
+    const match = v.notes?.match(/\[engine:(\d*)cc\/(\d*)kw\]/)
+    if (!match) return { ...v, engineCc: null, powerKw: null }
+    return {
+      ...v,
+      engineCc: match[1] ? Number.parseInt(match[1]) : null,
+      powerKw:  match[2] ? Number.parseInt(match[2]) : null,
+    }
+  })
+
+  return NextResponse.json({ data: decoded })
 }
 
 export async function POST(req: NextRequest) {
@@ -37,12 +50,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
   }
 
+  // Destructure fields that don't have DB columns yet (engineCc / powerKw).
+  // They are encoded into the notes field so they survive the round-trip until
+  // the DB migration adds the real columns (run: prisma migrate dev).
+  const { engineCc, powerKw, notes, ...coreData } = parsed.data
+
+  // Encode engine spec into notes when provided, preserving any user notes.
+  const engineTag = engineCc || powerKw
+    ? `[engine:${engineCc ?? ''}cc/${powerKw ?? ''}kw]`
+    : ''
+  const mergedNotes = [notes, engineTag].filter(Boolean).join(' ') || undefined
+
   const vehicle = await prisma.vehicle.create({
     data: {
       userId: auth.userId,
-      ...parsed.data,
+      ...coreData,
+      notes: mergedNotes,
     },
   })
 
-  return NextResponse.json({ data: vehicle }, { status: 201 })
+  // Re-attach parsed engine fields to the response so the frontend store
+  // receives the complete vehicle object (they're already in the returned notes too).
+  return NextResponse.json({
+    data: { ...vehicle, engineCc: engineCc ?? null, powerKw: powerKw ?? null },
+  }, { status: 201 })
 }

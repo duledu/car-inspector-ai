@@ -41,10 +41,10 @@ const PHASES: { phase: InspectionPhase; label: string; short: string; category?:
 ]
 
 const STATUS_CFG = {
-  PENDING: { bg: 'transparent',            border: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.28)', icon: null },
-  OK:      { bg: 'rgba(34,197,94,0.07)',   border: 'rgba(34,197,94,0.25)',   text: '#22c55e',                icon: '✓' },
-  WARNING: { bg: 'rgba(245,158,11,0.07)',  border: 'rgba(245,158,11,0.25)',  text: '#f59e0b',                icon: '!' },
-  PROBLEM: { bg: 'rgba(239,68,68,0.07)',   border: 'rgba(239,68,68,0.25)',   text: '#ef4444',                icon: '✕' },
+  PENDING: { bg: 'transparent',            border: 'rgba(255,255,255,0.10)', text: 'rgba(255,255,255,0.55)', icon: null,  glow: 'none' },
+  OK:      { bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.3)',    text: '#22c55e',                icon: '✓',   glow: '0 0 12px rgba(34,197,94,0.2)' },
+  WARNING: { bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.3)',   text: '#f59e0b',                icon: '!',   glow: '0 0 12px rgba(245,158,11,0.2)' },
+  PROBLEM: { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.3)',    text: '#ef4444',                icon: '✕',   glow: '0 0 12px rgba(239,68,68,0.2)' },
 } as const
 
 type PhotoEntry   = { key: string; label: string; file: File; previewUrl: string; aiPending: boolean; aiResult?: MockAIResult }
@@ -104,7 +104,7 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
     <div>
       {/* Progress summary */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>
           {captured} of {PHOTO_ANGLES.length} captured
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -155,7 +155,7 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
               {/* Info + AI result */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.55)' }}>{angle.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.80)' }}>{angle.label}</span>
                   {photo && !photo.aiPending && (
                     <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(34,211,238,0.1)', color: '#22d3ee', letterSpacing: '0.04em' }}>AI</span>
                   )}
@@ -163,7 +163,7 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
                     <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', letterSpacing: '0.04em' }}>Analysing…</span>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{angle.hint}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>{angle.hint}</div>
                 {photo?.aiResult && <AIBadge result={photo.aiResult} />}
               </div>
 
@@ -230,7 +230,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
     <div>
       {/* Mini progress */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.58)', fontWeight: 500 }}>
           {done} / {items.length} checked
         </span>
         <div style={{ display: 'flex', gap: 3 }}>
@@ -253,7 +253,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
               background: s.bg, border: `1px solid ${s.border}`,
               transition: 'background 0.15s, border-color 0.15s',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: item.status === 'PENDING' ? 'rgba(255,255,255,0.6)' : '#fff', marginBottom: 10, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: item.status === 'PENDING' ? 'rgba(255,255,255,0.82)' : '#fff', marginBottom: 10, lineHeight: 1.4 }}>
                 {item.itemLabel}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -266,17 +266,21 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
                       key={st}
                       onClick={() => onStatus(item.id, st)}
                       style={{
-                        flex: 1, padding: '9px 4px', borderRadius: 8,
+                        flex: 1, padding: '10px 4px', borderRadius: 10,
                         border: `1px solid ${sel ? cfg.border : 'rgba(255,255,255,0.07)'}`,
                         background: sel ? cfg.bg : 'rgba(255,255,255,0.02)',
-                        color: sel ? cfg.text : 'rgba(255,255,255,0.25)',
+                        color: sel ? cfg.text : 'rgba(255,255,255,0.28)',
                         fontSize: 12, fontWeight: sel ? 700 : 400,
                         cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                        transition: 'all 0.12s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        transition: 'all 0.15s ease',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                        boxShadow: sel ? cfg.glow : 'none',
+                        letterSpacing: sel ? '-0.1px' : '0',
                       }}
                     >
-                      {sel && cfg.icon && <span style={{ fontSize: 11 }}>{cfg.icon}</span>}
+                      {sel && cfg.icon && (
+                        <span style={{ fontSize: 10, fontWeight: 900, lineHeight: 1 }}>{cfg.icon}</span>
+                      )}
                       {labels[st]}
                     </button>
                   )
@@ -329,23 +333,24 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
         </div>
       )}
 
-      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 24 }}>
-          Checklist complete. Calculate your full AI confidence score.
+      <div style={{ padding: '12px 0 4px' }}>
+        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
+          All phases complete. Calculate your full AI confidence score.
         </div>
         <Link
           href="/report"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '15px 32px',
-            background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
-            color: '#000', borderRadius: 14, fontSize: 15, fontWeight: 800,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '15px 0',
+            background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
+            color: '#050810', borderRadius: 14, fontSize: 15, fontWeight: 800,
             textDecoration: 'none', letterSpacing: '-0.2px',
-            boxShadow: '0 4px 20px rgba(34,211,238,0.3)',
+            boxShadow: '0 4px 24px rgba(34,211,238,0.36), inset 0 1px 0 rgba(255,255,255,0.25)',
+            width: '100%',
           }}
         >
-          Calculate Risk Score
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          View AI Confidence Report
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </Link>
       </div>
     </div>
@@ -477,73 +482,101 @@ export default function InspectionPage() {
 
       <div style={{ maxWidth: 680 }}>
 
-        {/* Vehicle banner */}
+        {/* Vehicle banner — premium glass card */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 14,
-          padding: '13px 16px', marginBottom: 14,
-          background: 'rgba(34,211,238,0.04)',
-          border: '1px solid rgba(34,211,238,0.12)',
-          borderRadius: 14,
+          padding: '14px 16px 14px 20px', marginBottom: 12,
+          background: 'linear-gradient(135deg, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.02) 55%, rgba(129,140,248,0.02) 100%)',
+          border: '1px solid rgba(34,211,238,0.16)',
+          borderRadius: 18,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)',
+          position: 'relative', overflow: 'hidden',
         }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {/* Left accent bar */}
+          <div style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+            background: 'linear-gradient(to bottom, #22d3ee 0%, rgba(34,211,238,0.2) 100%)',
+            borderRadius: '18px 0 0 18px',
+          }} />
+
+          {/* Icon */}
+          <div style={{
+            width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+            background: 'rgba(34,211,238,0.09)',
+            border: '1px solid rgba(34,211,238,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 18px rgba(34,211,238,0.12)',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/>
               <circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
             </svg>
           </div>
+
+          {/* Vehicle info */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1 }}>Inspecting</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Inspecting</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeVehicle.make} {activeVehicle.model}
             </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{activeVehicle.year}</div>
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginBottom: 2 }}>Overall</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#22d3ee', letterSpacing: '-1px', lineHeight: 1 }}>{progress}%</div>
+
+          {/* Progress ring */}
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <svg width="44" height="44" viewBox="0 0 44 44">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+              <circle
+                cx="22" cy="22" r="18" fill="none"
+                stroke={progress >= 80 ? '#22c55e' : progress >= 40 ? '#22d3ee' : '#818cf8'}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 18}`}
+                strokeDashoffset={`${2 * Math.PI * 18 * (1 - progress / 100)}`}
+                transform="rotate(-90 22 22)"
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+              />
+              <text x="22" y="26" textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="11" fontWeight="800" fontFamily="var(--font-sans)">{progress}%</text>
+            </svg>
           </div>
         </div>
 
-        {/* Progress track */}
-        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginBottom: 14, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: 3, transition: 'width 0.5s ease', boxShadow: '0 0 8px rgba(34,211,238,0.4)' }} />
-        </div>
-
-        {/* Step tabs — horizontal scroll, no scrollbar */}
-        <div className="no-scroll-bar" style={{ display: 'flex', gap: 5, marginBottom: 14, overflowX: 'auto', paddingBottom: 2 } as React.CSSProperties}>
+        {/* Step tabs — floating glass segmented control */}
+        <div className="tab-scroll-container no-scroll-bar" style={{ marginBottom: 12 } as React.CSSProperties}>
           {PHASES.map((p, idx) => {
             const isActive  = p.phase === currentPhase
             const isDone    = idx < phaseIdx
-            const tabBorder = isActive ? 'rgba(34,211,238,0.3)' : isDone ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.07)'
-            const tabBg     = isActive ? 'rgba(34,211,238,0.09)' : isDone ? 'rgba(34,197,94,0.04)' : 'transparent'
-            const tabColor  = isActive ? '#22d3ee' : isDone ? '#22c55e' : 'rgba(255,255,255,0.28)'
-            const badgeBg   = isActive ? 'rgba(34,211,238,0.18)' : isDone ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)'
-            const badgeColor = isActive ? '#22d3ee' : isDone ? '#22c55e' : 'rgba(255,255,255,0.25)'
-            const showCheck = isDone && !isActive
             return (
               <button
                 key={p.phase}
                 onClick={() => setPhase(p.phase)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 11px', borderRadius: 10, flexShrink: 0,
-                  border: `1px solid ${tabBorder}`,
-                  background: tabBg,
-                  color: tabColor,
-                  fontSize: 12, fontWeight: isActive ? 700 : 500,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '6px 10px', borderRadius: 10, flexShrink: 0,
+                  border: `1px solid ${isActive ? 'rgba(34,211,238,0.32)' : isDone ? 'rgba(34,197,94,0.18)' : 'transparent'}`,
+                  background: isActive
+                    ? 'rgba(34,211,238,0.13)'
+                    : isDone ? 'rgba(34,197,94,0.05)' : 'transparent',
+                  color: isActive ? '#22d3ee' : isDone ? '#22c55e' : 'rgba(255,255,255,0.3)',
+                  fontSize: 11.5, fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
-                  transition: 'all 0.15s',
+                  transition: 'all 0.18s ease',
+                  boxShadow: isActive ? '0 2px 12px rgba(34,211,238,0.16), inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
+                  letterSpacing: isActive ? '-0.1px' : '0',
                 }}
               >
-                {/* Step number badge */}
+                {/* Badge */}
                 <span style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  width: 17, height: 17, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 800,
-                  background: badgeBg,
-                  color: badgeColor,
+                  fontSize: 9, fontWeight: 800,
+                  background: isActive ? '#22d3ee' : isDone ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
+                  color: isActive ? '#050810' : isDone ? '#22c55e' : 'rgba(255,255,255,0.3)',
+                  boxShadow: isActive ? '0 0 8px rgba(34,211,238,0.4)' : 'none',
+                  transition: 'all 0.18s ease',
                 }}>
-                  {showCheck
-                    ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {isDone
+                    ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     : idx + 1
                   }
                 </span>
@@ -554,17 +587,28 @@ export default function InspectionPage() {
         </div>
 
         {/* Phase card */}
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '18px 16px', marginBottom: 12 }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 18,
+          padding: '18px 16px',
+          marginBottom: 12,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+        }}>
           {/* Phase header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px' }}>{phaseCfg?.label}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
-                Step {phaseIdx + 1} of {PHASES.length}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Accent bar */}
+              <div style={{ width: 3, height: 28, borderRadius: 2, background: 'linear-gradient(to bottom, #22d3ee, rgba(34,211,238,0.2))', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2 }}>{phaseCfg?.label}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
+                  Step {phaseIdx + 1} of {PHASES.length}
+                </div>
               </div>
             </div>
             {currentPhase === 'AI_PHOTOS' && photos.some(p => p.aiPending) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b' }}>AI Analysing</span>
               </div>
@@ -578,6 +622,8 @@ export default function InspectionPage() {
                 make={activeVehicle.make}
                 model={activeVehicle.model}
                 year={activeVehicle.year}
+                engineCc={activeVehicle.engineCc}
+                powerKw={activeVehicle.powerKw}
               />
             </div>
           )}
@@ -585,10 +631,23 @@ export default function InspectionPage() {
           {/* AI_PHOTOS */}
           {currentPhase === 'AI_PHOTOS' && (
             <div>
-              <div style={{ padding: '11px 13px', background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.1)', borderRadius: 10, marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#22d3ee', marginBottom: 3 }}>AI Photo Inspection</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-                  Photograph each area. AI analyses each image for repairs, repaints, panel gaps, and anomalies. Results are advisory — verify manually.
+              <div style={{
+                padding: '11px 14px', marginBottom: 14,
+                background: 'linear-gradient(135deg, rgba(34,211,238,0.05) 0%, rgba(129,140,248,0.03) 100%)',
+                border: '1px solid rgba(34,211,238,0.13)',
+                borderRadius: 12,
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+              }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>AI Photo Inspection</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+                    Photograph each area. AI analyses each image for repairs, repaints, and anomalies. Results are advisory.
+                  </div>
                 </div>
               </div>
               <PhotoGrid photos={photos} onAdd={handleOpenCamera} />
@@ -605,41 +664,52 @@ export default function InspectionPage() {
         </div>
 
         {/* Navigation */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          {/* Back — ghost button */}
           <button
             onClick={goPrev}
             disabled={isFirst}
             style={{
               flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0 20px', height: 50,
-              background: 'rgba(255,255,255,0.03)',
+              padding: '0 18px', height: 52,
+              background: 'transparent',
               border: `1px solid ${isFirst ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 12,
-              fontSize: 14, color: isFirst ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.5)',
-              cursor: isFirst ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500,
+              borderRadius: 14,
+              fontSize: 13, color: isFirst ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.65)',
+              cursor: isFirst ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-sans)', fontWeight: 500,
+              transition: 'border-color 0.15s, color 0.15s',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Back
           </button>
 
+          {/* Next — solid gradient CTA */}
           <button
             onClick={goNext}
             disabled={isLast}
+            className={!isLast ? 'btn-cta' : ''}
             style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              height: 50, borderRadius: 12,
-              background: isLast ? 'rgba(255,255,255,0.02)' : 'rgba(34,211,238,0.1)',
-              border: `1px solid ${isLast ? 'rgba(255,255,255,0.06)' : 'rgba(34,211,238,0.25)'}`,
-              fontSize: 14, fontWeight: 700,
-              color: isLast ? 'rgba(255,255,255,0.12)' : '#22d3ee',
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              height: 52, borderRadius: 14,
+              background: isLast
+                ? 'rgba(255,255,255,0.02)'
+                : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
+              border: isLast ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              fontSize: 14, fontWeight: 800,
+              color: isLast ? 'rgba(255,255,255,0.1)' : '#050810',
               cursor: isLast ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-sans)',
-              letterSpacing: '-0.1px',
+              letterSpacing: isLast ? '0' : '-0.2px',
+              boxShadow: isLast ? 'none' : '0 4px 20px rgba(34,211,238,0.32), inset 0 1px 0 rgba(255,255,255,0.25)',
+              transition: 'box-shadow 0.2s ease, transform 0.1s ease',
             }}
           >
-            {phaseIdx === PHASES.length - 2 ? 'Finish Checklist' : `Next: ${PHASES[phaseIdx + 1]?.short ?? ''}`}
-            {!isLast && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
+            {phaseIdx === PHASES.length - 2 ? 'Finish & Score' : `Continue`}
+            {!isLast && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            )}
           </button>
         </div>
 

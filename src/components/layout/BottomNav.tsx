@@ -82,11 +82,12 @@ export function BottomNav() {
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
         zIndex: 50,
-        background: 'rgba(7,10,18,0.97)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        background: 'rgba(6,9,16,0.98)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(32px)',
+        WebkitBackdropFilter: 'blur(32px)',
         flexDirection: 'column',
+        boxShadow: '0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.4)',
       }}
     >
       <div style={{
@@ -121,11 +122,11 @@ export function BottomNav() {
                   width: 54, height: 54,
                   borderRadius: '50%',
                   background: active
-                    ? 'linear-gradient(135deg, #06b6d4, #0891b2)'
-                    : 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+                    ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                    : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 4px 20px rgba(34,211,238,${active ? '0.55' : '0.38'}), 0 0 0 4px rgba(8,12,20,0.9)`,
-                  border: '2px solid rgba(34,211,238,0.25)',
+                  boxShadow: `0 4px 22px rgba(34,211,238,${active ? '0.6' : '0.4'}), 0 0 0 3px rgba(6,9,16,0.95), 0 0 0 5px rgba(34,211,238,0.12)`,
+                  border: '1.5px solid rgba(255,255,255,0.2)',
                   transition: 'all 0.2s ease',
                 }}>
                   {item.icon(active)}
@@ -159,28 +160,29 @@ export function BottomNav() {
                 position: 'relative',
               }}
             >
-              {/* Active pill indicator */}
+              {/* Active top glow indicator */}
               {active && (
                 <div style={{
                   position: 'absolute',
-                  bottom: 4,
+                  top: 0,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  width: 20, height: 3,
-                  borderRadius: 3,
+                  width: 24, height: 2,
+                  borderRadius: '0 0 3px 3px',
                   background: '#22d3ee',
-                  boxShadow: '0 0 8px rgba(34,211,238,0.6)',
+                  boxShadow: '0 0 10px rgba(34,211,238,0.7)',
                 }} />
               )}
 
               {/* Icon */}
               <div style={{
-                width: 38, height: 38,
-                borderRadius: 12,
+                width: 40, height: 36,
+                borderRadius: 11,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: active ? 'rgba(34,211,238,0.1)' : 'transparent',
-                border: active ? '1px solid rgba(34,211,238,0.18)' : '1px solid transparent',
-                transition: 'all 0.15s ease',
+                background: active ? 'rgba(34,211,238,0.09)' : 'transparent',
+                border: active ? '1px solid rgba(34,211,238,0.16)' : '1px solid transparent',
+                boxShadow: active ? '0 0 14px rgba(34,211,238,0.1)' : 'none',
+                transition: 'all 0.18s ease',
               }}>
                 {item.icon(active)}
               </div>

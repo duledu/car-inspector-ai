@@ -84,10 +84,10 @@ export default function AppShell({ children }: AppShellProps) {
         <header style={{
           height: 56,
           flexShrink: 0,
-          background: 'rgba(8,12,20,0.95)',
+          background: 'rgba(6,9,16,0.97)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -95,6 +95,7 @@ export default function AppShell({ children }: AppShellProps) {
           position: 'sticky',
           top: 0,
           zIndex: 40,
+          boxShadow: '0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.3)',
         }}>
           {/* Left: brand mark + page title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

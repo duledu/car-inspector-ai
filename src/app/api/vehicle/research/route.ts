@@ -9,11 +9,13 @@ import { z } from 'zod'
 import { vehicleResearchService } from '@/modules/research/research.service'
 
 const schema = z.object({
-  make:   z.string().min(1).max(60),
-  model:  z.string().min(1).max(80),
-  year:   z.number().int().min(1980).max(new Date().getFullYear() + 1),
-  engine: z.string().max(100).optional(),
-  trim:   z.string().max(80).optional(),
+  make:     z.string().min(1).max(60),
+  model:    z.string().min(1).max(80),
+  year:     z.number().int().min(1980).max(new Date().getFullYear() + 1),
+  engineCc: z.number().int().positive().max(10000).optional(),
+  powerKw:  z.number().int().positive().max(2000).optional(),
+  engine:   z.string().max(100).optional(),
+  trim:     z.string().max(80).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -32,10 +34,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { make, model, year, engine, trim } = parsed.data
+  const { make, model, year, engineCc, powerKw, engine, trim } = parsed.data
 
   // research() never throws — it always returns useful content
-  const result = await vehicleResearchService.research({ make, model, year, engine, trim })
+  const result = await vehicleResearchService.research({ make, model, year, engineCc, powerKw, engine, trim })
 
   return NextResponse.json({
     data:        result,

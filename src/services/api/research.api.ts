@@ -9,6 +9,8 @@ export interface ResearchRequestPayload {
   make: string
   model: string
   year: number
+  engineCc?: number
+  powerKw?: number
   engine?: string
   trim?: string
 }

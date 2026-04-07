@@ -64,6 +64,8 @@ model Vehicle {
   sellerType  SellerType @default(PRIVATE)
   sellerName  String?
   listingUrl  String?
+  engineCc    Int?
+  powerKw     Int?
   vin         String?
   notes       String?
   status      VehicleStatus @default(ACTIVE)

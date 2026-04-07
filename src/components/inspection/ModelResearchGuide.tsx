@@ -212,10 +212,11 @@ function SectionBlock({ section }: Readonly<{ section: ResearchSection }>) {
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.015)',
+      background: 'rgba(255,255,255,0.018)',
       border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: 13,
+      borderRadius: 14,
       overflow: 'hidden',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)',
     }}>
       <button
         type="button"
@@ -313,12 +314,16 @@ const CTA_FEATURES = [
 
 function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: string; onStart: () => void; loading: boolean }>) {
   return (
-    <div style={{
-      padding: '20px 18px',
-      background: 'linear-gradient(135deg, rgba(34,211,238,0.04) 0%, rgba(129,140,248,0.04) 100%)',
-      border: '1px solid rgba(34,211,238,0.16)',
-      borderRadius: 16,
-    }}>
+    <div
+      className="research-cta-card"
+      style={{
+        padding: '20px 18px',
+        background: 'linear-gradient(135deg, rgba(34,211,238,0.06) 0%, rgba(34,211,238,0.02) 55%, rgba(129,140,248,0.03) 100%)',
+        border: '1px solid rgba(34,211,238,0.18)',
+        borderRadius: 18,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
         <div style={{
@@ -356,21 +361,25 @@ function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: 
         ))}
       </div>
 
-      {/* CTA button */}
+      {/* CTA button — solid gradient primary action */}
       <button
         type="button"
         onClick={onStart}
         disabled={loading}
         style={{
           width: '100%', padding: '14px 0',
-          background: loading ? 'rgba(34,211,238,0.07)' : 'rgba(34,211,238,0.12)',
-          border: '1px solid rgba(34,211,238,0.3)',
-          borderRadius: 12, cursor: loading ? 'not-allowed' : 'pointer',
-          fontSize: 13, fontWeight: 700, color: '#22d3ee',
+          background: loading
+            ? 'rgba(34,211,238,0.06)'
+            : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
+          border: loading ? '1px solid rgba(34,211,238,0.2)' : 'none',
+          borderRadius: 13, cursor: loading ? 'not-allowed' : 'pointer',
+          fontSize: 13.5, fontWeight: 800,
+          color: loading ? 'rgba(34,211,238,0.6)' : '#050810',
           fontFamily: 'var(--font-sans)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          transition: 'background 0.15s, box-shadow 0.15s',
-          boxShadow: loading ? 'none' : '0 0 20px rgba(34,211,238,0.08)',
+          transition: 'box-shadow 0.2s ease, transform 0.1s ease',
+          boxShadow: loading ? 'none' : '0 4px 20px rgba(34,211,238,0.32), inset 0 1px 0 rgba(255,255,255,0.22)',
+          letterSpacing: loading ? '0' : '-0.1px',
         }}
       >
         {loading ? (
@@ -510,10 +519,11 @@ function ResearchResults({
       {/* Result header card */}
       <div style={{
         padding: '16px 16px',
-        background: 'linear-gradient(135deg, rgba(34,211,238,0.04) 0%, rgba(129,140,248,0.03) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 14,
+        background: 'linear-gradient(135deg, rgba(34,211,238,0.06) 0%, rgba(34,211,238,0.02) 55%, rgba(129,140,248,0.03) 100%)',
+        border: '1px solid rgba(34,211,238,0.15)',
+        borderRadius: 16,
         display: 'flex', alignItems: 'flex-start', gap: 13,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
       }}>
         <div style={{
           width: 40, height: 40, borderRadius: 11, flexShrink: 0,
@@ -559,8 +569,8 @@ function ResearchResults({
         borderRadius: 9,
         display: 'flex', alignItems: 'flex-start', gap: 8,
       }}>
-        <span style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0, marginTop: 1 }}>{Icons.info}</span>
-        <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.32)', lineHeight: 1.55 }}>
+        <span style={{ color: 'rgba(255,255,255,0.45)', flexShrink: 0, marginTop: 1 }}>{Icons.info}</span>
+        <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>
           {result.disclaimer}
         </p>
       </div>
@@ -571,9 +581,9 @@ function ResearchResults({
         style={{
           width: '100%', padding: '11px 0',
           background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.07)',
+          border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 10, cursor: 'pointer',
-          fontSize: 12, color: 'rgba(255,255,255,0.32)',
+          fontSize: 12, color: 'rgba(255,255,255,0.68)',
           fontFamily: 'var(--font-sans)', fontWeight: 500,
           transition: 'border-color 0.15s',
         }}
@@ -590,12 +600,18 @@ interface ModelResearchGuideProps {
   make: string
   model: string
   year: number
+  engineCc?: number | null
+  powerKw?: number | null
   engine?: string
   trim?: string
 }
 
-export function ModelResearchGuide({ make, model, year, engine, trim }: Readonly<ModelResearchGuideProps>) {
-  const vehicleName = `${year} ${make} ${model}`
+export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engine, trim }: Readonly<ModelResearchGuideProps>) {
+  // Build a human-readable vehicle identity for display (e.g. "2013 BMW 530 2.0L 135kW")
+  const litreStr  = engineCc ? ` ${(engineCc / 1000).toFixed(1)}L` : ''
+  const kwStr     = powerKw  ? ` ${powerKw}kW`                     : ''
+  const vehicleName = `${year} ${make} ${model}${litreStr}${kwStr}`
+
   const [state,    setState]    = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [result,   setResult]   = useState<VehicleResearchResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
@@ -604,7 +620,12 @@ export function ModelResearchGuide({ make, model, year, engine, trim }: Readonly
     setState('loading')
     setErrorMsg('')
     try {
-      const data = await researchApi.getModelGuide({ make, model, year, engine, trim })
+      const data = await researchApi.getModelGuide({
+        make, model, year,
+        engineCc: engineCc ?? undefined,
+        powerKw:  powerKw  ?? undefined,
+        engine, trim,
+      })
       setResult(data)
       setState('success')
     } catch (err: unknown) {
@@ -615,7 +636,7 @@ export function ModelResearchGuide({ make, model, year, engine, trim }: Readonly
       )
       setState('error')
     }
-  }, [make, model, year, engine, trim])
+  }, [make, model, year, engineCc, powerKw, engine, trim])
 
   const reset = useCallback(() => {
     setState('idle')

@@ -49,6 +49,8 @@ export interface Vehicle {
   askingPrice?: number | null
   currency: string
   sellerType: SellerType
+  engineCc?: number | null
+  powerKw?: number | null
   vin?: string | null
   notes?: string | null
   status: VehicleStatus
@@ -64,6 +66,8 @@ export interface CreateVehiclePayload {
   askingPrice?: number
   currency?: string
   sellerType?: SellerType
+  engineCc?: number
+  powerKw?: number
   vin?: string
   notes?: string
 }
