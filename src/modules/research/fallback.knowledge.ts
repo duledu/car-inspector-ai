@@ -1,0 +1,268 @@
+// =============================================================================
+// Fallback Knowledge Base — Vehicle Research Module
+// Used when the AI provider is unavailable or times out.
+// Returns structured research data based on make/model/year.
+// =============================================================================
+
+import type { VehicleResearchResult, ResearchSection, ResearchIssue } from '@/types'
+
+function item(title: string, description: string, severity: 'high' | 'medium' | 'low', tags: ResearchIssue['tags']): ResearchIssue {
+  return { title, description, severity, tags }
+}
+
+function section(id: string, title: string, items: ResearchIssue[]): ResearchSection {
+  return { id, title, items }
+}
+
+// ─── Brand-specific knowledge ─────────────────────────────────────────────────
+
+const BMW_KNOWLEDGE = {
+  commonProblems: section('commonProblems', 'Common Problems', [
+    item('Cooling System Failures', 'Water pump and thermostat are known weak points, especially plastic housings on 6-cylinder engines. Failure can lead to overheating rapidly.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Oil Leaks', 'Valve cover gaskets, oil filter housing gaskets, and rear crankshaft seals commonly leak on high-mileage examples. Look for oil residue around the engine block.', 'medium', ['COMMON_ISSUE']),
+    item('Electronics & Comfort Features', 'Window regulators, iDrive glitches, and comfort module failures are frequently reported. These are minor but expensive to diagnose and repair at a dealership.', 'medium', ['COMMON_ISSUE']),
+    item('N47 Timing Chain (4-cyl diesel)', 'Applies to 318d, 320d, 520d. The timing chain can rattle and fail catastrophically — check for cold-start rattle. Not applicable to N57 (530d) or N55/N52 petrol.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('High-Pressure Fuel Pump (diesel)', 'HPFP failure causes hard starting, misfires, and white smoke. Common on high-mileage diesel examples. Listen for rough idle and hesitation under load.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+    item('Cold Start — Engine Sound', 'Idle the car for 2+ minutes when cold. A rattling or ticking sound at startup can indicate timing chain wear or VANOS actuator issues.', 'high', ['HIGH_ATTENTION']),
+    item('Coolant Level & Condition', 'Check the expansion tank. BMW coolant should be blue/green and full. Brown or murky coolant signals internal corrosion or head gasket issues.', 'high', ['HIGH_ATTENTION']),
+    item('Oil Level & Quality', 'Check the oil. Excessive oil consumption (>1L per 1000km) is reported on some N-series engines. Look for mayonnaise under the cap (coolant contamination).', 'high', ['HIGH_ATTENTION']),
+    item('Service History Completeness', 'BMW maintenance is expensive. A missing service record (especially timing chain service or DSC/brake fluid service) is a major red flag.', 'high', ['HIGH_ATTENTION']),
+  ]),
+  visualAttention: section('visualAttention', 'Visual Attention Areas', [
+    item('Rear Subframe for Rust', 'F10/E60/E90-era BMWs can develop rust around the rear subframe mounting points. Inspect underneath if possible.', 'high', ['VISUAL_CHECK']),
+    item('Sunroof Drains', 'Blocked sunroof drains cause water to pool in the footwells and damage electronics. Check for damp carpets.', 'medium', ['VISUAL_CHECK']),
+    item('Panel Gaps & Paint Uniformity', 'Check all body panels for inconsistent gaps or colour variations — indicators of previous accident repair.', 'medium', ['VISUAL_CHECK']),
+    item('Tyre Wear Pattern', 'Uneven tyre wear points to suspension, alignment, or camber issues. BMW sport suspension components are expensive to replace.', 'medium', ['VISUAL_CHECK']),
+  ]),
+  mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+    item('VANOS System', 'The variable valve timing system can fail causing rough idle and poor performance. Listen for rattling at idle or irregular engine note.', 'medium', ['COMMON_ISSUE']),
+    item('Automatic Transmission (ZF 8HP)', 'The ZF 8-speed is generally reliable but needs regular fluid changes. Ask for transmission service history. Hesitation or harsh shifts suggest low fluid or worn clutch packs.', 'medium', ['COMMON_ISSUE']),
+    item('Rear Integral Link Bushings', 'F10 5-series has hydraulic rear bushings that deteriorate. Worn bushings cause rear-end instability and tyre wear. Listen for clunks over bumps.', 'medium', ['COMMON_ISSUE']),
+    item('Brakes — Size & Cost', 'BMW brakes are larger than average. Rear callipers seize if the parking brake is rarely used. Budget for brake pad/disc replacement ($600–$1200 at an independent).', 'low', ['EXPENSIVE_RISK']),
+  ]),
+  testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+    item('Transmission Smoothness', 'Automatic should shift seamlessly in all modes. Any shudder, hunting between gears, or hard downshift requires immediate investigation.', 'high', ['TEST_DRIVE']),
+    item('Steering Feedback & Straight-Line Tracking', 'BMW should feel connected and track straight. Pulling to one side suggests suspension, alignment, or brake drag issues.', 'medium', ['TEST_DRIVE']),
+    item('Brake Pedal Feel', 'The pedal should be firm mid-travel. Sponginess or pulsation suggests warped discs or air in the brake system.', 'high', ['TEST_DRIVE']),
+    item('Engine Under Load', 'Accelerate firmly through the rev range. Any hesitation, smoke, or unusual noise under load can indicate turbo, injector, or fuel system issues.', 'high', ['TEST_DRIVE']),
+  ]),
+  costAwareness: section('costAwareness', 'Cost Awareness', [
+    item('Timing Chain Repair (4-cyl diesel)', 'N47 timing chain replacement: £2,000–£5,000 at an independent. If the chain has failed, the engine may be beyond economic repair.', 'high', ['EXPENSIVE_RISK']),
+    item('Cooling System Overhaul', 'Full cooling system replacement (pump, thermostat, hoses, expansion tank): £700–£1,500. Do not skip this on high-mileage examples.', 'high', ['EXPENSIVE_RISK']),
+    item('Suspension Refresh', 'Rear integral links, front control arms, and thrust arms: £800–£2,000 for full refresh at a specialist. Inspect carefully for worn rubber.', 'medium', ['EXPENSIVE_RISK']),
+    item('Software & Electronics Diagnostics', 'BMW ISTA/INPA dealer-level diagnostics reveal stored fault codes invisible to generic OBD tools. Pay £50–£100 for a pre-purchase scan.', 'medium', ['HIGH_ATTENTION']),
+  ]),
+}
+
+const MERCEDES_KNOWLEDGE = {
+  commonProblems: section('commonProblems', 'Common Problems', [
+    item('7G-Tronic Transmission', 'The 7-speed automatic has weak torque converter and valve body. Jerky low-speed shifts and slip under load are warning signs. Full rebuild: £2,000–£4,000.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Rust Under Window and Door Seals', 'W204 C-Class and W212 E-Class can develop hidden rust behind rubber seals. Peel back the seal at the bottom of windows to check.', 'high', ['COMMON_ISSUE']),
+    item('Fuel Injector Leaks (diesel)', 'CDI diesel injectors can leak or fail. White smoke at startup and poor cold-start performance are key symptoms.', 'medium', ['COMMON_ISSUE']),
+    item('Air Suspension (Airmatic)', 'On equipped models, compressor and air struts fail. Look for sagging at the rear. Replacement cost: £1,500–£3,000+.', 'high', ['EXPENSIVE_RISK']),
+  ]),
+  highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+    item('STAR Diagnostics Scan', 'Mercedes-specific faults are invisible to generic OBD readers. A full STAR or iCarsoft MB II scan before purchase is essential.', 'high', ['HIGH_ATTENTION']),
+    item('Transmission Fluid Condition', 'Check for dark or burnt-smelling ATF. Mercedes "sealed for life" transmissions need fluid changes every 60–80k miles in practice.', 'high', ['HIGH_ATTENTION']),
+    item('Rust Inspection Under Seals', 'Use a torch to inspect beneath door and window rubbers, especially on the sills. Hidden rust here is structural.', 'high', ['HIGH_ATTENTION']),
+  ]),
+  visualAttention: section('visualAttention', 'Visual Attention Areas', [
+    item('Sill & Wheel Arch Rust', 'Check sills at the front and rear junction points, and inner wheel arches for bubbling paint or rust perforation.', 'high', ['VISUAL_CHECK']),
+    item('Engine Bay Oil Residue', 'CDI engines can develop oil leaks from the cam cover and turbo connections. Whitish residue or dark oil staining indicates active leaks.', 'medium', ['VISUAL_CHECK']),
+    item('Interior Trim Condition', 'W204/W212 plastics crack and warp. This is cosmetic but expensive to replace with genuine parts. Check the instrument surround and centre console.', 'low', ['VISUAL_CHECK']),
+  ]),
+  mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+    item('Balance Shaft (M271 petrol)', 'The M271 balance shaft can fail. Rattling on startup indicates balance shaft or oil pump chain wear. This is a major repair.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('EGR System (diesel)', 'EGR valves coke up on diesel models used mainly for short trips. Causes hesitation and limp mode. Cleaning: £200–£500. Replacement: more.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+    item('Transmission at Low Speed', 'Drive slowly in a car park. The 7G-Tronic should engage smoothly from rest. Any shuddering or clunking is a serious red flag.', 'high', ['TEST_DRIVE']),
+    item('Air Suspension Level (if equipped)', 'Park on level ground after the drive. Check that all four corners sit at the same height. A drooping corner indicates a failed strut or compressor.', 'high', ['TEST_DRIVE']),
+  ]),
+  costAwareness: section('costAwareness', 'Cost Awareness', [
+    item('Transmission Rebuild', 'W7 7G-Tronic rebuild or remanufactured unit: £2,000–£4,500 fitted. Non-negotiable if symptoms are present.', 'high', ['EXPENSIVE_RISK']),
+    item('Air Suspension Overhaul', 'Full Airmatic system overhaul: £2,000–£5,000 depending on which corners are affected. Independent specialist is 40–60% cheaper than dealer.', 'high', ['EXPENSIVE_RISK']),
+  ]),
+}
+
+const AUDI_VW_KNOWLEDGE = {
+  commonProblems: section('commonProblems', 'Common Problems', [
+    item('DSG/S Tronic Dual-Clutch Gearbox', 'The DQ200 7-speed dry-clutch DSG is known for shuddering at low speed and mechatronic unit failure. Replacement mechatronic: £800–£2,000. The DQ250 wet-clutch is more reliable.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Timing Belt/Chain Failure', '2.0 TFSI petrol engines (EA888 Gen1-2) had camshaft follower and timing chain tensioner issues. Early EA113 had timing belt issues. Know your engine generation.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Carbon Buildup on Intake Valves (TFSI)', 'Direct injection engines accumulate carbon on intake valves, causing rough idle and misfires. Walnut shell cleaning: £300–£600.', 'medium', ['COMMON_ISSUE']),
+    item('MMI/Electronics Failures', 'MMI infotainment units fail (black screen, no sound). Fan control units on Audi also commonly fail causing overheating.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+    item('Timing Belt/Chain Service Date', 'For timing belt engines, confirm exact date and mileage of last replacement. This is a critical safety item — do not guess.', 'high', ['HIGH_ATTENTION']),
+    item('DSG Shudder Test', 'At low speed (5–15 mph) in a car park, maintain light throttle. Any judder, vibration, or hesitation indicates DSG clutch pack or mechatronic wear.', 'high', ['HIGH_ATTENTION']),
+    item('VCDS Fault Code Scan', 'Audi/VW-specific diagnostics reveal faults invisible to generic tools. VCDS or ODIS scan should be performed before purchase.', 'high', ['HIGH_ATTENTION']),
+  ]),
+  visualAttention: section('visualAttention', 'Visual Attention Areas', [
+    item('Oil Filler Cap — Mayonnaise', 'Remove the oil filler cap and check for creamy residue. This indicates coolant contamination and potential head gasket failure (common on 2.0 TFSI).', 'high', ['VISUAL_CHECK']),
+    item('Rear Torsion Beam Rust (VW)', 'On Golf/Jetta/Passat, inspect the rear torsion beam for rust. Surface rust is normal; penetrating rust is structural.', 'medium', ['VISUAL_CHECK']),
+    item('Sunroof Seal & Water Ingress', 'Check the A-pillar trim and footwell carpets for water staining. Blocked sunroof drains flood the cabin and damage ECUs.', 'medium', ['VISUAL_CHECK']),
+  ]),
+  mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+    item('Haldex Coupling (quattro/4Motion)', 'Four-wheel drive Haldex units need fluid changes every 20k miles. Neglect causes diff binding and clutch failure. Ask for service history.', 'medium', ['COMMON_ISSUE']),
+    item('Water Pump (EA888)', 'The 2.0 TFSI water pump is plastic and frequently fails. A replacement is reasonable (£300–£600 at an independent) but needs to be done proactively.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+    item('DSG Engagement from Stop', 'From a standstill, ease onto the throttle without lifting. A good DSG engages cleanly. Judder at 5–20 mph is the key failure symptom.', 'high', ['TEST_DRIVE']),
+    item('TFSI Idle Quality', 'A healthy EA888 should idle smoothly and quietly. Carbon buildup or misfires cause a lumpy idle that is immediately noticeable.', 'medium', ['TEST_DRIVE']),
+  ]),
+  costAwareness: section('costAwareness', 'Cost Awareness', [
+    item('DSG Mechatronic Unit', 'DQ200 mechatronic replacement: £800–£2,000 at a specialist. If the gearbox shudders, factor this into the negotiation.', 'high', ['EXPENSIVE_RISK']),
+    item('Timing Chain Kit (EA888)', 'Full timing chain kit (chain, tensioners, guides): £600–£1,200 at an independent. Non-negotiable on pre-2012 EA888 engines.', 'high', ['EXPENSIVE_RISK']),
+  ]),
+}
+
+const TOYOTA_KNOWLEDGE = {
+  commonProblems: section('commonProblems', 'Common Problems', [
+    item('D-4D Injector Failure (diesel)', '2.0 D-4D diesel injectors can crack, causing rough running and white smoke. Replacement cost per injector: £200–£600. All four often need replacing together.', 'medium', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Rust on High-Mileage Examples', 'Older Toyotas can rust around the rear wheel arches and sills despite their general reliability. Check structural areas carefully.', 'medium', ['COMMON_ISSUE']),
+    item('Suspension Wear (Strut Mounts)', 'Front strut mounts and lower ball joints wear out at high mileage. Clunking over bumps is the key symptom.', 'low', ['COMMON_ISSUE']),
+  ]),
+  highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+    item('Diesel Injector Compression Test', 'If diesel, request a compression test or have injectors tested before purchase. Cracked injectors are a significant cost.', 'high', ['HIGH_ATTENTION']),
+    item('Service Record Verification', 'Toyota reliability is largely dependent on proper maintenance. Incomplete oil change records are a concern on high-mileage examples.', 'medium', ['HIGH_ATTENTION']),
+  ]),
+  visualAttention: section('visualAttention', 'Visual Attention Areas', [
+    item('Rear Wheel Arch Rust', 'Inspect the trailing edge of rear wheel arches and the bottom of the rear doors for rust bubbling or perforation.', 'medium', ['VISUAL_CHECK']),
+    item('Engine Bay Cleanliness', 'Toyotas rarely have oil leaks unless neglected. An unusually dirty engine bay may indicate a cover-up for leaks.', 'low', ['VISUAL_CHECK']),
+  ]),
+  mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+    item('CVT Transmission (if equipped)', 'CVT units can whine under heavy load and fail at very high mileage. Any burning smell or slipping sensation is a red flag.', 'medium', ['COMMON_ISSUE']),
+    item('Hybrid Battery Health (Prius/Auris)', 'For hybrid models, check battery health with Toyota Techstream or a specialist tool. Weak cells significantly reduce performance.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+  ]),
+  testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+    item('Diesel Smoke at Startup', 'Minimal white smoke at cold startup is normal. Sustained smoke once warm indicates injector or turbo issues.', 'medium', ['TEST_DRIVE']),
+    item('Overall Drivetrain Refinement', 'Toyotas should feel smooth and refined. Any harshness, vibration or unusual noise is more concerning than on comparable European models given their reputation.', 'low', ['TEST_DRIVE']),
+  ]),
+  costAwareness: section('costAwareness', 'Cost Awareness', [
+    item('D-4D Injector Set', 'Full set of 4 injectors: £800–£2,400 depending on reman vs. new. Testing before purchase can identify which (if any) are faulty.', 'high', ['EXPENSIVE_RISK']),
+    item('Hybrid Battery (if applicable)', 'OEM hybrid battery replacement: £1,500–£3,000. Third-party remanufactured packs: £800–£1,500. Confirm warranty.', 'high', ['EXPENSIVE_RISK']),
+  ]),
+}
+
+const FORD_KNOWLEDGE = {
+  commonProblems: section('commonProblems', 'Common Problems', [
+    item('EcoBoost Turbo & Coolant Issues', '1.0 EcoBoost can overheat if coolant level drops. Coolant mixing with oil is reported. Check for head gasket issues — common on early EcoBoost.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('PowerShift Dual-Clutch Gearbox', 'The Powershift DCT fitted to Focus and Fiesta (2010–2016) is notorious for shudder and hesitation at low speeds. Avoid examples with this symptom.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('Rust on Wheel Arches & Sills', 'Older Fiestas, Focuses and Mondeos can suffer significant rust on sills, rear arches, and rear bumper mounting areas.', 'medium', ['COMMON_ISSUE']),
+    item('Front Suspension Wear', 'Front lower wishbone ball joints and anti-roll bar links wear quickly, causing knocking over bumps. Repair is inexpensive but check carefully.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+    item('PowerShift Shudder Test', 'At very low speed in a car park, maintain light throttle from a standstill. Any shudder or vibration at 5–15 mph is a major red flag for this gearbox.', 'high', ['HIGH_ATTENTION']),
+    item('Coolant Condition (EcoBoost)', 'Check the coolant reservoir for oily residue or mayonnaise-like deposits indicating head gasket seepage.', 'high', ['HIGH_ATTENTION']),
+    item('Rust Under Body', 'Get underneath or use an inspection mirror to check sills, floor pan junctions, and rear subframe mounts.', 'medium', ['HIGH_ATTENTION']),
+  ]),
+  visualAttention: section('visualAttention', 'Visual Attention Areas', [
+    item('Sills at the Front Jack Point', 'Fords commonly rust through the sill at the front jacking point. Poke the metal gently with a key — soft or flaking metal is structural failure.', 'high', ['VISUAL_CHECK']),
+    item('Rear Arch Inner Surface', 'The inner surface of rear arches traps mud and can rot from the inside out. Look with a torch into the wheel arch cavity.', 'medium', ['VISUAL_CHECK']),
+  ]),
+  mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+    item('1.6 TDCi Timing Belt', 'If diesel with the 1.6 TDCi, timing belt replacement interval is 100k miles but many recommend 60k. Confirm the service date.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('EGR Valve (diesel)', 'EGR valves coke up causing hesitation and limp mode. Cleaning or replacement: £150–£400. Ask about any hesitation history.', 'medium', ['COMMON_ISSUE']),
+  ]),
+  testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+    item('PowerShift From Rest', 'The most critical test. Drive slowly from a standstill on light throttle. Any vibration or shudder at under 20 mph means the clutch pack needs replacement.', 'high', ['TEST_DRIVE']),
+    item('Front Suspension Over Bumps', 'Drive slowly over speed bumps and listen for knocking. Any metallic knock from the front suggests worn ball joints or anti-roll bar links.', 'medium', ['TEST_DRIVE']),
+  ]),
+  costAwareness: section('costAwareness', 'Cost Awareness', [
+    item('PowerShift Clutch Pack Replacement', 'Dual-clutch replacement: £1,200–£2,500 at an independent. A full gearbox remanufacture is £3,000+. This is a major negotiating point.', 'high', ['EXPENSIVE_RISK']),
+    item('EcoBoost Head Gasket', 'Head gasket replacement on 1.0 EcoBoost: £700–£1,500. Catch it early — overheating destroys the head.', 'high', ['EXPENSIVE_RISK']),
+  ]),
+}
+
+// ─── Generic fallback ─────────────────────────────────────────────────────────
+
+function buildGenericResult(make: string, model: string, year: number): VehicleResearchResult {
+  const vehicleKey = `${year} ${make} ${model}`
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: 'low',
+    overallRiskLevel: 'moderate',
+    summary: `Detailed AI research for the ${vehicleKey} is temporarily unavailable. The guide below covers universal inspection priorities that apply to all used vehicles. Always verify findings with a qualified mechanic.`,
+    sections: {
+      commonProblems: section('commonProblems', 'Common Problems', [
+        item('Engine Oil Consumption', 'Many engines consume oil between service intervals. Check the dipstick — if it is below the minimum mark, this indicates an issue that should be investigated.', 'medium', ['COMMON_ISSUE']),
+        item('Automatic Transmission Wear', 'Automatic gearboxes deteriorate without regular fluid changes. Hesitation, rough shifts, or slipping are warning signs requiring specialist inspection.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Rust on Structural Areas', 'Rust on sills, subframes, and floor pans affects structural integrity. Cosmetic rust is different — learn to distinguish surface from penetrating rust.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
+        item('Service History — Verify Every Entry', 'Cross-reference stamps with receipts where possible. A gap in service history on a complex vehicle is a negotiation point.', 'high', ['HIGH_ATTENTION']),
+        item('OBD Diagnostic Scan', 'A basic OBD reader reveals stored and pending fault codes. Do this before the test drive. Clear codes can mask recurring problems.', 'high', ['HIGH_ATTENTION']),
+        item('Independent Pre-Purchase Inspection', 'A mechanic inspection (£100–£200) is the single best investment before any used car purchase over £3,000.', 'high', ['HIGH_ATTENTION']),
+      ]),
+      visualAttention: section('visualAttention', 'Visual Attention Areas', [
+        item('Paint Thickness & Panel Colour Match', 'Stand back and look along the panels in good light. Any colour variation or orange peel differences indicate body repair. A paint depth meter is ideal.', 'medium', ['VISUAL_CHECK']),
+        item('Underneath — Fluid Leaks & Rust', 'Inspect the underside with a torch. Look for fresh oil spots, coolant staining, and any rust on the subframe or floor pan.', 'high', ['VISUAL_CHECK']),
+        item('Tyre Condition & Wear Pattern', 'Uneven wear across the tread indicates alignment or suspension problems. Check age stamps on the sidewall — tyres over 6 years old should be replaced regardless of tread.', 'medium', ['VISUAL_CHECK']),
+      ]),
+      mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
+        item('Timing Belt / Chain Service', 'Confirm whether the engine uses a belt or chain, and if it is a belt — when it was last changed. Missed interval = catastrophic engine failure risk.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Cooling System Condition', 'Check that the coolant is the correct colour and the level is stable. A cold engine should never require topping up between services.', 'high', ['COMMON_ISSUE']),
+        item('Clutch Feel (manual gearbox)', 'For manual cars, the clutch should engage smoothly in the lower third of pedal travel. Engagement very high up indicates a worn clutch near the end of its life.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
+        item('Cold Start Behaviour', 'Start the car cold. Excessive smoke, rough idle, or warning lights at startup are immediate red flags. Do not let the seller warm the car up before your arrival.', 'high', ['TEST_DRIVE']),
+        item('Emergency Braking Test', 'Find a safe empty area and brake firmly from 30 mph. The car should stop straight with no pulling, vibration, or ABS pulsing on dry road.', 'high', ['TEST_DRIVE']),
+        item('Acceleration & Gear Changes', 'Accelerate through the full rev range in lower gears. Any hesitation, smoke, or unusual noise under load points to engine or drivetrain issues.', 'medium', ['TEST_DRIVE']),
+      ]),
+      costAwareness: section('costAwareness', 'Cost Awareness', [
+        item('Timing Belt Replacement', 'If overdue or unknown: budget £400–£800 for a belt-driven engine. Non-negotiable before purchase for safety.', 'high', ['EXPENSIVE_RISK']),
+        item('Full Service at Purchase', 'Budget for a full service (oil, filters, brake fluid, spark plugs) at purchase regardless of the stated service date. Cost: £200–£400 at an independent garage.', 'medium', ['EXPENSIVE_RISK']),
+        item('Pre-Purchase Inspection', 'An independent inspection by a marque specialist is £100–£250. This fee saves thousands by catching hidden faults before you sign.', 'medium', ['HIGH_ATTENTION']),
+      ]),
+    },
+    disclaimer: 'This guide is based on general vehicle inspection principles due to limited vehicle-specific data. Use as a starting checklist only — always verify with a qualified mechanic before purchase.',
+  }
+}
+
+// ─── Brand matcher ────────────────────────────────────────────────────────────
+
+function buildBrandResult(make: string, model: string, year: number): VehicleResearchResult {
+  const vehicleKey = `${year} ${make} ${model}`
+  const m = make.toLowerCase()
+
+  const BRAND_MAP: Record<string, typeof BMW_KNOWLEDGE> = {
+    bmw:       BMW_KNOWLEDGE,
+    mercedes:  MERCEDES_KNOWLEDGE,
+    audi:      AUDI_VW_KNOWLEDGE,
+    volkswagen: AUDI_VW_KNOWLEDGE,
+    vw:        AUDI_VW_KNOWLEDGE,
+    skoda:     AUDI_VW_KNOWLEDGE,
+    seat:      AUDI_VW_KNOWLEDGE,
+    toyota:    TOYOTA_KNOWLEDGE,
+    lexus:     TOYOTA_KNOWLEDGE,
+    ford:      FORD_KNOWLEDGE,
+  }
+
+  const knowledge = BRAND_MAP[m]
+  if (!knowledge) return buildGenericResult(make, model, year)
+
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: 'medium',
+    overallRiskLevel: 'moderate',
+    summary: `The ${vehicleKey} is covered by our model knowledge base. The guide below reflects commonly reported issues for this brand generation. AI live data is temporarily unavailable — findings are based on known patterns.`,
+    sections: knowledge,
+    disclaimer: 'This guide is based on our built-in knowledge base for this vehicle brand. Findings reflect commonly reported issues and may not reflect all individual variants. AI live analysis was unavailable at the time of generation. Always verify with a qualified mechanic.',
+  }
+}
+
+// ─── Public entry point ───────────────────────────────────────────────────────
+
+export function generateFallbackResult(params: {
+  make: string
+  model: string
+  year: number
+  engine?: string
+  trim?: string
+}): VehicleResearchResult {
+  return buildBrandResult(params.make, params.model, params.year)
+}

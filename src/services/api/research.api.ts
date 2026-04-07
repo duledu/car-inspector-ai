@@ -15,10 +15,13 @@ export interface ResearchRequestPayload {
 
 export const researchApi = {
   getModelGuide: async (payload: ResearchRequestPayload): Promise<VehicleResearchResult> => {
-    const { data } = await apiClient.post<ApiResponse<VehicleResearchResult>>(
+    const { data } = await apiClient.post<ApiResponse<VehicleResearchResult> & { limitedMode?: boolean }>(
       '/vehicle/research',
       payload
     )
-    return data.data
+    // Merge limitedMode from the wrapper into the result object
+    const result = data.data
+    if (data.limitedMode) result.limitedMode = true
+    return result
   },
 }

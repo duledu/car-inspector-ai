@@ -453,6 +453,8 @@ export interface VehicleResearchResult {
     costAwareness: ResearchSection
   }
   disclaimer: string
+  /** Set to true when the result came from the fallback knowledge base, not live AI */
+  limitedMode?: boolean
 }
 
 // ─── UI / Form helpers ────────────────────────────────────────────────────────
