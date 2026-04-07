@@ -14,6 +14,8 @@ export interface ResearchParams {
   powerKw?: number
   engine?: string
   trim?: string
+  askingPrice?: number
+  currency?: string
 }
 
 export interface ResearchOutput extends VehicleResearchResult {
@@ -23,31 +25,37 @@ export interface ResearchOutput extends VehicleResearchResult {
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(params: ResearchParams): string {
-  const { make, model, year, engineCc, powerKw, engine, trim } = params
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency } = params
 
-  // Build a precise engine identity string when cc / kW are known.
-  // e.g. "2.0L (1995cc) 135kW" — this pins the exact variant, not just the nameplate.
-  const litres    = engineCc ? (engineCc / 1000).toFixed(1) : null
-  const ccLabel   = engineCc ? `${engineCc}cc` : null
-  const litreLabel = litres  ? `${litres}L`   : null
-  const kwLabel   = powerKw  ? `${powerKw}kW` : null
+  const litres     = engineCc ? (engineCc / 1000).toFixed(1) : null
+  const ccLabel    = engineCc ? `${engineCc}cc` : null
+  const litreLabel = litres   ? `${litres}L`    : null
+  const kwLabel    = powerKw  ? `${powerKw}kW`  : null
 
-  // Human-readable engine spec, e.g. "2.0L (1995cc) 135kW"
   const engineSpec = [litreLabel && ccLabel ? `${litreLabel} (${ccLabel})` : (litreLabel ?? ccLabel), kwLabel]
     .filter(Boolean).join(' ')
 
-  // Full vehicle description for the prompt heading
   const vehicleDesc = [year, make, model, trim, engine || engineSpec].filter(Boolean).join(' ')
 
-  // Precision note injected when we have specific engine data — tells the AI
-  // to focus on problems for THIS variant, not the whole model range.
   const variantNote = engineSpec
     ? `\nEngine variant: **${engineSpec}** — focus issues on THIS specific engine/gearbox combination, not the entire model range.`
     : ''
 
-  return `You are an expert automotive advisor helping a buyer inspect a used car.
+  const curr = currency ?? 'EUR'
+  const priceNote = askingPrice
+    ? `\nAsking price: **${askingPrice.toLocaleString()} ${curr}**`
+    : ''
 
-The buyer is about to inspect a **${vehicleDesc}**.${variantNote}
+  const priceContextInstruction = askingPrice
+    ? `The buyer is asking ${askingPrice.toLocaleString()} ${curr} for this car.
+Compare this to the Serbia used-car market. Provide a realistic market range in EUR.`
+    : `No asking price provided. Still provide a realistic Serbia market price range for this vehicle in EUR based on typical listings.`
+
+  return `You are an expert automotive advisor helping a buyer in Serbia inspect a used car.
+
+The buyer is about to inspect a **${vehicleDesc}**.${variantNote}${priceNote}
+
+${priceContextInstruction}
 
 Generate a practical pre-inspection guide based on real known issues, owner reports, and expert knowledge for this exact vehicle and engine variant.
 
@@ -59,6 +67,15 @@ Rules:
 - Include repair cost context where it is a genuine financial risk
 - Be concise and actionable
 
+IMPORTANT — priceContext field:
+- Always populate "priceContext" — never omit it
+- "marketRangeFrom" and "marketRangeTo" must be integers in EUR representing the Serbia used-car market for this exact variant and year
+- "evaluation": "low" if asking price is below range or suspiciously cheap, "fair" if within range, "high" if above range. If no asking price, set "evaluation": "fair" and note it in evaluationLabel
+- "evaluationLabel": short human label, e.g. "Below market", "Fair market value", "Above market", "No asking price — estimate only"
+- "summary": 1-2 sentences — how the asking price (or lack of one) compares to the Serbia market and what this means for the buyer
+- "isEstimated": true always (we are using AI estimation, not live data)
+${askingPrice ? `- Include "askingPrice": ${askingPrice}, "currency": "${curr}"` : '- Omit "askingPrice" from priceContext'}
+
 Respond ONLY with valid JSON. No markdown, no code fences, no prose before or after.
 
 {
@@ -67,15 +84,23 @@ Respond ONLY with valid JSON. No markdown, no code fences, no prose before or af
   "confidence": "high",
   "overallRiskLevel": "moderate",
   "summary": "1-2 sentence overview of reliability for this specific variant and what buyers should know",
-  "sections": {
-    "commonProblems": { "id": "commonProblems", "title": "Common Problems", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["COMMON_ISSUE"] }] },
-    "highPriorityChecks": { "id": "highPriorityChecks", "title": "High-Priority Checks", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["HIGH_ATTENTION"] }] },
-    "visualAttention": { "id": "visualAttention", "title": "Visual Attention Areas", "items": [{ "title": "...", "description": "...", "severity": "medium", "tags": ["VISUAL_CHECK"] }] },
-    "mechanicalWatchouts": { "id": "mechanicalWatchouts", "title": "Mechanical Watchouts", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["COMMON_ISSUE"] }] },
-    "testDriveFocus": { "id": "testDriveFocus", "title": "Test Drive Focus", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["TEST_DRIVE"] }] },
-    "costAwareness": { "id": "costAwareness", "title": "Cost Awareness", "items": [{ "title": "...", "description": "...", "severity": "high", "tags": ["EXPENSIVE_RISK"] }] }
+  "priceContext": {
+    ${askingPrice ? `"askingPrice": ${askingPrice}, "currency": "${curr}", ` : ''}"marketRangeFrom": 0,
+    "marketRangeTo": 0,
+    "evaluation": "fair",
+    "evaluationLabel": "Fair market value",
+    "summary": "...",
+    "isEstimated": true
   },
-  "disclaimer": "AI-generated guide. Verify with a qualified mechanic before purchase."
+  "sections": {
+    "commonProblems":     { "id": "commonProblems",     "title": "Common Problems",          "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
+    "highPriorityChecks": { "id": "highPriorityChecks", "title": "High-Priority Checks",     "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["HIGH_ATTENTION"] }] },
+    "visualAttention":    { "id": "visualAttention",    "title": "Visual Attention Areas",   "items": [{ "title": "...", "description": "...", "severity": "medium", "tags": ["VISUAL_CHECK"]   }] },
+    "mechanicalWatchouts":{ "id": "mechanicalWatchouts","title": "Mechanical Watchouts",     "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
+    "testDriveFocus":     { "id": "testDriveFocus",     "title": "Test Drive Focus",         "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["TEST_DRIVE"]     }] },
+    "costAwareness":      { "id": "costAwareness",      "title": "Cost Awareness",           "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["EXPENSIVE_RISK"] }] }
+  },
+  "disclaimer": "AI-generated guide. Price range is an estimated market reference, not live data. Verify with a qualified mechanic before purchase."
 }
 
 Generate 3-5 items per section. Be specific to the ${vehicleDesc}.`
@@ -101,13 +126,13 @@ async function callOpenAI(
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        max_tokens: 3000,
+        max_tokens: 3500,
         temperature: 0.3,
         response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: 'You are an expert automotive advisor. Respond with valid JSON only — the structure specified by the user.',
+            content: 'You are an expert automotive advisor specialising in the Serbian used-car market. Respond with valid JSON only — the structure specified by the user.',
           },
           { role: 'user', content: buildPrompt(params) },
         ],
@@ -122,7 +147,6 @@ async function callOpenAI(
     const json = await response.json()
     const content: string = json.choices?.[0]?.message?.content ?? ''
 
-    // Strip any accidental code fences
     const cleaned = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
     return JSON.parse(cleaned) as VehicleResearchResult
   } finally {
@@ -151,7 +175,7 @@ export class VehicleResearchService {
       console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying`)
     }
 
-    // Attempt 2 (only if not a timeout — timeouts won't improve)
+    // Attempt 2
     try {
       const result = await callOpenAI(this.openaiApiKey, params, 8000)
       console.log('[research] AI response OK (attempt 2)')

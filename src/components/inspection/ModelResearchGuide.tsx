@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useState, useCallback } from 'react'
-import type { VehicleResearchResult, ResearchSection, ResearchIssue, ResearchTagType } from '@/types'
+import type { VehicleResearchResult, ResearchSection, ResearchIssue, ResearchTagType, PriceContext } from '@/types'
 import { researchApi } from '@/services/api/research.api'
 
 // ─── Tag config ───────────────────────────────────────────────────────────────
@@ -495,6 +495,102 @@ function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium
   )
 }
 
+// ─── Price context card ───────────────────────────────────────────────────────
+
+const EVAL_CFG = {
+  low:  { label: 'Below market',      color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.22)',   dot: '#22c55e' },
+  fair: { label: 'Fair market value', color: '#22d3ee', bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.22)', dot: '#22d3ee' },
+  high: { label: 'Above market',      color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.22)', dot: '#f59e0b' },
+}
+
+function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
+  const cfg = EVAL_CFG[pc.evaluation] ?? EVAL_CFG.fair
+  const fmt = (n: number) => n.toLocaleString('de-DE')
+  const curr = pc.currency ?? 'EUR'
+
+  return (
+    <div style={{
+      borderRadius: 14,
+      border: `1px solid ${cfg.border}`,
+      background: cfg.bg,
+      overflow: 'hidden',
+    }}>
+      {/* Header row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: '11px 14px 10px',
+        borderBottom: `1px solid ${cfg.border}`,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, letterSpacing: '-0.1px' }}>
+          Serbia Market Range
+        </span>
+        {pc.isEstimated && (
+          <span style={{
+            marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '0.05em',
+            textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4,
+            color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            AI estimate
+          </span>
+        )}
+      </div>
+
+      {/* Three values */}
+      <div style={{ display: 'grid', gridTemplateColumns: pc.askingPrice ? '1fr 1fr 1fr' : '1fr 1fr', gap: 0 }}>
+        {/* Market range */}
+        <div style={{ padding: '12px 14px', borderRight: `1px solid ${cfg.border}` }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+            Price range
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+            {fmt(pc.marketRangeFrom)} – {fmt(pc.marketRangeTo)}
+          </div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{curr}</div>
+        </div>
+
+        {/* Asking price — only when present */}
+        {pc.askingPrice != null && (
+          <div style={{ padding: '12px 14px', borderRight: `1px solid ${cfg.border}` }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+              Asking price
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+              {fmt(pc.askingPrice)}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{curr}</div>
+          </div>
+        )}
+
+        {/* Evaluation */}
+        <div style={{ padding: '12px 14px' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+            Evaluation
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: cfg.dot, boxShadow: `0 0 6px ${cfg.dot}80`, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, lineHeight: 1.2 }}>
+              {pc.evaluationLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary row */}
+      <div style={{
+        padding: '10px 14px',
+        borderTop: `1px solid ${cfg.border}`,
+        fontSize: 11.5, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6,
+      }}>
+        {pc.summary}
+      </div>
+    </div>
+  )
+}
+
 // ─── Full results view ────────────────────────────────────────────────────────
 
 function ResearchResults({
@@ -554,6 +650,9 @@ function ResearchResults({
         </div>
       </div>
 
+      {/* Price context card — always shown when present */}
+      {result.priceContext && <PriceContextCard pc={result.priceContext} />}
+
       {/* Sections */}
       {sectionOrder.map(key => {
         const s = result.sections[key]
@@ -604,9 +703,11 @@ interface ModelResearchGuideProps {
   powerKw?: number | null
   engine?: string
   trim?: string
+  askingPrice?: number | null
+  currency?: string | null
 }
 
-export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engine, trim }: Readonly<ModelResearchGuideProps>) {
+export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency }: Readonly<ModelResearchGuideProps>) {
   // Build a human-readable vehicle identity for display (e.g. "2013 BMW 530 2.0L 135kW")
   const litreStr  = engineCc ? ` ${(engineCc / 1000).toFixed(1)}L` : ''
   const kwStr     = powerKw  ? ` ${powerKw}kW`                     : ''
@@ -622,21 +723,21 @@ export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engin
     try {
       const data = await researchApi.getModelGuide({
         make, model, year,
-        engineCc: engineCc ?? undefined,
-        powerKw:  powerKw  ?? undefined,
+        engineCc:    engineCc    ?? undefined,
+        powerKw:     powerKw     ?? undefined,
+        askingPrice: askingPrice ?? undefined,
+        currency:    currency    ?? undefined,
         engine, trim,
       })
       setResult(data)
       setState('success')
     } catch (err: unknown) {
-      setErrorMsg(
-        err instanceof Error
-          ? err.message
-          : 'Could not connect to research service. Check your connection and try again.'
-      )
+      const msg = (err as { message?: string })?.message
+        ?? 'Could not connect to research service. Check your connection and try again.'
+      setErrorMsg(msg)
       setState('error')
     }
-  }, [make, model, year, engineCc, powerKw, engine, trim])
+  }, [make, model, year, engineCc, powerKw, askingPrice, currency, engine, trim])
 
   const reset = useCallback(() => {
     setState('idle')

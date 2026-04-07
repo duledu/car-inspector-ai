@@ -442,12 +442,24 @@ export interface ResearchSection {
   items: ResearchIssue[]
 }
 
+export interface PriceContext {
+  askingPrice?: number
+  currency?: string
+  marketRangeFrom: number
+  marketRangeTo: number
+  evaluation: 'low' | 'fair' | 'high'
+  evaluationLabel: string
+  summary: string
+  isEstimated?: boolean
+}
+
 export interface VehicleResearchResult {
   vehicleKey: string
   generatedAt: string
   confidence: 'high' | 'medium' | 'low'
   summary: string
   overallRiskLevel: 'low' | 'moderate' | 'high'
+  priceContext?: PriceContext
   sections: {
     commonProblems: ResearchSection
     highPriorityChecks: ResearchSection

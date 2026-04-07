@@ -13,6 +13,8 @@ export interface ResearchRequestPayload {
   powerKw?: number
   engine?: string
   trim?: string
+  askingPrice?: number
+  currency?: string
 }
 
 export const researchApi = {

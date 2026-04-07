@@ -93,7 +93,10 @@ export default function VehiclePage() {
       setShowForm(false)
       setForm(EMPTY_FORM)
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create vehicle')
+      const msg =
+        (err as { message?: string })?.message ||
+        'Failed to create vehicle. Please try again.'
+      setFormError(msg)
     } finally {
       setSubmitting(false)
     }

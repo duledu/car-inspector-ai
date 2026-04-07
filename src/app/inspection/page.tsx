@@ -624,6 +624,8 @@ export default function InspectionPage() {
                 year={activeVehicle.year}
                 engineCc={activeVehicle.engineCc}
                 powerKw={activeVehicle.powerKw}
+                askingPrice={activeVehicle.askingPrice}
+                currency={activeVehicle.currency}
               />
             </div>
           )}
