@@ -647,6 +647,30 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
         fontSize: 11.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.6,
       }}>
         {pc.summary}
+
+        {/* Listing count + filter attribution */}
+        {pc.listingCount != null && pc.listingCount > 0 && (() => {
+          const filters = pc.filtersMatched
+          const filterParts = filters
+            ? [filters.fuelType, filters.transmission, filters.bodyType].filter(Boolean)
+            : []
+          const filterLabel = filterParts.length > 0 ? filterParts.join(', ') : null
+          const relaxedNote = pc.filtersRelaxed ? ' (filters partially matched)' : ''
+          const listingText = filterLabel
+            ? `Based on ${pc.listingCount} listings (${filterLabel})${relaxedNote}`
+            : `Based on broader market data${relaxedNote}`
+          return (
+            <span style={{
+              display: 'block', marginTop: 6,
+              fontSize: 10, fontWeight: 600,
+              color: pc.filtersRelaxed ? 'rgba(245,158,11,0.7)' : 'rgba(34,211,238,0.65)',
+              fontStyle: 'italic',
+            }}>
+              {listingText}
+            </span>
+          )
+        })()}
+
         {pc.source && (
           <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.28)', fontStyle: 'italic' }}>
             Source: {pc.source}
@@ -771,9 +795,16 @@ interface ModelResearchGuideProps {
   trim?: string
   askingPrice?: number | null
   currency?: string | null
+  fuelType?: string | null
+  transmission?: string | null
+  bodyType?: string | null
+  mileage?: number | null
 }
 
-export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency }: Readonly<ModelResearchGuideProps>) {
+export function ModelResearchGuide({
+  make, model, year, engineCc, powerKw, engine, trim,
+  askingPrice, currency, fuelType, transmission, bodyType, mileage,
+}: Readonly<ModelResearchGuideProps>) {
   // Build a human-readable vehicle identity for display (e.g. "2013 BMW 530 2.0L 135kW")
   const litreStr  = engineCc ? ` ${(engineCc / 1000).toFixed(1)}L` : ''
   const kwStr     = powerKw  ? ` ${powerKw}kW`                     : ''
@@ -789,10 +820,14 @@ export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engin
     try {
       const data = await researchApi.getModelGuide({
         make, model, year,
-        engineCc:    engineCc    ?? undefined,
-        powerKw:     powerKw     ?? undefined,
-        askingPrice: askingPrice ?? undefined,
-        currency:    currency    ?? undefined,
+        engineCc:     engineCc     ?? undefined,
+        powerKw:      powerKw      ?? undefined,
+        askingPrice:  askingPrice  ?? undefined,
+        currency:     currency     ?? undefined,
+        fuelType:     fuelType     ?? undefined,
+        transmission: transmission ?? undefined,
+        bodyType:     bodyType     ?? undefined,
+        mileage:      mileage      ?? undefined,
         engine, trim,
       })
       setResult(data)
@@ -803,7 +838,7 @@ export function ModelResearchGuide({ make, model, year, engineCc, powerKw, engin
       setErrorMsg(msg)
       setState('error')
     }
-  }, [make, model, year, engineCc, powerKw, askingPrice, currency, engine, trim])
+  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, bodyType, mileage, engine, trim])
 
   const reset = useCallback(() => {
     setState('idle')

@@ -13,6 +13,19 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function clearSessionAndRedirect() {
+  try { localStorage.removeItem('uci-user-store') } catch { /* ignore */ }
+  // Use replace so the user can't navigate back to the broken state
+  globalThis.location.replace('/auth')
+}
+
+// A promise that never resolves — used to swallow the error chain when we
+// are already redirecting the user away.  The component unmounts before
+// resolution, so there is no memory leak.
+const REDIRECT_PENDING = new Promise<never>(() => {})
+
 // ─── Request Interceptor — Attach JWT ─────────────────────────────────────────
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (typeof window !== 'undefined') {
@@ -35,36 +48,59 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+    const status  = error.response?.status
+    const message = error.response?.data?.message ?? ''
 
-    // Attempt token refresh on 401
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // ── Hard auth failures: token is invalid or server has no secret ──────────
+    // These cannot be fixed by refreshing — clear session and redirect immediately.
+    const isHardAuthFailure =
+      status === 401 &&
+      (message === 'Invalid token' ||
+       message === 'Server configuration error' ||
+       message === 'Missing Authorization header')
+
+    if (isHardAuthFailure) {
+      clearSessionAndRedirect()
+      // Never resolve — page is navigating away.
+      return REDIRECT_PENDING
+    }
+
+    // ── Soft auth failure: token expired — attempt silent refresh ─────────────
+    if (status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       try {
         const stored = localStorage.getItem('uci-user-store')
         const refreshToken = stored ? JSON.parse(stored)?.state?.session?.refreshToken : null
-        if (refreshToken) {
-          const { data } = await axios.post('/api/auth/refresh', { refreshToken })
-          // Update stored token
-          const storeState = JSON.parse(localStorage.getItem('uci-user-store') ?? '{}')
-          if (storeState?.state?.session) {
-            storeState.state.session.accessToken = data.accessToken
-            localStorage.setItem('uci-user-store', JSON.stringify(storeState))
-          }
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
-          return apiClient(originalRequest)
+
+        if (!refreshToken) {
+          // No refresh token available — nothing we can do.
+          clearSessionAndRedirect()
+          return REDIRECT_PENDING
         }
+
+        const { data } = await axios.post('/api/auth/refresh', { refreshToken })
+
+        // Persist the new access token
+        const storeState = JSON.parse(localStorage.getItem('uci-user-store') ?? '{}')
+        if (storeState?.state?.session) {
+          storeState.state.session.accessToken = data.accessToken
+          localStorage.setItem('uci-user-store', JSON.stringify(storeState))
+        }
+
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        return apiClient(originalRequest)
       } catch {
-        // Refresh failed — clear session (will trigger redirect in AuthGuard)
-        localStorage.removeItem('uci-user-store')
-        window.location.href = '/auth'
+        // Refresh failed — session is unrecoverable.
+        clearSessionAndRedirect()
+        return REDIRECT_PENDING
       }
     }
 
-    // Normalize error shape
+    // ── All other errors — normalize shape and reject ─────────────────────────
     const normalizedError: ApiError = {
-      message: error.response?.data?.message ?? error.message ?? 'An error occurred',
+      message: message || error.message || 'An error occurred',
       code: error.response?.data?.code ?? 'UNKNOWN_ERROR',
-      statusCode: error.response?.status ?? 0,
+      statusCode: status ?? 0,
       details: error.response?.data?.details,
     }
 

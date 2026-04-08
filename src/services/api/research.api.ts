@@ -15,6 +15,10 @@ export interface ResearchRequestPayload {
   trim?: string
   askingPrice?: number
   currency?: string
+  fuelType?: string
+  transmission?: string
+  bodyType?: string
+  mileage?: number
 }
 
 export const researchApi = {

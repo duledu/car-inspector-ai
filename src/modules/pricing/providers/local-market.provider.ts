@@ -23,8 +23,8 @@ type Segment =
 // [mid-point EUR, spread fraction]  spread defines how wide the range is
 const SEGMENT_PRICE: Record<Segment, [number, number]> = {
   mini:           [14_000, 0.22],
-  city:           [19_000, 0.20],
-  compact:        [27_000, 0.20],
+  city:           [19_000, 0.2],
+  compact:        [27_000, 0.2],
   midsize:        [38_000, 0.22],
   premium_entry:  [48_000, 0.24],
   premium_mid:    [65_000, 0.26],
@@ -35,7 +35,7 @@ const SEGMENT_PRICE: Record<Segment, [number, number]> = {
   suv_large:      [90_000, 0.28],
   van:            [30_000, 0.24],
   pickup:         [38_000, 0.24],
-  sports:         [55_000, 0.30],
+  sports:         [55_000, 0.3],
 }
 
 // ─── Model → segment lookup ───────────────────────────────────────────────────
@@ -220,11 +220,11 @@ const MAKE_SEGMENT: Record<string, Segment> = {
 
 function depreciation(age: number): number {
   const curve: Record<number, number> = {
-    0: 1.00, 1: 0.82, 2: 0.72, 3: 0.63, 4: 0.55, 5: 0.48,
+    0: 1, 1: 0.82, 2: 0.72, 3: 0.63, 4: 0.55, 5: 0.48,
     6: 0.42, 7: 0.37, 8: 0.33, 9: 0.29, 10: 0.26,
-    11: 0.23, 12: 0.20, 13: 0.18, 14: 0.16, 15: 0.14,
+    11: 0.23, 12: 0.2, 13: 0.18, 14: 0.16, 15: 0.14,
   }
-  if (age <= 0) return 1.00
+  if (age <= 0) return 1
   if (age >= 15) return Math.max(0.08, 0.14 - (age - 15) * 0.01)
   // Interpolate
   const lo = curve[Math.floor(age)]
@@ -235,13 +235,39 @@ function depreciation(age: number): number {
 // ─── Engine-size multiplier ───────────────────────────────────────────────────
 
 function engineMultiplier(engineCc?: number): number {
-  if (!engineCc) return 1.0
-  if (engineCc < 1200) return 0.90
-  if (engineCc < 1700) return 1.00
+  if (!engineCc) return 1
+  if (engineCc < 1200) return 0.9
+  if (engineCc < 1700) return 1
   if (engineCc < 2100) return 1.05
   if (engineCc < 2600) return 1.14
   if (engineCc < 3200) return 1.24
   return 1.38
+}
+
+// ─── Filter-based multipliers (Serbia market calibrated) ─────────────────────
+// Diesel holds value better; automatics command a premium; EVs are scarce/premium
+
+function fuelMultiplier(fuelType?: string): number {
+  switch (fuelType) {
+    case 'diesel':   return 1.08  // Diesel popular, holds value
+    case 'hybrid':   return 1.1   // Hybrid premium
+    case 'electric': return 1.15  // EV scarce, premium priced
+    case 'lpg':      return 0.95  // LPG slight discount (conversion stigma)
+    default:         return 1     // petrol = baseline
+  }
+}
+
+function transmissionMultiplier(transmission?: string): number {
+  return transmission === 'automatic' ? 1.08 : 1
+}
+
+function bodyMultiplier(bodyType?: string): number {
+  switch (bodyType) {
+    case 'wagon':   return 1.03  // Wagons hold slight premium in Serbia
+    case 'coupe':   return 1.05  // Coupes are rarer, premium
+    case 'suv':     return 1.04  // SUVs in demand
+    default:        return 1
+  }
 }
 
 // ─── Segment resolver ─────────────────────────────────────────────────────────
@@ -268,15 +294,19 @@ export class LocalMarketProvider implements VehiclePriceProviderInterface {
   }
 
   async getMarketPrice(query: PriceQuery): Promise<MarketPriceResult> {
-    const { make, model, year, engineCc } = query
+    const { make, model, year, engineCc, fuelType, transmission, bodyType } = query
     const age = new Date().getFullYear() - year
 
     const segment = resolveSegment(make, model)
     const [baseNew, spread] = SEGMENT_PRICE[segment]
 
-    const depr = depreciation(age)
-    const engMul = engineMultiplier(engineCc)
-    const midPoint = Math.round(baseNew * depr * engMul)
+    const depr    = depreciation(age)
+    const engMul  = engineMultiplier(engineCc)
+    const fuelMul = fuelMultiplier(fuelType)
+    const transMul = transmissionMultiplier(transmission)
+    const bodyMul  = bodyMultiplier(bodyType)
+
+    const midPoint = Math.round(baseNew * depr * engMul * fuelMul * transMul * bodyMul)
 
     const halfSpread = Math.round(midPoint * spread * 0.5)
     const minPrice = Math.max(500, Math.round((midPoint - halfSpread) / 100) * 100)
@@ -289,6 +319,10 @@ export class LocalMarketProvider implements VehiclePriceProviderInterface {
     if (isWellKnownMake && age <= 12) confidence = 'high'
     if (!isWellKnownMake || age > 18) confidence = 'low'
 
+    const filtersApplied = Object.fromEntries(
+      Object.entries({ fuelType, transmission, bodyType }).filter(([, v]) => v != null)
+    )
+
     return {
       minPrice,
       maxPrice,
@@ -297,6 +331,8 @@ export class LocalMarketProvider implements VehiclePriceProviderInterface {
       confidence,
       source: 'Serbia market model (Polovni Automobili pattern)',
       note: `Based on ${segment.replace('_', ' ')} segment, ${age}-year depreciation`,
+      listingCount: 0,
+      filtersUsed: filtersApplied,
     }
   }
 }

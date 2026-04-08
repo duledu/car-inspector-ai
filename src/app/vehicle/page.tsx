@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useVehicleStore } from '@/store'
-import type { CreateVehiclePayload, Vehicle } from '@/types'
+import type { CreateVehiclePayload, Vehicle, FuelType, Transmission, BodyType } from '@/types'
 import AppShell from '../AppShell'
 
 const EMPTY_FORM: CreateVehiclePayload = {
   make: '', model: '', year: new Date().getFullYear(),
   engineCc: undefined, powerKw: undefined,
   mileage: undefined, askingPrice: undefined, currency: 'EUR',
-  sellerType: 'PRIVATE', vin: '', notes: '',
+  sellerType: 'PRIVATE', fuelType: undefined, transmission: undefined,
+  bodyType: undefined, vin: '', notes: '',
 }
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
@@ -57,6 +58,28 @@ const CURRENCY_OPTIONS = [
   { label: 'USD', value: 'USD' },
   { label: 'GBP', value: 'GBP' },
 ] as const
+
+const FUEL_OPTIONS: ReadonlyArray<{ label: string; value: FuelType }> = [
+  { label: 'Diesel',   value: 'diesel'   },
+  { label: 'Petrol',   value: 'petrol'   },
+  { label: 'Hybrid',   value: 'hybrid'   },
+  { label: 'Electric', value: 'electric' },
+  { label: 'LPG',      value: 'lpg'      },
+]
+
+const TRANSMISSION_OPTIONS: ReadonlyArray<{ label: string; value: Transmission }> = [
+  { label: 'Manual',    value: 'manual'    },
+  { label: 'Automatic', value: 'automatic' },
+]
+
+const BODY_OPTIONS: ReadonlyArray<{ label: string; value: BodyType }> = [
+  { label: 'Hatchback', value: 'hatchback' },
+  { label: 'Sedan',     value: 'sedan'     },
+  { label: 'Wagon',     value: 'wagon'     },
+  { label: 'SUV',       value: 'suv'       },
+  { label: 'Coupe',     value: 'coupe'     },
+  { label: 'Van',       value: 'van'       },
+]
 
 /* ── Field wrapper ── */
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
@@ -209,7 +232,62 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 3: Mileage / Asking Price */}
+            {/* Row 3: Fuel type */}
+            <div style={{ marginBottom: 14 }}>
+              <Field label="Fuel Type">
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {FUEL_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => set({ fuelType: form.fuelType === opt.value ? undefined : opt.value })}
+                      style={{
+                        padding: '7px 13px', fontSize: 12, fontWeight: form.fuelType === opt.value ? 700 : 400,
+                        borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        border: form.fuelType === opt.value ? '1px solid rgba(34,211,238,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                        background: form.fuelType === opt.value ? 'rgba(34,211,238,0.1)' : 'rgba(255,255,255,0.03)',
+                        color: form.fuelType === opt.value ? '#22d3ee' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+
+            {/* Row 4: Transmission / Body type */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <Field label="Transmission">
+                <Segmented
+                  options={TRANSMISSION_OPTIONS as unknown as Array<{ label: string; value: string }>}
+                  value={form.transmission ?? ''}
+                  onChange={v => set({ transmission: v ? v as Transmission : undefined })}
+                />
+              </Field>
+              <Field label="Body Type">
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {BODY_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => set({ bodyType: form.bodyType === opt.value ? undefined : opt.value })}
+                      style={{
+                        padding: '7px 11px', fontSize: 12, fontWeight: form.bodyType === opt.value ? 700 : 400,
+                        borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        border: form.bodyType === opt.value ? '1px solid rgba(34,211,238,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                        background: form.bodyType === opt.value ? 'rgba(34,211,238,0.1)' : 'rgba(255,255,255,0.03)',
+                        color: form.bodyType === opt.value ? '#22d3ee' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+
+            {/* Row 5: Mileage / Asking Price */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
               <Field label="Mileage (km)">
                 <input style={inp} type="number" value={form.mileage ?? ''} onChange={e => set({ mileage: e.target.value ? Number.parseInt(e.target.value) : undefined })} placeholder="85 000" />
@@ -219,7 +297,7 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 3: Seller type (segmented) */}
+            {/* Row 6: Seller type (segmented) */}
             <div style={{ marginBottom: 14 }}>
               <Field label="Seller Type">
                 <Segmented

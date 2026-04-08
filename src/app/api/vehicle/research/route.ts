@@ -18,6 +18,10 @@ const schema = z.object({
   trim:         z.string().max(80).optional(),
   askingPrice:  z.number().positive().optional(),
   currency:     z.string().max(10).optional(),
+  fuelType:     z.enum(['diesel', 'petrol', 'hybrid', 'electric', 'lpg']).optional(),
+  transmission: z.enum(['manual', 'automatic']).optional(),
+  bodyType:     z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
+  mileage:      z.number().int().positive().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -36,11 +40,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency } = parsed.data
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType, mileage } = parsed.data
 
   // research() never throws — it always returns useful content
   const result = await vehicleResearchService.research({
     make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency,
+    fuelType, transmission, bodyType, mileage,
   })
 
   return NextResponse.json({

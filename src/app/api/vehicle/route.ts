@@ -13,6 +13,9 @@ const CreateSchema = z.object({
   sellerType: z.enum(['PRIVATE', 'DEALER', 'INDEPENDENT_DEALER']).default('PRIVATE'),
   engineCc: z.number().int().positive().max(10000).optional(),
   powerKw: z.number().int().positive().max(2000).optional(),
+  fuelType: z.enum(['diesel', 'petrol', 'hybrid', 'electric', 'lpg']).optional(),
+  transmission: z.enum(['manual', 'automatic']).optional(),
+  bodyType: z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
   vin: z.string().optional(),
   notes: z.string().optional(),
 })

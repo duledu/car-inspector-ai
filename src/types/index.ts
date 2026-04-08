@@ -38,6 +38,9 @@ export interface RegisterPayload {
 
 export type SellerType = 'PRIVATE' | 'DEALER' | 'INDEPENDENT_DEALER'
 export type VehicleStatus = 'ACTIVE' | 'PURCHASED' | 'PASSED' | 'ARCHIVED'
+export type FuelType = 'diesel' | 'petrol' | 'hybrid' | 'electric' | 'lpg'
+export type Transmission = 'manual' | 'automatic'
+export type BodyType = 'sedan' | 'wagon' | 'hatchback' | 'suv' | 'coupe' | 'van'
 
 export interface Vehicle {
   id: string
@@ -51,6 +54,9 @@ export interface Vehicle {
   sellerType: SellerType
   engineCc?: number | null
   powerKw?: number | null
+  fuelType?: FuelType | null
+  transmission?: Transmission | null
+  bodyType?: BodyType | null
   vin?: string | null
   notes?: string | null
   status: VehicleStatus
@@ -68,6 +74,9 @@ export interface CreateVehiclePayload {
   sellerType?: SellerType
   engineCc?: number
   powerKw?: number
+  fuelType?: FuelType
+  transmission?: Transmission
+  bodyType?: BodyType
   vin?: string
   notes?: string
 }
@@ -153,6 +162,8 @@ export interface Photo {
 
 export type Verdict = 'STRONG_BUY' | 'BUY_WITH_CAUTION' | 'HIGH_RISK' | 'WALK_AWAY'
 
+export type ServiceHistoryStatus = 'FULL' | 'PARTIAL' | 'NONE' | 'SUSPICIOUS'
+
 export interface ScoreDimension {
   label: string
   score: number       // 0-100
@@ -176,8 +187,11 @@ export interface RiskScore {
     documents: ScoreDimension
   }
   hasPremiumData: boolean
-  reasonsFor: string[]     // top 5
-  reasonsAgainst: string[] // top 5
+  reasonsFor: string[]       // top 5
+  reasonsAgainst: string[]   // top 5
+  riskFlags: string[]        // e.g. NO_SERVICE_HISTORY, HIGH_DAMAGE_COUNT
+  negotiationHints: string[] // buyer negotiation advice
+  serviceHistoryStatus: ServiceHistoryStatus
   createdAt: string
 }
 
@@ -187,6 +201,7 @@ export interface ScoreCalculationInput {
   vinData?: VehicleHistoryResult | null
   testDriveRatings: Record<string, number>
   hasPremiumHistory: boolean
+  serviceHistoryStatus?: ServiceHistoryStatus  // explicit override; derived from checklist if absent
 }
 
 // ─── Vehicle History / CarVertical Integration ────────────────────────────────
@@ -459,6 +474,12 @@ export interface PriceContext {
   source?: string
   /** How reliable this estimate is */
   confidence?: ConfidenceLevel
+  /** Number of real listings the estimate is based on */
+  listingCount?: number
+  /** Which vehicle filters were matched when fetching listings */
+  filtersMatched?: { fuelType?: string; transmission?: string; bodyType?: string }
+  /** Whether filters were relaxed to gather enough listings */
+  filtersRelaxed?: boolean
 }
 
 export interface VehicleResearchResult {

@@ -626,6 +626,10 @@ export default function InspectionPage() {
                 powerKw={activeVehicle.powerKw}
                 askingPrice={activeVehicle.askingPrice}
                 currency={activeVehicle.currency}
+                fuelType={activeVehicle.fuelType}
+                transmission={activeVehicle.transmission}
+                bodyType={activeVehicle.bodyType}
+                mileage={activeVehicle.mileage}
               />
             </div>
           )}

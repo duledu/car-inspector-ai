@@ -1,20 +1,24 @@
 // =============================================================================
 // Pricing Service — orchestrates VehiclePriceProviders
-// Strategy: LOCAL MARKET (primary) → AI ANTHROPIC (fallback)
 //
-// The local-market provider is pure computation (always available).
-// The AI provider runs only when local confidence is 'low' OR as a secondary
-// enrichment when ANTHROPIC_API_KEY is present.
+// Provider order (first success wins):
+//   1. PalovniProvider   — real live listings from polovniautomobili.com
+//   2. LocalMarketProvider — pure computation, always available (fallback)
+//   3. AIAnthropicPriceProvider — enrichment when API key is present
+//
+// PalovniProvider tries strict → relaxed → broad filter matching internally.
+// If it throws (bot-blocked, timeout, no listings), LocalMarket takes over.
 // =============================================================================
 
 import type { VehiclePriceProviderInterface, PriceQuery, MarketPriceResult } from './provider.interface'
 import { LocalMarketProvider }      from './providers/local-market.provider'
 import { AIAnthropicPriceProvider } from './providers/ai-anthropic.provider'
+import { PalovniProvider }          from './providers/polovni.provider'
 
-export type { PriceQuery, MarketPriceResult }
+export type { PriceQuery, MarketPriceResult } from './provider.interface'
 
 export class PricingService {
-  private providers: VehiclePriceProviderInterface[]
+  private readonly providers: VehiclePriceProviderInterface[]
 
   constructor(providers: VehiclePriceProviderInterface[]) {
     this.providers = providers
@@ -29,7 +33,11 @@ export class PricingService {
 
       try {
         const result = await provider.getMarketPrice(query)
-        console.log(`[pricing] ${provider.providerId} → ${result.minPrice}–${result.maxPrice} EUR (${result.confidence})`)
+        console.log(
+          `[pricing] ${provider.providerId} → ${result.minPrice}–${result.maxPrice} EUR` +
+          ` (${result.confidence})` +
+          (result.listingCount != null && result.listingCount > 0 ? ` — ${result.listingCount} listings` : '')
+        )
         return result
       } catch (err) {
         console.warn(`[pricing] ${provider.providerId} failed:`, err instanceof Error ? err.message : err)
@@ -47,6 +55,7 @@ export function createPricingService(): PricingService {
   const anthropicKey = process.env.ANTHROPIC_API_KEY ?? ''
 
   const providers: VehiclePriceProviderInterface[] = [
+    new PalovniProvider(),
     new LocalMarketProvider(),
     ...(anthropicKey ? [new AIAnthropicPriceProvider(anthropicKey)] : []),
   ]

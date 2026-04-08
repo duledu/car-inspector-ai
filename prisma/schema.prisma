@@ -66,6 +66,9 @@ model Vehicle {
   listingUrl  String?
   engineCc    Int?
   powerKw     Int?
+  fuelType    String?
+  transmission String?
+  bodyType    String?
   vin         String?
   notes       String?
   status      VehicleStatus @default(ACTIVE)

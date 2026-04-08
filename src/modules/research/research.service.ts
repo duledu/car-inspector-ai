@@ -19,6 +19,10 @@ export interface ResearchParams {
   trim?: string
   askingPrice?: number
   currency?: string
+  fuelType?: string
+  transmission?: string
+  bodyType?: string
+  mileage?: number
 }
 
 export interface ResearchOutput extends VehicleResearchResult {
@@ -28,7 +32,7 @@ export interface ResearchOutput extends VehicleResearchResult {
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(params: ResearchParams): string {
-  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency } = params
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType } = params
 
   const litres     = engineCc ? (engineCc / 1000).toFixed(1) : null
   const ccLabel    = engineCc ? `${engineCc}cc`              : null
@@ -47,6 +51,16 @@ function buildPrompt(params: ResearchParams): string {
     ? `\nEngine variant: **${engineSpec}** — focus issues on THIS specific engine/gearbox combination.`
     : ''
 
+  const filterParts = [
+    fuelType     ? `Fuel: **${fuelType}**`           : null,
+    transmission ? `Gearbox: **${transmission}**`    : null,
+    bodyType     ? `Body style: **${bodyType}**`     : null,
+  ].filter(Boolean)
+
+  const filterNote = filterParts.length > 0
+    ? `\nVehicle spec: ${filterParts.join(' | ')} — tailor known issues to this configuration.`
+    : ''
+
   const priceNote = askingPrice
     ? `\nAsking price: **${askingPrice.toLocaleString()} ${curr}**`
     : ''
@@ -57,7 +71,7 @@ function buildPrompt(params: ResearchParams): string {
 
   return `You are an expert automotive advisor helping a buyer in Serbia inspect a used car.
 
-Vehicle: **${vehicleDesc}**${variantNote}${priceNote}
+Vehicle: **${vehicleDesc}**${variantNote}${filterNote}${priceNote}
 
 ${priceInstruction}
 
@@ -112,37 +126,42 @@ Generate 3-5 items per section. Be specific to the ${vehicleDesc}.`
 function buildPriceContext(
   market: MarketPriceResult,
   askingPrice?: number,
-  currency?: string,
+  currency = 'EUR',
 ): PriceContext {
-  const curr = currency ?? 'EUR'
-  const { minPrice, maxPrice, avgPrice, confidence, source } = market
+  const { minPrice, maxPrice, avgPrice, confidence, source, listingCount, filtersUsed } = market
 
-  let evaluation: PriceContext['evaluation'] = 'fair'
-  let evaluationLabel = 'Fair market value'
-  let summary = `Estimated Serbia market range: €${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}.`
+  const rangeStr = `€${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}`
 
-  if (askingPrice != null) {
-    if (askingPrice < minPrice * 0.9) {
-      evaluation     = 'low'
-      evaluationLabel = 'Below market — investigate why'
-      summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is below the typical Serbia range of €${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}. Unusually low prices warrant extra scrutiny.`
-    } else if (askingPrice > maxPrice * 1.1) {
-      evaluation     = 'high'
-      evaluationLabel = 'Above market'
-      summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is above the typical Serbia range of €${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}. Negotiate or verify premium features justify the premium.`
-    } else {
-      evaluation     = 'fair'
-      evaluationLabel = 'Fair market value'
-      summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} sits within the typical Serbia range of €${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}.`
-    }
+  let evaluation: PriceContext['evaluation']
+  let evaluationLabel: string
+  let summary: string
+
+  if (askingPrice == null) {
+    evaluation      = 'fair'
+    evaluationLabel = 'Estimate only'
+    summary = `Estimated Serbia market range for this vehicle: ${rangeStr} (avg €${avgPrice.toLocaleString('de-DE')}).`
+  } else if (askingPrice < minPrice * 0.9) {
+    evaluation      = 'low'
+    evaluationLabel = 'Below market — investigate why'
+    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is below the typical Serbia range of ${rangeStr}. Unusually low prices warrant extra scrutiny.`
+  } else if (askingPrice > maxPrice * 1.1) {
+    evaluation      = 'high'
+    evaluationLabel = 'Above market'
+    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is above the typical Serbia range of ${rangeStr}. Negotiate or verify premium features justify the premium.`
   } else {
-    summary = `Estimated Serbia market range for this vehicle: €${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')} (avg €${avgPrice.toLocaleString('de-DE')}).`
+    evaluation      = 'fair'
+    evaluationLabel = 'Fair market value'
+    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} sits within the typical Serbia range of ${rangeStr}.`
   }
 
+  const filtersMatched = filtersUsed
+    ? Object.fromEntries(Object.entries(filtersUsed).filter(([, v]) => v != null))
+    : undefined
+
   return {
-    ...(askingPrice != null ? { askingPrice, currency: curr } : {}),
+    ...(askingPrice != null ? { askingPrice, currency } : {}),
     marketRangeFrom: minPrice,
-    marketRangeTo: maxPrice,
+    marketRangeTo:   maxPrice,
     avgPrice,
     evaluation,
     evaluationLabel,
@@ -150,6 +169,10 @@ function buildPriceContext(
     isEstimated: true,
     source,
     confidence,
+    listingCount,
+    filtersMatched:  Object.keys(filtersMatched ?? {}).length > 0 ? filtersMatched : undefined,
+    filtersRelaxed:  listingCount != null && listingCount > 0 && filtersMatched != null
+                       && Object.keys(filtersMatched).length < 3 ? true : undefined,
   }
 }
 
@@ -205,14 +228,18 @@ export class VehicleResearchService {
         ? this.callWithRetry(params)
         : Promise.reject(new Error('No API key')),
       pricingService.getMarketPrice({
-        make:      params.make,
-        model:     params.model,
-        year:      params.year,
-        engineCc:  params.engineCc,
-        powerKw:   params.powerKw,
-        trim:      params.trim,
-        askingPrice: params.askingPrice,
-        currency:  params.currency,
+        make:         params.make,
+        model:        params.model,
+        year:         params.year,
+        engineCc:     params.engineCc,
+        powerKw:      params.powerKw,
+        trim:         params.trim,
+        askingPrice:  params.askingPrice,
+        currency:     params.currency,
+        fuelType:     params.fuelType,
+        transmission: params.transmission,
+        bodyType:     params.bodyType,
+        mileage:      params.mileage,
       }),
     ])
 
