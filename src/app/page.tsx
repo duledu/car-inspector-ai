@@ -917,38 +917,134 @@ function ClosingCTA() {
 // FOOTER
 // ══════════════════════════════════════════════════════════════
 
-function Footer() {
+function FooterLink({ href, children }: Readonly<{ href: string; children: React.ReactNode }>) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 32, marginBottom: 40 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', marginBottom: 12 }}>
+    <Link
+      href={href}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        fontSize: 13,
+        color: hovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.52)',
+        textDecoration: 'none',
+        transition: 'color 0.18s ease',
+        letterSpacing: '-0.1px',
+      }}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function Footer() {
+  const [signinHovered, setSigninHovered] = useState(false)
+  const [startHovered,  setStartHovered]  = useState(false)
+
+  return (
+    <footer style={{
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.012) 100%)',
+    }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 32px 48px' }}>
+
+        {/* ── Top grid ── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 1fr 1fr',
+          gap: '48px 64px',
+          marginBottom: 56,
+        }}>
+
+          {/* Brand column */}
+          <div style={{ maxWidth: 320 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', marginBottom: 14 }}>
               <span style={{ color: '#22d3ee' }}>Car Inspector</span> AI
             </div>
-            <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.25)', lineHeight: 1.65, maxWidth: 200 }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>
               AI-powered inspection intelligence for smarter used car buying decisions.
             </p>
           </div>
+
+          {/* Nav columns */}
           {[
-            { title: 'Inspect', links: [{ label: 'Start Inspection', href: '/inspection' }, { label: 'My Vehicles', href: '/vehicle' }, { label: 'View Reports', href: '/report' }, { label: 'Premium History', href: '/premium' }] },
-            { title: 'Platform', links: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Community', href: '/community' }, { label: 'Messages', href: '/messages' }, { label: 'Profile', href: '/profile' }] },
+            { title: 'Inspect', links: [
+              { label: 'Start Inspection', href: '/inspection' },
+              { label: 'My Vehicles',      href: '/vehicle' },
+              { label: 'View Reports',     href: '/report' },
+              { label: 'Premium History',  href: '/premium' },
+            ]},
+            { title: 'Platform', links: [
+              { label: 'Dashboard',  href: '/dashboard' },
+              { label: 'Community',  href: '/community' },
+              { label: 'Messages',   href: '/messages' },
+              { label: 'Profile',    href: '/profile' },
+            ]},
           ].map(col => (
             <div key={col.title}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>{col.title}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700,
+                color: 'rgba(255,255,255,0.38)',
+                textTransform: 'uppercase', letterSpacing: '0.1em',
+                marginBottom: 18,
+              }}>
+                {col.title}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                 {col.links.map(l => (
-                  <Link key={l.href} href={l.href} style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>{l.label}</Link>
+                  <FooterLink key={l.href} href={l.href}>{l.label}</FooterLink>
                 ))}
               </div>
             </div>
           ))}
         </div>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.18)' }}>Car Inspector AI — AI-guided automotive intelligence.</span>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Link href="/auth" style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}>Sign In</Link>
-            <Link href="/inspection" style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}>Start Free</Link>
+
+        {/* ── Bottom row ── */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          paddingTop: 28,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '-0.1px' }}>
+            Car Inspector AI — AI-guided automotive intelligence.
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Link
+              href="/auth"
+              onMouseEnter={() => setSigninHovered(true)}
+              onMouseLeave={() => setSigninHovered(false)}
+              style={{
+                fontSize: 12, fontWeight: 500,
+                color: signinHovered ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.38)',
+                textDecoration: 'none',
+                transition: 'color 0.18s ease',
+                letterSpacing: '-0.1px',
+              }}
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/inspection"
+              onMouseEnter={() => setStartHovered(true)}
+              onMouseLeave={() => setStartHovered(false)}
+              style={{
+                fontSize: 12, fontWeight: 700,
+                color: startHovered ? '#fff' : '#22d3ee',
+                textDecoration: 'none',
+                letterSpacing: '-0.1px',
+                padding: '5px 13px',
+                borderRadius: 7,
+                border: `1px solid ${startHovered ? 'rgba(34,211,238,0.55)' : 'rgba(34,211,238,0.28)'}`,
+                background: startHovered ? 'rgba(34,211,238,0.12)' : 'rgba(34,211,238,0.06)',
+                transition: 'all 0.18s ease',
+              }}
+            >
+              Start Free
+            </Link>
           </div>
         </div>
       </div>
