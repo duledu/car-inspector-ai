@@ -125,6 +125,261 @@ function LandingNav() {
 // HERO
 // ══════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════
+// HERO CARD — premium 3D glass inspection preview
+// ══════════════════════════════════════════════════════════════
+
+function HeroCard() {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Float wrapper — animation only, no hover transform here */}
+      <div style={{ animation: 'float 7s ease-in-out infinite', width: '100%', maxWidth: 380 }}>
+
+        {/* Hover wrapper — lift transform only */}
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            position: 'relative',
+            paddingBottom: 36,
+            transform: hovered ? 'translateY(-8px)' : 'translateY(0)',
+            transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
+          }}
+        >
+
+          {/* ── Wide ambient glow — sits behind everything ── */}
+          <div style={{
+            position: 'absolute', inset: -60, pointerEvents: 'none', zIndex: 0,
+            background: 'radial-gradient(ellipse 80% 70% at 50% 48%, rgba(34,211,238,0.18) 0%, rgba(129,140,248,0.08) 50%, transparent 75%)',
+            opacity: hovered ? 1 : 0.7,
+            transition: 'opacity 0.4s ease',
+          }} />
+
+          {/* ── Drop shadow card (depth illusion) ── */}
+          <div style={{
+            position: 'absolute', inset: 8, top: 12, zIndex: 1,
+            borderRadius: 28,
+            background: 'rgba(4,8,20,0.7)',
+            filter: 'blur(20px)',
+          }} />
+
+          {/* ══ Main glass card ══ */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            borderRadius: 24,
+            overflow: 'hidden',
+            background: 'rgba(6,10,24,0.32)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            boxShadow: [
+              'inset 0 1px 0 rgba(255,255,255,0.1)',         // top glass edge
+              'inset 0 -1px 0 rgba(0,0,0,0.2)',              // bottom inner shadow
+              'inset 1px 0 0 rgba(255,255,255,0.03)',         // left inner edge
+              '0 4px 6px rgba(0,0,0,0.25)',                  // contact shadow
+              '0 20px 60px rgba(0,0,0,0.6)',                 // mid shadow
+              '0 48px 100px rgba(0,0,0,0.45)',               // deep ambient
+              `0 0 48px rgba(34,211,238,${hovered ? '0.13' : '0.055'})`, // soft cyan halo
+            ].join(', '),
+            transition: 'box-shadow 0.4s ease',
+          }}>
+
+            {/* ── Glass surface light — top-left radial ── */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: '55%', pointerEvents: 'none',
+              background: 'radial-gradient(ellipse 90% 60% at 15% -10%, rgba(34,211,238,0.13) 0%, rgba(129,140,248,0.05) 40%, transparent 70%)',
+            }} />
+            {/* ── Subtle noise/grain texture via repeating gradient ── */}
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.025,
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")',
+              backgroundSize: '128px 128px',
+            }} />
+
+            {/* ══ CARD HEADER ══ */}
+            <div style={{ padding: '22px 22px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+
+                {/* Left: vehicle info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Live badge */}
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 8px 3px 6px', borderRadius: 6, marginBottom: 10,
+                    background: 'rgba(34,211,238,0.08)',
+                    border: '1px solid rgba(34,211,238,0.2)',
+                  }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px #22d3ee', animation: 'pulse-dot 2s infinite', flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live Inspection</span>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.6px', lineHeight: 1.15, marginBottom: 5, textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>2019 BMW 3 Series</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', letterSpacing: '-0.1px' }}>87 000 km &nbsp;·&nbsp; 14 500 EUR</div>
+                </div>
+
+                {/* Right: score ring */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {/* Pulse ring glow */}
+                  <div style={{
+                    position: 'absolute', inset: -8, borderRadius: '50%', pointerEvents: 'none',
+                    background: 'radial-gradient(circle, rgba(34,211,238,0.25) 0%, transparent 65%)',
+                    animation: 'glow-pulse 2.8s ease-in-out infinite',
+                  }} />
+                  <svg width="72" height="72" viewBox="0 0 72 72" style={{ display: 'block' }}>
+                    {/* Track */}
+                    <circle cx="36" cy="36" r="29" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5"/>
+                    {/* Filled arc */}
+                    <circle cx="36" cy="36" r="29" fill="none"
+                      stroke="url(#sg)" strokeWidth="5"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 29}`}
+                      strokeDashoffset={`${2 * Math.PI * 29 * (1 - 0.87)}`}
+                      transform="rotate(-90 36 36)"
+                      style={{ filter: 'drop-shadow(0 0 7px rgba(34,211,238,0.9))' }}
+                    />
+                    <defs>
+                      <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#22d3ee"/>
+                        <stop offset="100%" stopColor="#818cf8"/>
+                      </linearGradient>
+                    </defs>
+                    <text x="36" y="40" textAnchor="middle" fontSize="17" fontWeight="900" fill="#fff" letterSpacing="-1">87</text>
+                  </svg>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(34,211,238,0.12) 50%, rgba(255,255,255,0.02) 100%)', margin: '18px 0 16px' }} />
+            </div>
+
+            {/* ══ PROGRESS ══ */}
+            <div style={{ padding: '0 22px 18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, letterSpacing: '0.02em' }}>Inspection progress</span>
+                <span style={{ fontSize: 12, color: '#22d3ee', fontWeight: 800, letterSpacing: '-0.3px' }}>73%</span>
+              </div>
+              {/* Track */}
+              <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'visible', position: 'relative' }}>
+                {/* Fill */}
+                <div style={{
+                  position: 'absolute', left: 0, top: 0, bottom: 0, width: '73%',
+                  background: 'linear-gradient(90deg, #22d3ee 0%, #818cf8 100%)',
+                  borderRadius: 99,
+                  boxShadow: '0 0 12px rgba(34,211,238,0.6), 0 0 24px rgba(34,211,238,0.25)',
+                }} />
+                {/* Thumb dot */}
+                <div style={{
+                  position: 'absolute', top: '50%', left: '73%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 12, height: 12, borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 0 8px rgba(34,211,238,0.9), 0 0 20px rgba(34,211,238,0.4)',
+                  border: '2px solid rgba(34,211,238,0.6)',
+                }} />
+              </div>
+            </div>
+
+            {/* ══ PHASE CHIPS ══ */}
+            <div style={{ padding: '0 22px 18px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {[
+                { l: 'Exterior',   done: true  },
+                { l: 'Interior',   done: true  },
+                { l: 'Mechanical', done: false },
+                { l: 'Test Drive', done: false },
+              ].map(p => (
+                <span key={p.l} style={{
+                  padding: '5px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                  background: p.done ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${p.done ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  color: p.done ? '#4ade80' : 'rgba(255,255,255,0.3)',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  boxShadow: p.done ? '0 0 10px rgba(34,197,94,0.18), inset 0 1px 0 rgba(34,197,94,0.1)' : 'none',
+                }}>
+                  {p.done
+                    ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    : <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                  }
+                  {p.l}
+                </span>
+              ))}
+            </div>
+
+            {/* ══ AI FINDINGS ══ */}
+            <div style={{
+              margin: '0 12px 12px',
+              borderRadius: 16,
+              background: 'rgba(4,10,24,0.6)',
+              border: '1px solid rgba(34,211,238,0.12)',
+              overflow: 'hidden',
+            }}>
+              {/* Panel header */}
+              <div style={{
+                padding: '10px 14px',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'linear-gradient(90deg, rgba(34,211,238,0.06) 0%, transparent 100%)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Findings</span>
+                </div>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>3 detected</span>
+              </div>
+              {/* Findings rows */}
+              {[
+                { l: 'Left door panel gap',  s: 'warn', label: 'Warning' },
+                { l: 'Rear bumper repaint',  s: 'warn', label: 'Warning' },
+                { l: 'Engine bay clean',     s: 'ok',   label: 'Clear'   },
+              ].map((f, i, arr) => (
+                <div key={f.l} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  gap: 10,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div style={{
+                      width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                      background: f.s === 'ok' ? '#22c55e' : '#f59e0b',
+                      boxShadow: `0 0 8px ${f.s === 'ok' ? 'rgba(34,197,94,0.9)' : 'rgba(245,158,11,0.9)'}`,
+                    }} />
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.82)', letterSpacing: '-0.1px', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{f.l}</span>
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                    color: f.s === 'ok' ? 'rgba(34,197,94,0.8)' : 'rgba(245,158,11,0.8)',
+                    flexShrink: 0,
+                  }}>{f.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── AI pill — floats below card ── */}
+          <div style={{
+            position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 3,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '9px 20px', borderRadius: 99, whiteSpace: 'nowrap',
+            background: 'rgba(6,12,28,0.92)',
+            border: '1px solid rgba(34,211,238,0.28)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            fontSize: 12, fontWeight: 700, color: '#22d3ee',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(34,211,238,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 10px #22d3ee, 0 0 20px rgba(34,211,238,0.5)', animation: 'pulse-dot 2s infinite', flexShrink: 0 }} />
+            AI analysing photos…
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Hero() {
   return (
     <section style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden', padding: '100px 20px 80px' }}>
@@ -151,26 +406,26 @@ function Hero() {
         {/* ── Cinematic car — full-bleed, mask-faded, zero hard edges ── */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
 
-          {/* Photo: inset:0 so no geometric left edge exists.
-              mask-image fades it in from the right — the left is fully
-              transparent, the transition is purely gradient-controlled. */}
+          {/* Hero visual — cardoctorImg capsule, right-side anchored */}
           <img
-            src="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1800&q=75&auto=format&fit=crop"
+            src="/icons/cardoctorImg.png"
             alt=""
             aria-hidden="true"
             style={{
               position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: '65% center',
-              opacity: 0.32,
-              filter: 'brightness(0.52) saturate(0.65) contrast(1.08)',
-              /* Mask: left 30% fully hidden → soft feather 30–60% → visible right side.
-                 No geometry = no hard edge, ever. */
-              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 30%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.88) 60%, black 80%)',
-              maskImage:       'linear-gradient(to right, transparent 0%, transparent 30%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.88) 60%, black 80%)',
+              top: '50%',
+              right: '-2%',
+              transform: 'translateY(-50%)',
+              height: '140%',
+              width: 'auto',
+              maxWidth: '75%',
+              objectFit: 'contain',
+              objectPosition: 'right center',
+              opacity: 0.95,
+              filter: 'brightness(0.88) saturate(0.78) contrast(1.06)',
+              /* Fade left edge so image blends into the dark scene */
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 15%, rgba(0,0,0,0.72) 32%, black 54%)',
+              maskImage:       'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 15%, rgba(0,0,0,0.72) 32%, black 54%)',
             }}
           />
 
@@ -291,105 +546,7 @@ function Hero() {
           </div>
 
           {/* Preview card */}
-          <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', maxWidth: 360, position: 'relative', paddingBottom: 28 }}>
-              {/* Glow halo — increased opacity + dual-tone */}
-              <div style={{ position: 'absolute', inset: -36, background: 'radial-gradient(ellipse at 55% 45%, rgba(34,211,238,0.22) 0%, rgba(129,140,248,0.08) 50%, transparent 72%)', pointerEvents: 'none' }} />
-
-              <div style={{
-                ...glass,
-                /* Darker, more opaque — card reads clearly against the bg */
-                background: 'rgba(8,14,30,0.76)',
-                /* More blur = stronger glass separation */
-                backdropFilter: 'blur(28px)',
-                WebkitBackdropFilter: 'blur(28px)',
-                /* Refined border: faint top-highlight + perimeter ring */
-                border: '1px solid rgba(255,255,255,0.11)',
-                borderRadius: 24, padding: 24, position: 'relative',
-                boxShadow: [
-                  /* Dark spread — darkens scene directly behind card */
-                  '0 0 80px 24px rgba(4,8,18,0.55)',
-                  /* Deep close shadow */
-                  '0 12px 40px rgba(0,0,0,0.65)',
-                  /* Wide ambient shadow */
-                  '0 32px 80px rgba(0,0,0,0.42)',
-                  /* Cyan ambient glow — matches theme accent */
-                  '0 0 56px rgba(34,211,238,0.09)',
-                  /* Top inner highlight — glass edge */
-                  'inset 0 1px 0 rgba(255,255,255,0.11)',
-                  /* Subtle inner perimeter */
-                  'inset 0 0 0 1px rgba(255,255,255,0.04)',
-                ].join(', '),
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Inspecting</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px' }}>2019 BMW 3 Series</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', marginTop: 1 }}>87 000 km · 14 500 EUR</div>
-                  </div>
-                  <svg width="62" height="62" viewBox="0 0 62 62">
-                    <circle cx="31" cy="31" r="25" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="4"/>
-                    <circle cx="31" cy="31" r="25" fill="none" stroke="url(#hg)" strokeWidth="4"
-                      strokeLinecap="round" strokeDasharray="157" strokeDashoffset="20"
-                      transform="rotate(-90 31 31)"/>
-                    <defs>
-                      <linearGradient id="hg" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#22d3ee"/>
-                        <stop offset="100%" stopColor="#818cf8"/>
-                      </linearGradient>
-                    </defs>
-                    <text x="31" y="36" textAnchor="middle" fontSize="14" fontWeight="900" fill="#fff">87</text>
-                  </svg>
-                </div>
-
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.32)', marginBottom: 6 }}>
-                    <span>Inspection progress</span>
-                    <span style={{ color: '#22d3ee', fontWeight: 700 }}>73%</span>
-                  </div>
-                  <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4 }}>
-                    <div style={{ height: '100%', width: '73%', background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: 4 }}/>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 18 }}>
-                  {[{ l: 'Exterior', d: true }, { l: 'Interior', d: true }, { l: 'Mechanical', d: false }, { l: 'Test Drive', d: false }].map(p => (
-                    <span key={p.l} style={{
-                      padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: p.d ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${p.d ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}`,
-                      color: p.d ? '#22c55e' : 'rgba(255,255,255,0.32)',
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                    }}>
-                      {p.d && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                      {p.l}
-                    </span>
-                  ))}
-                </div>
-
-                <div style={{ background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)', borderRadius: 14, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>AI Findings</div>
-                  {[{ l: 'Left door panel gap', s: 'warn' }, { l: 'Rear bumper repaint', s: 'warn' }, { l: 'Engine bay clean', s: 'ok' }].map(f => (
-                    <div key={f.l} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: f.s === 'ok' ? '#22c55e' : '#f59e0b', boxShadow: `0 0 6px ${f.s === 'ok' ? '#22c55e' : '#f59e0b'}60` }} />
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.52)' }}>{f.l}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{
-                position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
-                padding: '8px 16px', borderRadius: 100, whiteSpace: 'nowrap',
-                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)',
-                backdropFilter: 'blur(12px)', fontSize: 12, fontWeight: 700, color: '#22d3ee',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 8px #22d3ee', animation: 'pulse-dot 2s infinite' }} />
-                AI analysing photos…
-              </div>
-            </div>
-          </div>
+          <HeroCard />
         </div>
       </div>
     </section>
