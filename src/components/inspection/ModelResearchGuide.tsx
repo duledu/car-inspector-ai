@@ -498,94 +498,160 @@ function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium
 // ─── Price context card ───────────────────────────────────────────────────────
 
 const EVAL_CFG = {
-  low:  { label: 'Below market',      color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.22)',   dot: '#22c55e' },
-  fair: { label: 'Fair market value', color: '#22d3ee', bg: 'rgba(34,211,238,0.08)', border: 'rgba(34,211,238,0.22)', dot: '#22d3ee' },
-  high: { label: 'Above market',      color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.22)', dot: '#f59e0b' },
+  low:  { label: 'Below market',      color: '#22c55e', bg: 'rgba(34,197,94,0.06)',   border: 'rgba(34,197,94,0.18)',   barColor: '#22c55e' },
+  fair: { label: 'Fair market value', color: '#22d3ee', bg: 'rgba(34,211,238,0.06)', border: 'rgba(34,211,238,0.18)', barColor: '#22d3ee' },
+  high: { label: 'Above market',      color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', barColor: '#f59e0b' },
+}
+
+const CONFIDENCE_CFG = {
+  high:   { label: 'High confidence',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.2)'   },
+  medium: { label: 'Medium confidence', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  low:    { label: 'Low confidence',    color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.2)' },
 }
 
 function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
-  const cfg = EVAL_CFG[pc.evaluation] ?? EVAL_CFG.fair
-  const fmt = (n: number) => n.toLocaleString('de-DE')
+  const cfg  = EVAL_CFG[pc.evaluation] ?? EVAL_CFG.fair
+  const ccfg = CONFIDENCE_CFG[pc.confidence ?? 'medium']
+  const fmt  = (n: number) => `€${n.toLocaleString('de-DE')}`
   const curr = pc.currency ?? 'EUR'
+
+  // Position of asking price on the range bar (0–100%)
+  const rangeSpan = pc.marketRangeTo - pc.marketRangeFrom
+  const askingPct = pc.askingPrice != null && rangeSpan > 0
+    ? Math.max(4, Math.min(96, ((pc.askingPrice - pc.marketRangeFrom) / rangeSpan) * 100))
+    : null
+  const avgPct = pc.avgPrice != null && rangeSpan > 0
+    ? Math.max(2, Math.min(98, ((pc.avgPrice - pc.marketRangeFrom) / rangeSpan) * 100))
+    : 50
 
   return (
     <div style={{
-      borderRadius: 14,
+      borderRadius: 16,
       border: `1px solid ${cfg.border}`,
       background: cfg.bg,
       overflow: 'hidden',
     }}>
-      {/* Header row */}
+      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 9,
         padding: '11px 14px 10px',
         borderBottom: `1px solid ${cfg.border}`,
       }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
         </svg>
-        <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, letterSpacing: '-0.1px' }}>
-          Serbia Market Range
+        <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, letterSpacing: '-0.1px', flex: 1 }}>
+          Market Price · Serbia
         </span>
-        {pc.isEstimated && (
-          <span style={{
-            marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '0.05em',
-            textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4,
-            color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}>
-            AI estimate
-          </span>
-        )}
+        {/* Confidence badge */}
+        <span style={{
+          fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+          padding: '2px 7px', borderRadius: 4,
+          color: ccfg.color, background: ccfg.bg, border: `1px solid ${ccfg.border}`,
+        }}>
+          {ccfg.label}
+        </span>
       </div>
 
-      {/* Three values */}
-      <div style={{ display: 'grid', gridTemplateColumns: pc.askingPrice ? '1fr 1fr 1fr' : '1fr 1fr', gap: 0 }}>
-        {/* Market range */}
+      {/* Numbers row */}
+      <div style={{ display: 'grid', gridTemplateColumns: pc.askingPrice != null ? '1fr 1fr 1fr' : '1fr 1fr', gap: 0 }}>
+        {/* Range */}
         <div style={{ padding: '12px 14px', borderRight: `1px solid ${cfg.border}` }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-            Price range
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+            Range
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-            {fmt(pc.marketRangeFrom)} – {fmt(pc.marketRangeTo)}
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+            {fmt(pc.marketRangeFrom)}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{curr}</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: '2px 0' }}>to</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+            {fmt(pc.marketRangeTo)}
+          </div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 3 }}>{curr}</div>
         </div>
 
-        {/* Asking price — only when present */}
-        {pc.askingPrice != null && (
-          <div style={{ padding: '12px 14px', borderRight: `1px solid ${cfg.border}` }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-              Asking price
+        {/* Average */}
+        {pc.avgPrice != null && (
+          <div style={{ padding: '12px 14px', borderRight: pc.askingPrice != null ? `1px solid ${cfg.border}` : undefined }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+              Avg price
             </div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: cfg.color, letterSpacing: '-0.5px', lineHeight: 1 }}>
+              {fmt(pc.avgPrice)}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 5 }}>{curr}</div>
+          </div>
+        )}
+
+        {/* Asking price */}
+        {pc.askingPrice != null && (
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+              Asking
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1 }}>
               {fmt(pc.askingPrice)}
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{curr}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, boxShadow: `0 0 5px ${cfg.color}80`, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: cfg.color }}>{pc.evaluationLabel}</span>
+            </div>
           </div>
         )}
+      </div>
 
-        {/* Evaluation */}
-        <div style={{ padding: '12px 14px' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-            Evaluation
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: cfg.dot, boxShadow: `0 0 6px ${cfg.dot}80`, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, lineHeight: 1.2 }}>
-              {pc.evaluationLabel}
-            </span>
-          </div>
+      {/* Visual range bar */}
+      <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${cfg.border}` }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          Price position
+        </div>
+        <div style={{ position: 'relative', height: 6, borderRadius: 6, background: 'rgba(255,255,255,0.07)', overflow: 'visible' }}>
+          {/* Gradient track */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 6,
+            background: `linear-gradient(90deg, rgba(34,197,94,0.5) 0%, rgba(34,211,238,0.5) 50%, rgba(245,158,11,0.5) 100%)`,
+          }} />
+          {/* Avg marker */}
+          <div style={{
+            position: 'absolute', top: '50%', left: `${avgPct}%`,
+            transform: 'translate(-50%, -50%)',
+            width: 2, height: 10, borderRadius: 2,
+            background: 'rgba(255,255,255,0.4)',
+          }} />
+          {/* Asking price marker */}
+          {askingPct != null && (
+            <div style={{
+              position: 'absolute', top: '50%', left: `${askingPct}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 12, height: 12, borderRadius: '50%',
+              background: cfg.barColor,
+              border: '2px solid #080c14',
+              boxShadow: `0 0 8px ${cfg.barColor}90`,
+              zIndex: 1,
+            }} />
+          )}
+        </div>
+        {/* Labels */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{fmt(pc.marketRangeFrom)}</span>
+          {pc.avgPrice != null && (
+            <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>avg {fmt(pc.avgPrice)}</span>
+          )}
+          <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{fmt(pc.marketRangeTo)}</span>
         </div>
       </div>
 
-      {/* Summary row */}
+      {/* Summary */}
       <div style={{
-        padding: '10px 14px',
-        borderTop: `1px solid ${cfg.border}`,
-        fontSize: 11.5, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6,
+        padding: '9px 14px 12px',
+        fontSize: 11.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.6,
       }}>
         {pc.summary}
+        {pc.source && (
+          <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.28)', fontStyle: 'italic' }}>
+            Source: {pc.source}
+          </span>
+        )}
       </div>
     </div>
   )

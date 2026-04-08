@@ -427,6 +427,8 @@ export interface ApiError {
 // ─── Vehicle Research / AI Pre-Inspection Guide ───────────────────────────────
 
 export type ResearchIssueSeverity = 'high' | 'medium' | 'low'
+export type ConfidenceLevel    = 'high' | 'medium' | 'low'
+export type PriceEvaluation    = 'low' | 'fair' | 'high'
 export type ResearchTagType = 'HIGH_ATTENTION' | 'COMMON_ISSUE' | 'EXPENSIVE_RISK' | 'VISUAL_CHECK' | 'TEST_DRIVE'
 
 export interface ResearchIssue {
@@ -447,16 +449,22 @@ export interface PriceContext {
   currency?: string
   marketRangeFrom: number
   marketRangeTo: number
-  evaluation: 'low' | 'fair' | 'high'
+  /** Midpoint of the realistic market range */
+  avgPrice?: number
+  evaluation: PriceEvaluation
   evaluationLabel: string
   summary: string
   isEstimated?: boolean
+  /** Human-readable data source label */
+  source?: string
+  /** How reliable this estimate is */
+  confidence?: ConfidenceLevel
 }
 
 export interface VehicleResearchResult {
   vehicleKey: string
   generatedAt: string
-  confidence: 'high' | 'medium' | 'low'
+  confidence: ConfidenceLevel
   summary: string
   overallRiskLevel: 'low' | 'moderate' | 'high'
   priceContext?: PriceContext
