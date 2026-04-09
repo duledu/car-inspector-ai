@@ -109,12 +109,18 @@ function LandingNav() {
             padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
             color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)',
             background: 'transparent', textDecoration: 'none', transition: 'all 0.15s',
-          }}>Sign In</Link>
+          }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
+          >Sign In</Link>
           <Link href="/inspection" style={{
             padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-            color: '#050810', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+            color: '#03131A', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
             textDecoration: 'none', boxShadow: '0 4px 16px rgba(34,211,238,0.3)', transition: 'all 0.15s',
-          }}>Start Free</Link>
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 22px rgba(34,211,238,0.5)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(34,211,238,0.3)'; (e.currentTarget as HTMLElement).style.transform = ''; }}
+          >Start Free</Link>
         </div>
       </div>
     </nav>
@@ -506,12 +512,12 @@ function Hero() {
               <Link href="/inspection" style={{
                 padding: '15px 30px', borderRadius: 14,
                 background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-                color: '#050810', fontSize: 14, fontWeight: 800,
+                color: '#03131A', fontSize: 14, fontWeight: 700,
                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
                 boxShadow: '0 8px 36px rgba(34,211,238,0.38)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.48)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.55)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 36px rgba(34,211,238,0.38)'; }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -525,7 +531,10 @@ function Hero() {
                 color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600,
                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
                 backdropFilter: 'blur(12px)', transition: 'all 0.2s',
-              }}>
+              }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.1)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.color = 'rgba(255,255,255,0.92)'; el.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.05)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.7)'; el.style.transform = ''; }}
+              >
                 View Dashboard
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
@@ -1051,16 +1060,19 @@ function ClosingCTA() {
             <Link href="/inspection" style={{
               padding: '15px 28px', borderRadius: 14,
               background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-              color: '#050810', fontSize: 14, fontWeight: 800,
+              color: '#03131A', fontSize: 14, fontWeight: 700,
               textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
               boxShadow: '0 8px 32px rgba(34,211,238,0.35)', transition: 'transform 0.2s, box-shadow 0.2s',
             }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.5)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.55)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(34,211,238,0.35)'; }}
             >
               Start Free Inspection
             </Link>
-            <Link href="/premium" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap' }}>
+            <Link href="/premium" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.1)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.color = 'rgba(255,255,255,0.92)'; el.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.05)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.65)'; el.style.transform = ''; }}
+            >
               Explore Premium
             </Link>
           </div>
