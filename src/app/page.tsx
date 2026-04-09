@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import React, { useEffect, useRef, useState } from 'react'
+import { useUserStore } from '@/store/useUserStore'
 
 // ══════════════════════════════════════════════════════════════
 // HOOKS
@@ -59,12 +60,34 @@ const glass: React.CSSProperties = {
 // ══════════════════════════════════════════════════════════════
 
 function LandingNav() {
-  const [scrolled, setScrolled] = useState(false)
+  const [scrolled, setScrolled]   = useState(false)
+  const [hydrated, setHydrated]   = useState(false)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const menuRef                   = useRef<HTMLDivElement>(null)
+  const { user, isAuthenticated, logout } = useUserStore()
+
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', h, { passive: true })
     return () => window.removeEventListener('scroll', h)
   }, [])
+
+  // Prevent hydration mismatch — match AppShell pattern
+  useEffect(() => { setHydrated(true) }, [])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const initials = user?.name
+    ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?'
 
   return (
     <nav style={{
@@ -104,23 +127,104 @@ function LandingNav() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <Link href="/auth" style={{
-            padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)',
-            background: 'transparent', textDecoration: 'none', transition: 'all 0.15s',
-          }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
-          >Sign In</Link>
-          <Link href="/inspection" style={{
-            padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-            color: '#03131A', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-            textDecoration: 'none', boxShadow: '0 4px 16px rgba(34,211,238,0.3)', transition: 'all 0.15s',
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 22px rgba(34,211,238,0.5)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(34,211,238,0.3)'; (e.currentTarget as HTMLElement).style.transform = ''; }}
-          >Start Free</Link>
+        {/* Auth buttons — fixed width prevents layout shift during hydration */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, minWidth: 180, justifyContent: 'flex-end',
+          opacity: hydrated ? 1 : 0, transition: 'opacity 0.15s ease' }}>
+
+          {hydrated && isAuthenticated && user ? (
+            /* ── Logged-in state ── */
+            <div ref={menuRef} style={{ position: 'relative', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Link href="/dashboard" style={{
+                padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.05)', textDecoration: 'none',
+                backdropFilter: 'blur(12px)', transition: 'all 0.15s', whiteSpace: 'nowrap',
+              }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.92)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.background = 'rgba(255,255,255,0.1)'; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.7)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.background = 'rgba(255,255,255,0.05)'; }}
+              >Dashboard</Link>
+
+              {/* Avatar button */}
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                style={{
+                  width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: menuOpen
+                    ? 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)'
+                    : 'rgba(255,255,255,0.08)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s', flexShrink: 0,
+                  boxShadow: menuOpen ? '0 0 14px rgba(34,211,238,0.3)' : 'none',
+                }}
+              >
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatarUrl} alt={user.name} style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: menuOpen ? '#03131A' : 'rgba(255,255,255,0.7)', letterSpacing: '0.02em' }}>{initials}</span>
+                )}
+              </button>
+
+              {/* Dropdown */}
+              {menuOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0, minWidth: 180,
+                  background: 'rgba(10,14,28,0.96)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.5)', overflow: 'hidden', zIndex: 100,
+                }}>
+                  {/* User info */}
+                  <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                  </div>
+                  {/* Menu items */}
+                  {[
+                    { label: 'Dashboard',     href: '/dashboard' },
+                    { label: 'My Inspections',href: '/inspection' },
+                    { label: 'Profile',       href: '/profile' },
+                  ].map(item => (
+                    <Link key={item.label} href={item.href}
+                      onClick={() => setMenuOpen(false)}
+                      style={{ display: 'block', padding: '10px 14px', fontSize: 13, fontWeight: 500,
+                        color: 'rgba(255,255,255,0.65)', textDecoration: 'none', transition: 'all 0.1s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                    >{item.label}</Link>
+                  ))}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', margin: '4px 0 0' }} />
+                  <button
+                    onClick={() => { setMenuOpen(false); logout() }}
+                    style={{ display: 'block', width: '100%', padding: '10px 14px', fontSize: 13, fontWeight: 500,
+                      color: 'rgba(239,68,68,0.8)', background: 'transparent', border: 'none', textAlign: 'left',
+                      cursor: 'pointer', transition: 'all 0.1s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgb(239,68,68)'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.07)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.8)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  >Sign Out</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Logged-out state ── */
+            <>
+              <Link href="/auth" style={{
+                padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)',
+                background: 'transparent', textDecoration: 'none', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
+              >Sign In</Link>
+              <Link href="/inspection" style={{
+                padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                color: '#03131A', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+                textDecoration: 'none', boxShadow: '0 4px 16px rgba(34,211,238,0.3)', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 22px rgba(34,211,238,0.5)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(34,211,238,0.3)'; (e.currentTarget as HTMLElement).style.transform = ''; }}
+              >Start Free</Link>
+            </>
+          )}
         </div>
       </div>
     </nav>
@@ -412,33 +516,33 @@ function Hero() {
         {/* ── Cinematic car — full-bleed, mask-faded, zero hard edges ── */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
 
-          {/* Hero visual — cardoctorImg capsule, right-side anchored */}
+          {/* Hero visual — 30% larger, shifted right, left overflow for dynamism */}
           <img
-            src="/icons/cardoctorImg.png"
+            src="/icons/cardoctorImg.jpg"
             alt=""
             aria-hidden="true"
             style={{
               position: 'absolute',
               top: '50%',
-              right: '-2%',
+              right: '-8%',          /* shift right so car dominates the frame */
               transform: 'translateY(-50%)',
-              height: '140%',
+              height: '182%',        /* was ~140%, +30% ≈ 182% */
               width: 'auto',
-              maxWidth: '75%',
+              maxWidth: '90%',       /* allow more left overflow */
               objectFit: 'contain',
               objectPosition: 'right center',
-              opacity: 0.95,
-              filter: 'brightness(0.88) saturate(0.78) contrast(1.06)',
-              /* Fade left edge so image blends into the dark scene */
-              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 15%, rgba(0,0,0,0.72) 32%, black 54%)',
-              maskImage:       'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 15%, rgba(0,0,0,0.72) 32%, black 54%)',
+              opacity: 0.96,
+              filter: 'brightness(0.9) saturate(0.82) contrast(1.05)',
+              /* Softer left fade — starts later so car bleeds left naturally */
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 10%, rgba(0,0,0,0.6) 26%, black 46%)',
+              maskImage:       'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 10%, rgba(0,0,0,0.6) 26%, black 46%)',
             }}
           />
 
-          {/* Dark base — keeps overall scene unified and dark */}
+          {/* Dark base — reduced from 0.38 → 0.30 (-20% opacity) */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'rgba(8,12,20,0.38)',
+            background: 'rgba(8,12,20,0.30)',
           }} />
 
           {/* Bottom vignette — image sinks into page */}
@@ -453,28 +557,43 @@ function Hero() {
             background: 'linear-gradient(to bottom, #080c14 0%, rgba(8,12,20,0.55) 45%, transparent 100%)',
           }} />
 
-          {/* Left anchor — locks text area to full dark, no bleed */}
+          {/* Left anchor — text-side darkness, reduced from 0.92 → 0.74 for -20% opacity feel */}
           <div style={{
-            position: 'absolute', top: 0, bottom: 0, left: 0, width: '38%',
-            background: 'linear-gradient(to right, #080c14 0%, rgba(8,12,20,0.92) 40%, transparent 100%)',
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: '42%',
+            background: 'linear-gradient(to right, #080c14 0%, rgba(8,12,20,0.74) 40%, transparent 100%)',
+          }} />
+
+          {/* Blur transition band — feathered zone between text and car */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: '28%', width: '22%',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            maskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
           }} />
 
           {/* Right edge vignette */}
           <div style={{
-            position: 'absolute', top: 0, bottom: 0, right: 0, width: '18%',
+            position: 'absolute', top: 0, bottom: 0, right: 0, width: '14%',
             background: 'linear-gradient(to left, #080c14 0%, transparent 100%)',
           }} />
 
-          {/* Soft atmosphere bloom — makes image feel embedded, not pasted */}
+          {/* Premium soft vignette — radial darkening at all four corners */}
           <div style={{
-            position: 'absolute', top: '10%', right: '2%', width: '60%', height: '80%',
-            background: 'radial-gradient(ellipse at 65% 45%, rgba(129,140,248,0.05) 0%, transparent 68%)',
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(ellipse 110% 90% at 52% 48%, transparent 42%, rgba(4,8,18,0.55) 75%, rgba(4,8,18,0.82) 100%)',
           }} />
 
-          {/* Subtle white haze at car highlight area — adds cinematic glow */}
+          {/* Atmosphere bloom — subtle indigo haze behind the car */}
           <div style={{
-            position: 'absolute', top: '20%', right: '15%', width: '45%', height: '50%',
-            background: 'radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.025) 0%, transparent 65%)',
+            position: 'absolute', top: '10%', right: '2%', width: '60%', height: '80%',
+            background: 'radial-gradient(ellipse at 65% 45%, rgba(129,140,248,0.06) 0%, transparent 68%)',
+          }} />
+
+          {/* Cinematic car highlight glow */}
+          <div style={{
+            position: 'absolute', top: '20%', right: '10%', width: '50%', height: '55%',
+            background: 'radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.03) 0%, transparent 65%)',
           }} />
 
         </div>

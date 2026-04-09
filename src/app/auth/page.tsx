@@ -226,14 +226,22 @@ function AuthPageContent() {
         {/* Background car image */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=80&fit=crop"
+          src="/icons/cardoctorImg.jpg"
           alt=""
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+          style={{
+            position: 'absolute', inset: 0, width: '130%', height: '100%',
+            objectFit: 'cover',
+            objectPosition: '70% center',   /* shifted right for cinematic framing */
+            right: 0, left: 'auto',
+            filter: 'brightness(0.88) saturate(0.8) contrast(1.05)',
+          }}
         />
-        {/* Dark overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(8,12,20,0.82) 0%, rgba(8,12,20,0.55) 50%, rgba(8,12,20,0.75) 100%)' }} />
+        {/* Dark overlay — ~20% more transparent than before */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(8,12,20,0.68) 0%, rgba(8,12,20,0.42) 50%, rgba(8,12,20,0.60) 100%)' }} />
         {/* Gradient fade toward left edge to blend with form */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #080c14 0%, transparent 18%)' }} />
+        {/* Premium vignette — corner darkening */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 110% 90% at 60% 50%, transparent 40%, rgba(4,8,18,0.5) 75%, rgba(4,8,18,0.78) 100%)' }} />
 
         {/* Panel content */}
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '48px 48px' }}>
