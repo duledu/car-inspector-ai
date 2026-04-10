@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/config'
 import { useUserStore } from '@/store/useUserStore'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 // ══════════════════════════════════════════════════════════════
 // HOOKS
@@ -130,14 +131,18 @@ function LandingNav() {
           ))}
         </div>
 
-        {/* Auth buttons — fixed width prevents layout shift during hydration */}
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0, minWidth: 180, justifyContent: 'flex-end',
-          opacity: hydrated ? 1 : 0, transition: 'opacity 0.15s ease' }}>
+        {/* Auth buttons — opacity transition prevents hydration flash */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end',
+          opacity: hydrated ? 1 : 0, transition: 'opacity 0.15s ease', flexShrink: 0 }}>
+
+          {/* Language switcher — always visible on both mobile and desktop */}
+          <LanguageSwitcher />
 
           {hydrated && isAuthenticated && user ? (
             /* ── Logged-in state ── */
             <div ref={menuRef} style={{ position: 'relative', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Link href="/dashboard" style={{
+              {/* Dashboard link — desktop only; mobile uses BottomNav / AppShell */}
+              <Link href="/dashboard" className="desktop-only" style={{
                 padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                 color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)',
                 background: 'rgba(255,255,255,0.05)', textDecoration: 'none',
@@ -218,7 +223,8 @@ function LandingNav() {
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
               >{t('common.signIn')}</Link>
-              <Link href="/inspection" style={{
+              {/* Start Free — desktop only; mobile hero already has a large CTA */}
+              <Link href="/inspection" className="desktop-only" style={{
                 padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
                 color: '#03131A', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
                 textDecoration: 'none', boxShadow: '0 4px 16px rgba(34,211,238,0.3)', transition: 'all 0.15s',

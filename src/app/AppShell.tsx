@@ -14,6 +14,7 @@ import { useUserStore } from '@/store'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 // Maps pathnames to topbar translation key slugs (used for mobile header title)
 const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
@@ -126,8 +127,9 @@ export default function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          {/* Right: premium badge + avatar */}
+          {/* Right: language switcher + premium badge + avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LanguageSwitcher />
             <Link href="/premium" style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 10px',
