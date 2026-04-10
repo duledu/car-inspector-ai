@@ -7,17 +7,18 @@
 // =============================================================================
 
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VehicleResearchResult, ResearchSection, ResearchIssue, ResearchTagType, PriceContext } from '@/types'
 import { researchApi } from '@/services/api/research.api'
 
 // ─── Tag config ───────────────────────────────────────────────────────────────
 
-const TAG_CONFIG: Record<ResearchTagType, { label: string; color: string; bg: string; border: string }> = {
-  HIGH_ATTENTION: { label: 'High Attention',  color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)'   },
-  COMMON_ISSUE:   { label: 'Common Issue',    color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)'  },
-  EXPENSIVE_RISK: { label: 'Expensive Risk',  color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   border: 'rgba(168,85,247,0.25)'  },
-  VISUAL_CHECK:   { label: 'Visual Check',    color: '#22d3ee', bg: 'rgba(34,211,238,0.1)',   border: 'rgba(34,211,238,0.25)'  },
-  TEST_DRIVE:     { label: 'Test Drive',      color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    border: 'rgba(34,197,94,0.25)'   },
+const TAG_CONFIG: Record<ResearchTagType, { labelKey: string; color: string; bg: string; border: string }> = {
+  HIGH_ATTENTION: { labelKey: 'research.tagHighAttention', color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)'   },
+  COMMON_ISSUE:   { labelKey: 'research.tagCommonIssue',   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)'  },
+  EXPENSIVE_RISK: { labelKey: 'research.tagExpensiveRisk', color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   border: 'rgba(168,85,247,0.25)'  },
+  VISUAL_CHECK:   { labelKey: 'research.tagVisualCheck',   color: '#22d3ee', bg: 'rgba(34,211,238,0.1)',   border: 'rgba(34,211,238,0.25)'  },
+  TEST_DRIVE:     { labelKey: 'research.tagTestDrive',     color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    border: 'rgba(34,197,94,0.25)'   },
 }
 
 const SEVERITY_DOT: Record<string, string> = {
@@ -27,9 +28,9 @@ const SEVERITY_DOT: Record<string, string> = {
 }
 
 const RISK_CONFIG = {
-  low:      { label: 'Low Risk',      color: '#22c55e', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.2)'  },
-  moderate: { label: 'Moderate Risk', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-  high:     { label: 'High Risk',     color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.2)'  },
+  low:      { labelKey: 'research.riskLow',      color: '#22c55e', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.2)'  },
+  moderate: { labelKey: 'research.riskModerate', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  high:     { labelKey: 'research.riskHigh',     color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.2)'  },
 }
 
 // ─── SVG Icon library (no emojis) ────────────────────────────────────────────
@@ -123,6 +124,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
 // ─── Tag component ────────────────────────────────────────────────────────────
 
 function Tag({ type }: Readonly<{ type: ResearchTagType }>) {
+  const { t } = useTranslation()
   const cfg = TAG_CONFIG[type]
   return (
     <span style={{
@@ -132,7 +134,7 @@ function Tag({ type }: Readonly<{ type: ResearchTagType }>) {
       color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
       whiteSpace: 'nowrap',
     }}>
-      {cfg.label}
+      {t(cfg.labelKey)}
     </span>
   )
 }
@@ -263,11 +265,12 @@ function SectionBlock({ section }: Readonly<{ section: ResearchSection }>) {
 // ─── Loading state ────────────────────────────────────────────────────────────
 
 function ResearchLoadingState({ vehicleName }: Readonly<{ vehicleName: string }>) {
+  const { t } = useTranslation()
   const steps = [
-    'Analysing vehicle generation…',
-    'Cross-referencing known issues…',
-    'Identifying high-risk areas…',
-    'Building inspection guide…',
+    t('research.loadingStep1'),
+    t('research.loadingStep2'),
+    t('research.loadingStep3'),
+    t('research.loadingStep4'),
   ]
   const [step] = useState(() => Math.floor(Math.random() * steps.length))
 
@@ -288,7 +291,7 @@ function ResearchLoadingState({ vehicleName }: Readonly<{ vehicleName: string }>
       </div>
 
       <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 5, letterSpacing: '-0.2px' }}>
-        Researching {vehicleName}
+        {t('research.researchingVehicle', { vehicleName })}
       </div>
       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
         {steps[step]}
@@ -305,14 +308,14 @@ function ResearchLoadingState({ vehicleName }: Readonly<{ vehicleName: string }>
 
 // ─── CTA card (pre-research) ──────────────────────────────────────────────────
 
-const CTA_FEATURES = [
-  { icon: Icons.warning, text: 'Known weaknesses & common failures' },
-  { icon: Icons.search,  text: 'What to physically inspect on this model' },
-  { icon: Icons.cost,    text: 'Expensive repairs to negotiate on' },
-  { icon: Icons.drive,   text: 'Test drive warning signs' },
-]
-
 function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: string; onStart: () => void; loading: boolean }>) {
+  const { t } = useTranslation()
+  const ctaFeatures = [
+    { icon: Icons.warning, text: t('research.ctaFeature1') },
+    { icon: Icons.search,  text: t('research.ctaFeature2') },
+    { icon: Icons.cost,    text: t('research.ctaFeature3') },
+    { icon: Icons.drive,   text: t('research.ctaFeature4') },
+  ]
   return (
     <div
       className="research-cta-card"
@@ -341,19 +344,17 @@ function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: 
 
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', marginBottom: 4 }}>
-            AI Model Research
+            {t('research.ctaTitle')}
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.55 }}>
-            Let AI surface known issues and priorities for the{' '}
-            <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{vehicleName}</span>{' '}
-            before you inspect.
+            {t('research.ctaDesc', { vehicleName })}
           </div>
         </div>
       </div>
 
       {/* Feature list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-        {CTA_FEATURES.map(item => (
+        {ctaFeatures.map(item => (
           <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ color: '#22d3ee', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{item.icon}</span>
             <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>{item.text}</span>
@@ -385,14 +386,14 @@ function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: 
         {loading ? (
           <>
             <div style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid rgba(34,211,238,0.3)', borderTopColor: '#22d3ee', animation: 'spin 0.8s linear infinite' }} />
-            Researching…
+            {t('research.researching')}
           </>
         ) : (
           <>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            Research This Model
+            {t('research.researchThisModel')}
           </>
         )}
       </button>
@@ -403,6 +404,7 @@ function ResearchCTA({ vehicleName, onStart, loading }: Readonly<{ vehicleName: 
 // ─── Limited mode banner ──────────────────────────────────────────────────────
 
 function LimitedModeBanner() {
+  const { t } = useTranslation()
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
@@ -414,10 +416,10 @@ function LimitedModeBanner() {
       <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{Icons.database}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>
-          Live data unavailable
+          {t('research.limitedModeTitle')}
         </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-          Showing known issues for this brand from our built-in knowledge base.
+          {t('research.limitedModeDesc')}
         </div>
       </div>
     </div>
@@ -427,6 +429,7 @@ function LimitedModeBanner() {
 // ─── Error state ──────────────────────────────────────────────────────────────
 
 function ResearchError({ message, onRetry }: Readonly<{ message: string; onRetry: () => void }>) {
+  const { t } = useTranslation()
   return (
     <div style={{
       padding: '20px 18px',
@@ -447,7 +450,7 @@ function ResearchError({ message, onRetry }: Readonly<{ message: string; onRetry
         </div>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#f87171', marginBottom: 4, letterSpacing: '-0.2px' }}>
-            Research unavailable
+            {t('research.errorTitle')}
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
             {message}
@@ -469,7 +472,7 @@ function ResearchError({ message, onRetry }: Readonly<{ message: string; onRetry
         }}
       >
         {Icons.retry}
-        Retry Research
+        {t('research.retryResearch')}
       </button>
     </div>
   )
@@ -478,10 +481,11 @@ function ResearchError({ message, onRetry }: Readonly<{ message: string; onRetry
 // ─── Confidence badge ────────────────────────────────────────────────────────
 
 function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium' | 'low' }>) {
+  const { t } = useTranslation()
   const cfg = {
-    high:   { label: 'AI Live',        color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',  border: 'rgba(34,211,238,0.22)'  },
-    medium: { label: 'Knowledge Base', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.22)' },
-    low:    { label: 'Generic Guide',  color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.22)' },
+    high:   { labelKey: 'research.confidenceAiLive',        color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',   border: 'rgba(34,211,238,0.22)'  },
+    medium: { labelKey: 'research.confidenceKnowledgeBase', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.22)'  },
+    low:    { labelKey: 'research.confidenceGenericGuide',  color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.22)' },
   }[confidence]
 
   return (
@@ -490,7 +494,7 @@ function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium
       padding: '2px 8px', borderRadius: 4,
       color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
     }}>
-      {cfg.label}
+      {t(cfg.labelKey)}
     </span>
   )
 }
@@ -498,18 +502,19 @@ function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium
 // ─── Price context card ───────────────────────────────────────────────────────
 
 const EVAL_CFG = {
-  low:  { label: 'Below market',      color: '#22c55e', bg: 'rgba(34,197,94,0.06)',   border: 'rgba(34,197,94,0.18)',   barColor: '#22c55e' },
-  fair: { label: 'Fair market value', color: '#22d3ee', bg: 'rgba(34,211,238,0.06)', border: 'rgba(34,211,238,0.18)', barColor: '#22d3ee' },
-  high: { label: 'Above market',      color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', barColor: '#f59e0b' },
+  low:  { labelKey: 'research.evalBelowMarket', color: '#22c55e', bg: 'rgba(34,197,94,0.06)',   border: 'rgba(34,197,94,0.18)',   barColor: '#22c55e' },
+  fair: { labelKey: 'research.evalFairMarket',  color: '#22d3ee', bg: 'rgba(34,211,238,0.06)', border: 'rgba(34,211,238,0.18)', barColor: '#22d3ee' },
+  high: { labelKey: 'research.evalAboveMarket', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', barColor: '#f59e0b' },
 }
 
 const CONFIDENCE_CFG = {
-  high:   { label: 'High confidence',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.2)'   },
-  medium: { label: 'Medium confidence', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-  low:    { label: 'Low confidence',    color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.2)' },
+  high:   { labelKey: 'research.confidenceHigh',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.2)'   },
+  medium: { labelKey: 'research.confidenceMedium', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  low:    { labelKey: 'research.confidenceLow',    color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.2)' },
 }
 
 function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
+  const { t } = useTranslation()
   const cfg  = EVAL_CFG[pc.evaluation] ?? EVAL_CFG.fair
   const ccfg = CONFIDENCE_CFG[pc.confidence ?? 'medium']
   const fmt  = (n: number) => `€${n.toLocaleString('de-DE')}`
@@ -541,7 +546,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
         </svg>
         <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color, letterSpacing: '-0.1px', flex: 1 }}>
-          Market Price · Serbia
+          {t('research.marketPriceHeader')}
         </span>
         {/* Confidence badge */}
         <span style={{
@@ -549,7 +554,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
           padding: '2px 7px', borderRadius: 4,
           color: ccfg.color, background: ccfg.bg, border: `1px solid ${ccfg.border}`,
         }}>
-          {ccfg.label}
+          {t(ccfg.labelKey)}
         </span>
       </div>
 
@@ -558,12 +563,12 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
         {/* Range */}
         <div style={{ padding: '12px 14px', borderRight: `1px solid ${cfg.border}` }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-            Range
+            {t('research.priceRange')}
           </div>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
             {fmt(pc.marketRangeFrom)}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: '2px 0' }}>to</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: '2px 0' }}>{t('research.priceTo')}</div>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
             {fmt(pc.marketRangeTo)}
           </div>
@@ -574,7 +579,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
         {pc.avgPrice != null && (
           <div style={{ padding: '12px 14px', borderRight: pc.askingPrice != null ? `1px solid ${cfg.border}` : undefined }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-              Avg price
+              {t('research.priceAvg')}
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: cfg.color, letterSpacing: '-0.5px', lineHeight: 1 }}>
               {fmt(pc.avgPrice)}
@@ -587,14 +592,14 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
         {pc.askingPrice != null && (
           <div style={{ padding: '12px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-              Asking
+              {t('research.priceAsking')}
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1 }}>
               {fmt(pc.askingPrice)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, boxShadow: `0 0 5px ${cfg.color}80`, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: cfg.color }}>{pc.evaluationLabel}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: cfg.color }}>{t(cfg.labelKey)}</span>
             </div>
           </div>
         )}
@@ -603,7 +608,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
       {/* Visual range bar */}
       <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${cfg.border}` }}>
         <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-          Price position
+          {t('research.pricePosition')}
         </div>
         <div style={{ position: 'relative', height: 6, borderRadius: 6, background: 'rgba(255,255,255,0.07)', overflow: 'visible' }}>
           {/* Gradient track */}
@@ -635,7 +640,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
           <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{fmt(pc.marketRangeFrom)}</span>
           {pc.avgPrice != null && (
-            <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>avg {fmt(pc.avgPrice)}</span>
+            <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{t('research.priceAvgShort')} {fmt(pc.avgPrice)}</span>
           )}
           <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{fmt(pc.marketRangeTo)}</span>
         </div>
@@ -655,10 +660,10 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
             ? [filters.fuelType, filters.transmission, filters.bodyType].filter(Boolean)
             : []
           const filterLabel = filterParts.length > 0 ? filterParts.join(', ') : null
-          const relaxedNote = pc.filtersRelaxed ? ' (filters partially matched)' : ''
+          const relaxedSuffix = pc.filtersRelaxed ? ` (${t('research.filtersPartiallyMatched')})` : ''
           const listingText = filterLabel
-            ? `Based on ${pc.listingCount} listings (${filterLabel})${relaxedNote}`
-            : `Based on broader market data${relaxedNote}`
+            ? `${t('research.basedOnListings', { count: pc.listingCount, filters: filterLabel })}${relaxedSuffix}`
+            : `${t('research.basedOnBroaderMarket')}${relaxedSuffix}`
           return (
             <span style={{
               display: 'block', marginTop: 6,
@@ -673,7 +678,7 @@ function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {
 
         {pc.source && (
           <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.28)', fontStyle: 'italic' }}>
-            Source: {pc.source}
+            {t('research.source')} {pc.source}
           </span>
         )}
       </div>
@@ -687,6 +692,7 @@ function ResearchResults({
   result,
   onReset,
 }: Readonly<{ result: VehicleResearchResult; onReset: () => void }>) {
+  const { t } = useTranslation()
   const risk = RISK_CONFIG[result.overallRiskLevel] ?? RISK_CONFIG.moderate
   const sectionOrder: (keyof VehicleResearchResult['sections'])[] = [
     'commonProblems',
@@ -722,7 +728,7 @@ function ResearchResults({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' }}>
-              Model Inspection Guide
+              {t('research.modelInspectionGuide')}
             </span>
             {/* Risk badge */}
             <span style={{
@@ -730,7 +736,7 @@ function ResearchResults({
               padding: '2px 8px', borderRadius: 4,
               color: risk.color, background: risk.bg, border: `1px solid ${risk.border}`,
             }}>
-              {risk.label}
+              {t(risk.labelKey)}
             </span>
             <ConfidenceBadge confidence={result.confidence} />
           </div>
@@ -777,7 +783,7 @@ function ResearchResults({
           transition: 'border-color 0.15s',
         }}
       >
-        Re-research this model
+        {t('research.reresearch')}
       </button>
     </div>
   )

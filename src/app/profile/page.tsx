@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { useUserStore, useVehicleStore, usePaymentStore } from '@/store'
 import AppShell from '../AppShell'
 
@@ -26,9 +27,10 @@ function StatCard({ label, value, icon }: Readonly<{ label: string; value: strin
 }
 
 export default function ProfilePage() {
-  const router = useRouter()
+  const router          = useRouter()
+  const { t }           = useTranslation()
   const { user, logout, updateProfile } = useUserStore()
-  const { vehicles } = useVehicleStore()
+  const { vehicles }    = useVehicleStore()
   const { purchaseHistory } = usePaymentStore()
 
   const [editing,   setEditing]   = useState(false)
@@ -47,8 +49,8 @@ export default function ProfilePage() {
     try {
       await updateProfile({ name })
       setEditing(false)
-    } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save')
+    } catch {
+      setSaveError(t('profile.failedToSave'))
     } finally {
       setSaving(false)
     }
@@ -59,7 +61,7 @@ export default function ProfilePage() {
     : 'U'
 
   const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('en', { year: 'numeric', month: 'long' })
+    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
     : '—'
 
   const paidReports = purchaseHistory.filter(p => p.status === 'PAID').length
@@ -99,13 +101,13 @@ export default function ProfilePage() {
                       disabled={saving}
                       style={{ padding: '9px 16px', background: saving ? 'rgba(34,211,238,0.5)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0 }}
                     >
-                      {saving ? '…' : 'Save'}
+                      {saving ? '…' : t('common.save')}
                     </button>
                     <button
                       onClick={() => { setEditing(false); setName(user?.name ?? '') }}
                       style={{ padding: '9px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0 }}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                   {saveError && <div style={{ fontSize: 12, color: '#f87171' }}>{saveError}</div>}
@@ -123,7 +125,7 @@ export default function ProfilePage() {
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    Edit
+                    {t('common.edit')}
                   </button>
                 </div>
               )}
@@ -133,7 +135,7 @@ export default function ProfilePage() {
                 <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 8px', background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)', borderRadius: 5, color: '#22d3ee' }}>
                   {user?.role ?? 'USER'}
                 </span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>Member since {memberSince}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>{t('profile.memberSince', { date: memberSince })}</span>
               </div>
             </div>
           </div>
@@ -142,18 +144,18 @@ export default function ProfilePage() {
         {/* ── Stats ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
           <StatCard
-            label="Vehicles tracked"
+            label={t('profile.vehiclesTracked')}
             value={vehicles.length || 0}
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>}
           />
           <StatCard
-            label="Premium reports"
+            label={t('profile.premiumReports')}
             value={paidReports}
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}
           />
           <StatCard
-            label="Account role"
-            value={user?.role === 'ADMIN' ? 'Admin' : 'Member'}
+            label={t('profile.accountRole')}
+            value={user?.role === 'ADMIN' ? t('common.admin') : t('common.member')}
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
           />
         </div>
@@ -162,17 +164,17 @@ export default function ProfilePage() {
         {purchaseHistory.length > 0 && (
           <div style={{ padding: '20px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
-              Purchase History
+              {t('profile.purchaseHistory')}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {purchaseHistory.map(p => (
                 <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <div>
                     <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', fontWeight: 500 }}>
-                      {p.productType === 'CARVERTICAL_REPORT' ? 'CarVertical History Report' : p.productType}
+                      {p.productType === 'CARVERTICAL_REPORT' ? t('profile.carverticalReport') : p.productType}
                     </div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
-                      {p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Pending'}
+                      {p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : t('common.pending')}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -180,7 +182,7 @@ export default function ProfilePage() {
                       {(p.amountCents / 100).toFixed(2)} {p.currency}
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: STATUS_COLOR[p.status] ?? 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                      {p.status}
+                      {p.status === 'PAID' ? t('common.paid') : p.status === 'PENDING' ? t('common.pending') : t('common.failed')}
                     </div>
                   </div>
                 </div>
@@ -192,9 +194,9 @@ export default function ProfilePage() {
         {/* ── Danger zone ── */}
         <div style={{ padding: '18px 20px', background: 'rgba(239,68,68,0.03)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>Sign Out</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>{t('profile.signOut')}</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', marginTop: 3 }}>
-              You will be redirected to the login screen.
+              {t('profile.signOutDesc')}
             </div>
           </div>
           <button
@@ -212,7 +214,7 @@ export default function ProfilePage() {
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-            Sign Out
+            {t('profile.signOut')}
           </button>
         </div>
 

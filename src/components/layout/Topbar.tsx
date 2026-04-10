@@ -1,25 +1,31 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
-const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
-  '/dashboard':  { title: 'Dashboard',        sub: 'Overview & quick actions' },
-  '/vehicle':    { title: 'Vehicles',          sub: 'Manage your inspection targets' },
-  '/inspection': { title: 'Inspection',        sub: 'Guided AI checklist' },
-  '/report':     { title: 'Confidence Report', sub: 'AI-powered risk analysis' },
-  '/premium':    { title: 'Premium Reports',   sub: 'Vehicle history intelligence' },
-  '/community':  { title: 'Community',         sub: 'Advice from fellow buyers' },
-  '/messages':   { title: 'Messages',          sub: 'Private conversations' },
-  '/profile':    { title: 'Profile',           sub: 'Account settings' },
+// Page title keys correspond to topbar.{slug}.title / topbar.{slug}.sub in translations
+const SLUG_MAP: Record<string, string> = {
+  '/dashboard':  'dashboard',
+  '/vehicle':    'vehicle',
+  '/inspection': 'inspection',
+  '/report':     'report',
+  '/premium':    'premium',
+  '/community':  'community',
+  '/messages':   'messages',
+  '/profile':    'profile',
 }
 
 export function Topbar() {
-  const pathname = usePathname()
-  const router   = useRouter()
+  const pathname      = usePathname()
+  const router        = useRouter()
+  const { t }         = useTranslation()
   const { user, logout } = useUserStore()
 
-  const page = PAGE_TITLES[pathname] ?? { title: 'Used Car Inspector AI', sub: '' }
+  const slug  = SLUG_MAP[pathname]
+  const title = slug ? t(`topbar.${slug}.title`) : t('topbar.fallback.title')
+  const sub   = slug ? t(`topbar.${slug}.sub`)   : ''
 
   const handleLogout = async () => {
     await logout()
@@ -54,11 +60,11 @@ export function Topbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.25px', lineHeight: 1.2 }}>
-            {page.title}
+            {title}
           </div>
-          {page.sub && (
+          {sub && (
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', lineHeight: 1.2 }}>
-              {page.sub}
+              {sub}
             </div>
           )}
         </div>
@@ -87,8 +93,11 @@ export function Topbar() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Inspect
+          {t('common.inspect')}
         </a>
+
+        {/* Language switcher */}
+        <LanguageSwitcher />
 
         {/* Divider */}
         <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.07)' }} />
@@ -120,7 +129,7 @@ export function Topbar() {
                 {user.name}
               </span>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', lineHeight: 1.2 }}>
-                {user.role === 'USER' ? 'Member' : user.role}
+                {user.role === 'USER' ? t('common.member') : user.role}
               </span>
             </div>
           </div>
@@ -129,7 +138,7 @@ export function Topbar() {
         {/* Sign out */}
         <button
           onClick={handleLogout}
-          aria-label="Sign out"
+          aria-label={t('common.signOut')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -149,7 +158,7 @@ export function Topbar() {
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Sign out
+          {t('common.signOut')}
         </button>
       </div>
     </header>

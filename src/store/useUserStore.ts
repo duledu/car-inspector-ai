@@ -9,25 +9,22 @@ import { immer } from 'zustand/middleware/immer'
 import type { AuthUser, AuthSession, LoginCredentials, RegisterPayload } from '@/types'
 import { authApi } from '@/services/api/auth.api'
 
-// ─── Error message resolver ───────────────────────────────────────────────────
+// ─── Error key resolver ──────────────────────────────────────────────────────
+// Returns a translation key (e.g. 'auth.error.invalidCredentials').
+// The AuthPage calls t(error) to render the localised string.
 function resolveAuthError(err: any, action: 'login' | 'register'): string {
-  const code: string = err?.code ?? ''
+  const code: string   = err?.code      ?? ''
   const status: number = err?.statusCode ?? 0
 
-  if (code === 'CONFIG_ERROR' || status === 503)
-    return 'Authentication service is temporarily unavailable. Please try again later.'
-  if (code === 'INVALID_CREDENTIALS' || status === 401)
-    return 'Invalid email or password.'
-  if (code === 'EMAIL_IN_USE' || status === 409)
-    return 'An account with this email already exists.'
-  if (code === 'VALIDATION_ERROR' || status === 422)
-    return action === 'login' ? 'Please enter a valid email and password.' : 'Please fill in all required fields correctly.'
-  if (status === 500)
-    return 'Something went wrong on our end. Please try again.'
-  if (!status)
-    return 'Cannot connect to server. Check your internet connection.'
+  if (code === 'CONFIG_ERROR'       || status === 503) return 'auth.error.unavailable'
+  if (code === 'INVALID_CREDENTIALS'|| status === 401) return 'auth.error.invalidCredentials'
+  if (code === 'EMAIL_IN_USE'       || status === 409) return 'auth.error.emailInUse'
+  if (code === 'VALIDATION_ERROR'   || status === 422)
+    return action === 'login' ? 'auth.error.validationLogin' : 'auth.error.validationRegister'
+  if (status === 500) return 'auth.error.serverError'
+  if (!status)        return 'auth.error.networkError'
 
-  return err?.message ?? (action === 'login' ? 'Login failed.' : 'Registration failed.')
+  return action === 'login' ? 'auth.error.loginFailed' : 'auth.error.registerFailed'
 }
 
 interface UserState {

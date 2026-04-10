@@ -2,31 +2,32 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
 import type { RiskScore } from '@/types'
 import AppShell from '../AppShell'
 
-// ─── Verdict config ───────────────────────────────────────────────────────────
-const VERDICT_CFG: Record<string, { label: string; color: string; bg: string; border: string; glow: string }> = {
-  STRONG_BUY:       { label: 'Strong Buy',       color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)',   glow: 'rgba(34,197,94,0.15)'   },
-  BUY_WITH_CAUTION: { label: 'Buy with Caution', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  glow: 'rgba(245,158,11,0.15)'  },
-  HIGH_RISK:        { label: 'High Risk',         color: '#f97316', bg: 'rgba(249,115,22,0.08)',  border: 'rgba(249,115,22,0.25)',  glow: 'rgba(249,115,22,0.15)'  },
-  WALK_AWAY:        { label: 'Walk Away',         color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.25)',   glow: 'rgba(239,68,68,0.15)'   },
+// ─── Verdict config (colours only — labels resolved via t()) ─────────────────
+const VERDICT_CFG: Record<string, { labelKey: string; color: string; bg: string; border: string; glow: string }> = {
+  STRONG_BUY:       { labelKey: 'verdict.STRONG_BUY',       color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)',   glow: 'rgba(34,197,94,0.15)'   },
+  BUY_WITH_CAUTION: { labelKey: 'verdict.BUY_WITH_CAUTION', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  glow: 'rgba(245,158,11,0.15)'  },
+  HIGH_RISK:        { labelKey: 'verdict.HIGH_RISK',         color: '#f97316', bg: 'rgba(249,115,22,0.08)',  border: 'rgba(249,115,22,0.25)',  glow: 'rgba(249,115,22,0.15)'  },
+  WALK_AWAY:        { labelKey: 'verdict.WALK_AWAY',         color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.25)',   glow: 'rgba(239,68,68,0.15)'   },
 }
 
-const FLAG_CFG: Record<string, { label: string; detail: string; color: string; bg: string; border: string }> = {
-  NO_SERVICE_HISTORY:   { label: 'No Service History',       detail: 'One of the biggest risk factors. Without documented maintenance, mechanical condition and mileage cannot be trusted.', color: '#ef4444', bg: 'rgba(239,68,68,0.06)',   border: 'rgba(239,68,68,0.2)'   },
-  POSSIBLE_FAKE_HISTORY:{ label: 'Suspicious Service Records', detail: 'Service records appear inconsistent or fabricated. Treat this vehicle as having no history at all.',                 color: '#f97316', bg: 'rgba(249,115,22,0.06)',  border: 'rgba(249,115,22,0.2)'  },
-  HIGH_DAMAGE_COUNT:    { label: 'Multiple Accidents',        detail: '3 or more recorded accidents indicate a pattern of damage. Inspect structural integrity thoroughly.',                   color: '#ef4444', bg: 'rgba(239,68,68,0.06)',   border: 'rgba(239,68,68,0.2)'   },
-  HIGH_REPAIR_HISTORY:  { label: 'High Repair Costs',         detail: 'Significant repair costs recorded. These issues may recur or indicate deeper mechanical problems.',                    color: '#f59e0b', bg: 'rgba(245,158,11,0.06)',  border: 'rgba(245,158,11,0.2)'  },
+const FLAG_CFG: Record<string, { labelKey: string; detailKey: string; color: string; bg: string; border: string }> = {
+  NO_SERVICE_HISTORY:    { labelKey: 'flag.NO_SERVICE_HISTORY.label',    detailKey: 'flag.NO_SERVICE_HISTORY.detail',    color: '#ef4444', bg: 'rgba(239,68,68,0.06)',   border: 'rgba(239,68,68,0.2)'   },
+  POSSIBLE_FAKE_HISTORY: { labelKey: 'flag.POSSIBLE_FAKE_HISTORY.label', detailKey: 'flag.POSSIBLE_FAKE_HISTORY.detail', color: '#f97316', bg: 'rgba(249,115,22,0.06)',  border: 'rgba(249,115,22,0.2)'  },
+  HIGH_DAMAGE_COUNT:     { labelKey: 'flag.HIGH_DAMAGE_COUNT.label',     detailKey: 'flag.HIGH_DAMAGE_COUNT.detail',     color: '#ef4444', bg: 'rgba(239,68,68,0.06)',   border: 'rgba(239,68,68,0.2)'   },
+  HIGH_REPAIR_HISTORY:   { labelKey: 'flag.HIGH_REPAIR_HISTORY.label',   detailKey: 'flag.HIGH_REPAIR_HISTORY.detail',   color: '#f59e0b', bg: 'rgba(245,158,11,0.06)',  border: 'rgba(245,158,11,0.2)'  },
 }
 
-const SVC_HISTORY_LABEL: Record<string, { label: string; color: string }> = {
-  FULL:        { label: 'Full history',    color: '#22c55e' },
-  PARTIAL:     { label: 'Partial history', color: '#f59e0b' },
-  NONE:        { label: 'No history',      color: '#ef4444' },
-  SUSPICIOUS:  { label: 'Suspicious',      color: '#f97316' },
+const SVC_HISTORY_CFG: Record<string, { labelKey: string; color: string }> = {
+  FULL:       { labelKey: 'svc.FULL',       color: '#22c55e' },
+  PARTIAL:    { labelKey: 'svc.PARTIAL',    color: '#f59e0b' },
+  NONE:       { labelKey: 'svc.NONE',       color: '#ef4444' },
+  SUSPICIOUS: { labelKey: 'svc.SUSPICIOUS', color: '#f97316' },
 }
 
 const SEV_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', info: '#22d3ee' }
@@ -54,7 +55,8 @@ function ScoreRing({ score, color }: Readonly<{ score: number; color: string }>)
 
 // ─── Risk flag card ───────────────────────────────────────────────────────────
 function RiskFlagCard({ flagKey }: Readonly<{ flagKey: string }>) {
-  const cfg = FLAG_CFG[flagKey]
+  const { t } = useTranslation()
+  const cfg   = FLAG_CFG[flagKey]
   if (!cfg) return null
   return (
     <div style={{ padding: '14px 16px', background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 13, display: 'flex', gap: 12 }}>
@@ -65,8 +67,8 @@ function RiskFlagCard({ flagKey }: Readonly<{ flagKey: string }>) {
         </svg>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: cfg.color, marginBottom: 4, letterSpacing: '-0.1px' }}>{cfg.label}</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>{cfg.detail}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: cfg.color, marginBottom: 4, letterSpacing: '-0.1px' }}>{t(cfg.labelKey)}</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>{t(cfg.detailKey)}</div>
       </div>
     </div>
   )
@@ -121,6 +123,7 @@ function EmptyReport({ icon, title, sub }: Readonly<{ icon: React.ReactNode; tit
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ReportPage() {
+  const { t }                          = useTranslation()
   const { activeVehicle }              = useVehicleStore()
   const { aiResults }                  = useInspectionStore()
   const { hasAccess }                  = usePaymentStore()
@@ -161,12 +164,12 @@ export default function ReportPage() {
       <AppShell>
         <EmptyReport
           icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
-          title="No vehicle selected"
-          sub="Select a vehicle and complete an inspection first."
+          title={t('report.noVehicle')}
+          sub={t('report.noVehicleSub')}
         />
         <div style={{ textAlign: 'center', marginTop: 4 }}>
           <Link href="/vehicle" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 22px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-            Go to Vehicles
+            {t('report.goToVehicles')}
           </Link>
         </div>
       </AppShell>
@@ -175,15 +178,15 @@ export default function ReportPage() {
 
   const latestAI = aiResults[0] ?? null
   const verdict  = riskScore ? VERDICT_CFG[riskScore.verdict] : null
-  const svcLabel = riskScore ? (SVC_HISTORY_LABEL[riskScore.serviceHistoryStatus] ?? SVC_HISTORY_LABEL.PARTIAL) : null
+  const svcLabel = riskScore ? (SVC_HISTORY_CFG[riskScore.serviceHistoryStatus] ?? SVC_HISTORY_CFG.PARTIAL) : null
 
   const dims = riskScore ? ([
-    { key: 'ai',         label: 'AI Analysis'  },
-    { key: 'exterior',   label: 'Exterior'     },
-    { key: 'interior',   label: 'Interior'     },
-    { key: 'mechanical', label: 'Mechanical'   },
-    { key: 'documents',  label: 'Documents'    },
-    { key: 'testDrive',  label: 'Test Drive'   },
+    { key: 'ai'         },
+    { key: 'exterior'   },
+    { key: 'interior'   },
+    { key: 'mechanical' },
+    { key: 'documents'  },
+    { key: 'testDrive'  },
   ] as const) : []
 
   return (
@@ -192,7 +195,7 @@ export default function ReportPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: 2 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>Confidence Report</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('report.title')}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
             {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
           </p>
@@ -201,7 +204,7 @@ export default function ReportPage() {
         {/* ── Loading ── */}
         {loading && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
-            Loading report…
+            {t('report.loading')}
           </div>
         )}
 
@@ -210,16 +213,16 @@ export default function ReportPage() {
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
             <EmptyReport
               icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
-              title="No score yet"
-              sub="Complete the inspection checklist then calculate your confidence score."
+              title={t('report.noScore')}
+              sub={t('report.noScoreSub')}
             />
             <div style={{ padding: '0 24px 28px', display: 'flex', gap: 10, justifyContent: 'center' }}>
               <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
-                ← Back to Inspection
+                {t('report.backToInspection')}
               </Link>
               <button onClick={handleCalculate} disabled={calculating}
                 style={{ padding: '10px 24px', background: calculating ? 'rgba(34,211,238,0.5)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
-                {calculating ? 'Calculating…' : 'Calculate Score'}
+                {calculating ? t('report.calculating') : t('report.calculateScore')}
               </button>
             </div>
           </div>
@@ -242,26 +245,26 @@ export default function ReportPage() {
 
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 }}>
-                    AI Confidence Score
+                    {t('report.aiConfidenceScore')}
                   </div>
                   {/* Verdict pill */}
                   <div style={{ display: 'inline-flex', padding: '5px 14px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 20, fontSize: 14, fontWeight: 700, color: verdict.color, marginBottom: 10 }}>
-                    {verdict.label}
+                    {t(verdict.labelKey)}
                   </div>
                   {/* Service history + premium badges */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 5, background: `${svcLabel.color}18`, border: `1px solid ${svcLabel.color}40`, color: svcLabel.color }}>
-                      {svcLabel.label}
+                      {t(svcLabel.labelKey)}
                     </span>
                     {riskScore.hasPremiumData && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 5, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)', color: '#22d3ee' }}>
-                        Premium data
+                        {t('report.premiumData')}
                       </span>
                     )}
                     {/* Active risk flag count */}
                     {riskScore.riskFlags.length > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 5, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444' }}>
-                        {riskScore.riskFlags.length} risk flag{riskScore.riskFlags.length > 1 ? 's' : ''}
+                        {t('report.riskFlagCount_other', { count: riskScore.riskFlags.length })}
                       </span>
                     )}
                   </div>
@@ -270,7 +273,7 @@ export default function ReportPage() {
                 {/* Recalculate button */}
                 <button onClick={handleCalculate} disabled={calculating}
                   style={{ flexShrink: 0, padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, fontSize: 12, color: 'rgba(255,255,255,0.4)', cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
-                  {calculating ? 'Recalculating…' : 'Recalculate'}
+                  {calculating ? t('report.recalculating') : t('report.recalculate')}
                 </button>
               </div>
             </div>
@@ -280,7 +283,7 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {riskScore.riskFlags.length > 0 && (
               <div>
-                <SectionLabel>Risk Flags</SectionLabel>
+                <SectionLabel>{t('report.riskFlags')}</SectionLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {riskScore.riskFlags.map((flag) => (
                     <RiskFlagCard key={flag} flagKey={flag} />
@@ -292,9 +295,9 @@ export default function ReportPage() {
             {/* Service history warning (when not flagged but still partial/none) */}
             {riskScore.serviceHistoryStatus === 'NONE' && riskScore.riskFlags.length === 0 && (
               <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 13 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>No verified service history</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>{t('report.noServiceHistoryTitle')}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>
-                  Without documented maintenance, mileage and mechanical condition cannot be trusted.
+                  {t('report.noServiceHistorySub')}
                 </div>
               </div>
             )}
@@ -304,11 +307,11 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {(riskScore.reasonsFor.length > 0 || riskScore.reasonsAgainst.length > 0) && (
               <div>
-                <SectionLabel>Inspection Summary</SectionLabel>
+                <SectionLabel>{t('report.breakdown')}</SectionLabel>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                   {riskScore.reasonsFor.length > 0 && (
                     <div style={{ padding: '16px 18px', background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.12)', borderRadius: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Positive signals</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.for')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                         {riskScore.reasonsFor.map((r) => (
                           <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
@@ -321,7 +324,7 @@ export default function ReportPage() {
                   )}
                   {riskScore.reasonsAgainst.length > 0 && (
                     <div style={{ padding: '16px 18px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Concerns</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.against')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                         {riskScore.reasonsAgainst.map((r) => (
                           <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
@@ -341,11 +344,11 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {dims.length > 0 && (
               <div>
-                <SectionLabel>Inspection Breakdown</SectionLabel>
+                <SectionLabel>{t('report.breakdown')}</SectionLabel>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
                   {dims.map(d => {
                     const dim = riskScore.dimensions[d.key]
-                    return <DimBar key={d.key} label={d.label} score={dim.score} explanation={dim.explanation} />
+                    return <DimBar key={d.key} label={t(`dim.${d.key}`)} score={dim.score} explanation={dim.explanation} />
                   })}
                 </div>
               </div>
@@ -356,7 +359,7 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {riskScore.negotiationHints.length > 0 && (
               <div>
-                <SectionLabel>Buyer Advice</SectionLabel>
+                <SectionLabel>{t('report.negotiation')}</SectionLabel>
                 <div style={{ padding: '18px 20px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 14 }}>
                   <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -365,8 +368,8 @@ export default function ReportPage() {
                       </svg>
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>Negotiation Strategy</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Based on inspection findings</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>{t('report.negotiation')}</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('topbar.inspection.sub')}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -397,7 +400,7 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {latestAI && latestAI.findings.length > 0 && (
               <div>
-                <SectionLabel>AI Photo Findings ({latestAI.findings.length})</SectionLabel>
+                <SectionLabel>{t('report.aiFindings')} ({latestAI.findings.length})</SectionLabel>
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, overflow: 'hidden' }}>
                   {latestAI.findings.map((f, i) => (
                     // eslint-disable-next-line react/no-array-index-key
@@ -422,16 +425,14 @@ export default function ReportPage() {
             <div style={{ padding: '18px 22px', background: hasPremium ? 'rgba(34,211,238,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasPremium ? 'rgba(34,211,238,0.16)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: hasPremium ? '#22d3ee' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  Premium Vehicle History
+                  {t('report.premiumUnlock')}
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  {hasPremium
-                    ? 'CarVertical history report is factored into your score.'
-                    : 'Unlock ownership records, accidents & service history to boost scoring accuracy.'}
+                  {hasPremium ? t('profile.carverticalReport') : t('dashboard.unlockHistorySub')}
                 </div>
               </div>
               <Link href="/premium" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, padding: '9px 18px', background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)', borderRadius: 9, fontSize: 12, fontWeight: 600, color: '#22d3ee', textDecoration: 'none' }}>
-                {hasPremium ? 'View Report' : 'Unlock Premium'}
+                {hasPremium ? t('report.title') : t('report.premiumUnlock')}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { useVehicleStore } from '@/store'
 import type { CreateVehiclePayload, Vehicle, FuelType, Transmission, BodyType } from '@/types'
 import AppShell from '../AppShell'
@@ -14,11 +15,12 @@ const EMPTY_FORM: CreateVehiclePayload = {
   bodyType: undefined, vin: '', notes: '',
 }
 
-const STATUS_META: Record<string, { color: string; label: string }> = {
-  ACTIVE:   { color: '#22d3ee', label: 'Active' },
-  PURCHASED:{ color: '#22c55e', label: 'Purchased' },
-  PASSED:   { color: '#6b7280', label: 'Passed' },
-  ARCHIVED: { color: '#6b7280', label: 'Archived' },
+// Status colours only — labels resolved via t() at render time
+const STATUS_COLOR: Record<string, string> = {
+  ACTIVE:    '#22d3ee',
+  PURCHASED: '#22c55e',
+  PASSED:    '#6b7280',
+  ARCHIVED:  '#6b7280',
 }
 
 /* ── Segmented control ── */
@@ -47,40 +49,6 @@ function Segmented<T extends string>({
   )
 }
 
-const SELLER_OPTIONS = [
-  { label: 'Private', value: 'PRIVATE' },
-  { label: 'Dealer', value: 'DEALER' },
-  { label: 'Independent', value: 'INDEPENDENT_DEALER' },
-] as const
-
-const CURRENCY_OPTIONS = [
-  { label: 'EUR', value: 'EUR' },
-  { label: 'USD', value: 'USD' },
-  { label: 'GBP', value: 'GBP' },
-] as const
-
-const FUEL_OPTIONS: ReadonlyArray<{ label: string; value: FuelType }> = [
-  { label: 'Diesel',   value: 'diesel'   },
-  { label: 'Petrol',   value: 'petrol'   },
-  { label: 'Hybrid',   value: 'hybrid'   },
-  { label: 'Electric', value: 'electric' },
-  { label: 'LPG',      value: 'lpg'      },
-]
-
-const TRANSMISSION_OPTIONS: ReadonlyArray<{ label: string; value: Transmission }> = [
-  { label: 'Manual',    value: 'manual'    },
-  { label: 'Automatic', value: 'automatic' },
-]
-
-const BODY_OPTIONS: ReadonlyArray<{ label: string; value: BodyType }> = [
-  { label: 'Hatchback', value: 'hatchback' },
-  { label: 'Sedan',     value: 'sedan'     },
-  { label: 'Wagon',     value: 'wagon'     },
-  { label: 'SUV',       value: 'suv'       },
-  { label: 'Coupe',     value: 'coupe'     },
-  { label: 'Van',       value: 'van'       },
-]
-
 /* ── Field wrapper ── */
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return (
@@ -94,15 +62,51 @@ function Field({ label, children }: Readonly<{ label: string; children: React.Re
 }
 
 export default function VehiclePage() {
-  const router = useRouter()
+  const router    = useRouter()
+  const { t }     = useTranslation()
   const { vehicles, activeVehicle, fetchVehicles, createVehicle, deleteVehicle, setActiveVehicle, isLoading } = useVehicleStore()
 
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm]         = useState<CreateVehiclePayload>(EMPTY_FORM)
-  const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError]   = useState<string | null>(null)
+  const [showForm,    setShowForm]    = useState(false)
+  const [form,        setForm]        = useState<CreateVehiclePayload>(EMPTY_FORM)
+  const [submitting,  setSubmitting]  = useState(false)
+  const [formError,   setFormError]   = useState<string | null>(null)
 
   useEffect(() => { fetchVehicles() }, [])
+
+  // Translated option arrays (defined inside component so t() is available)
+  const SELLER_OPTIONS = [
+    { label: t('vehicle.private'),     value: 'PRIVATE'            },
+    { label: t('vehicle.dealer'),      value: 'DEALER'             },
+    { label: t('vehicle.independent'), value: 'INDEPENDENT_DEALER' },
+  ] as const
+
+  const FUEL_OPTIONS: ReadonlyArray<{ label: string; value: FuelType }> = [
+    { label: t('vehicle.diesel'),   value: 'diesel'   },
+    { label: t('vehicle.petrol'),   value: 'petrol'   },
+    { label: t('vehicle.hybrid'),   value: 'hybrid'   },
+    { label: t('vehicle.electric'), value: 'electric' },
+    { label: t('vehicle.lpg'),      value: 'lpg'      },
+  ]
+
+  const TRANSMISSION_OPTIONS: ReadonlyArray<{ label: string; value: Transmission }> = [
+    { label: t('vehicle.manual'),    value: 'manual'    },
+    { label: t('vehicle.automatic'), value: 'automatic' },
+  ]
+
+  const BODY_OPTIONS: ReadonlyArray<{ label: string; value: BodyType }> = [
+    { label: t('vehicle.hatchback'), value: 'hatchback' },
+    { label: t('vehicle.sedan'),     value: 'sedan'     },
+    { label: t('vehicle.wagon'),     value: 'wagon'     },
+    { label: t('vehicle.suv'),       value: 'suv'       },
+    { label: t('vehicle.coupe'),     value: 'coupe'     },
+    { label: t('vehicle.van'),       value: 'van'       },
+  ]
+
+  const CURRENCY_OPTIONS = [
+    { label: 'EUR', value: 'EUR' },
+    { label: 'USD', value: 'USD' },
+    { label: 'GBP', value: 'GBP' },
+  ] as const
 
   const set = (patch: Partial<CreateVehiclePayload>) => setForm(prev => ({ ...prev, ...patch }))
 
@@ -115,11 +119,8 @@ export default function VehiclePage() {
       setActiveVehicle(v)
       setShowForm(false)
       setForm(EMPTY_FORM)
-    } catch (err: unknown) {
-      const msg =
-        (err as { message?: string })?.message ||
-        'Failed to create vehicle. Please try again.'
-      setFormError(msg)
+    } catch {
+      setFormError(t('vehicle.failedToCreate'))
     } finally {
       setSubmitting(false)
     }
@@ -127,7 +128,7 @@ export default function VehiclePage() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm('Remove this vehicle?')) return
+    if (!confirm(t('vehicle.removeConfirm'))) return
     await deleteVehicle(id)
   }
 
@@ -151,9 +152,11 @@ export default function VehiclePage() {
         {/* ── Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>Vehicles</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('vehicle.title')}</h1>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-              {vehicles.length > 0 ? `${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} tracked` : 'No vehicles yet'}
+              {vehicles.length > 0
+                ? t('vehicle.tracked_other', { count: vehicles.length })
+                : t('vehicle.noVehiclesYet')}
             </p>
           </div>
           <button
@@ -168,8 +171,8 @@ export default function VehiclePage() {
             }}
           >
             {showForm
-              ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel</>
-              : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Vehicle</>
+              ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> {t('common.cancel')}</>
+              : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> {t('vehicle.addVehicle')}</>
             }
           </button>
         </div>
@@ -184,25 +187,25 @@ export default function VehiclePage() {
             }}
           >
             <div style={{ fontSize: 13, fontWeight: 700, color: '#22d3ee', marginBottom: 22, letterSpacing: '-0.1px' }}>
-              New Vehicle
+              {t('vehicle.newVehicle')}
             </div>
 
             {/* Row 1: Make / Model / Year */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 14 }}>
-              <Field label="Make *">
+              <Field label={t('vehicle.make')}>
                 <input style={inp} value={form.make} onChange={e => set({ make: e.target.value })} placeholder="BMW" required />
               </Field>
-              <Field label="Model *">
+              <Field label={t('vehicle.model')}>
                 <input style={inp} value={form.model} onChange={e => set({ model: e.target.value })} placeholder="3 Series" required />
               </Field>
-              <Field label="Year *">
+              <Field label={t('vehicle.year')}>
                 <input style={inp} type="number" value={form.year} onChange={e => set({ year: Number.parseInt(e.target.value) })} min={1980} max={new Date().getFullYear() + 1} required />
               </Field>
             </div>
 
             {/* Row 2: Engine CC / Power kW */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
-              <Field label="Engine (cc)">
+              <Field label={t('vehicle.engineCc')}>
                 <div style={{ position: 'relative' }}>
                   <input
                     style={inp} type="number"
@@ -221,7 +224,7 @@ export default function VehiclePage() {
                   )}
                 </div>
               </Field>
-              <Field label="Power (kW)">
+              <Field label={t('vehicle.powerKw')}>
                 <input
                   style={inp} type="number"
                   value={form.powerKw ?? ''}
@@ -234,7 +237,7 @@ export default function VehiclePage() {
 
             {/* Row 3: Fuel type */}
             <div style={{ marginBottom: 14 }}>
-              <Field label="Fuel Type">
+              <Field label={t('vehicle.fuelType')}>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {FUEL_OPTIONS.map(opt => (
                     <button
@@ -258,14 +261,14 @@ export default function VehiclePage() {
 
             {/* Row 4: Transmission / Body type */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-              <Field label="Transmission">
+              <Field label={t('vehicle.transmission')}>
                 <Segmented
                   options={TRANSMISSION_OPTIONS as unknown as Array<{ label: string; value: string }>}
                   value={form.transmission ?? ''}
                   onChange={v => set({ transmission: v ? v as Transmission : undefined })}
                 />
               </Field>
-              <Field label="Body Type">
+              <Field label={t('vehicle.bodyType')}>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {BODY_OPTIONS.map(opt => (
                     <button
@@ -289,17 +292,17 @@ export default function VehiclePage() {
 
             {/* Row 5: Mileage / Asking Price */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
-              <Field label="Mileage (km)">
+              <Field label={t('vehicle.mileage')}>
                 <input style={inp} type="number" value={form.mileage ?? ''} onChange={e => set({ mileage: e.target.value ? Number.parseInt(e.target.value) : undefined })} placeholder="85 000" />
               </Field>
-              <Field label="Asking Price">
+              <Field label={t('vehicle.askingPrice')}>
                 <input style={inp} type="number" value={form.askingPrice ?? ''} onChange={e => set({ askingPrice: e.target.value ? Number.parseFloat(e.target.value) : undefined })} placeholder="12 500" />
               </Field>
             </div>
 
             {/* Row 6: Seller type (segmented) */}
             <div style={{ marginBottom: 14 }}>
-              <Field label="Seller Type">
+              <Field label={t('vehicle.sellerType')}>
                 <Segmented
                   options={SELLER_OPTIONS as unknown as { label: string; value: string }[]}
                   value={form.sellerType ?? 'PRIVATE'}
@@ -308,9 +311,9 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 4: Currency (segmented) */}
+            {/* Row 7: Currency (segmented) */}
             <div style={{ marginBottom: 14 }}>
-              <Field label="Currency">
+              <Field label={t('vehicle.currency')}>
                 <Segmented
                   options={CURRENCY_OPTIONS as unknown as { label: string; value: string }[]}
                   value={form.currency ?? 'EUR'}
@@ -319,9 +322,9 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 5: VIN */}
+            {/* Row 8: VIN */}
             <div style={{ marginBottom: 14 }}>
-              <Field label="VIN (optional)">
+              <Field label={t('vehicle.vin')}>
                 <input
                   style={{ ...inp, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
                   value={form.vin ?? ''} onChange={e => set({ vin: e.target.value })}
@@ -330,13 +333,13 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 6: Notes */}
+            {/* Row 9: Notes */}
             <div style={{ marginBottom: 20 }}>
-              <Field label="Notes">
+              <Field label={t('vehicle.notes')}>
                 <textarea
                   style={{ ...inp, minHeight: 72, resize: 'vertical' }}
                   value={form.notes ?? ''} onChange={e => set({ notes: e.target.value })}
-                  placeholder="Any observations about this car…"
+                  placeholder="…"
                 />
               </Field>
             </div>
@@ -356,7 +359,7 @@ export default function VehiclePage() {
                   cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
                 }}
               >
-                {submitting ? 'Saving…' : 'Save Vehicle'}
+                {submitting ? '…' : t('common.save')}
               </button>
               <button
                 type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
@@ -366,7 +369,7 @@ export default function VehiclePage() {
                   fontSize: 13, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </form>
@@ -395,14 +398,15 @@ export default function VehiclePage() {
                 <circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
               </svg>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>No vehicles yet</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)' }}>Add your first vehicle to start an AI inspection.</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{t('vehicle.noVehiclesYet')}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)' }}>{t('vehicle.addVehicle')}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {vehicles.map((vehicle) => {
-              const isActive = activeVehicle?.id === vehicle.id
-              const meta = STATUS_META[vehicle.status] ?? STATUS_META.ARCHIVED
+              const isActive    = activeVehicle?.id === vehicle.id
+              const statusColor = STATUS_COLOR[vehicle.status] ?? STATUS_COLOR.ARCHIVED
+              const statusLabel = t(`vehicle.status.${vehicle.status}`, { defaultValue: vehicle.status })
               return (
                 <div
                   key={vehicle.id}
@@ -424,10 +428,10 @@ export default function VehiclePage() {
                       {/* Status pill */}
                       <span style={{
                         fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                        color: meta.color, background: `${meta.color}18`, border: `1px solid ${meta.color}30`,
+                        color: statusColor, background: `${statusColor}18`, border: `1px solid ${statusColor}30`,
                         borderRadius: 5, padding: '2px 7px',
                       }}>
-                        {meta.label}
+                        {statusLabel}
                       </span>
                       {isActive && (
                         <span style={{
@@ -435,7 +439,7 @@ export default function VehiclePage() {
                           color: '#22d3ee', background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)',
                           borderRadius: 5, padding: '2px 7px',
                         }}>
-                          Selected
+                          {t('common.active')}
                         </span>
                       )}
                     </div>
@@ -458,7 +462,7 @@ export default function VehiclePage() {
                         minHeight: 44,
                       }}
                     >
-                      Inspect
+                      {t('common.inspect')}
                     </button>
                     <button
                       onClick={e => handleDelete(vehicle.id, e)}

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
 
 type Tab = 'login' | 'register'
@@ -19,6 +20,7 @@ function AuthPageContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const redirect     = searchParams.get('redirect') ?? '/dashboard'
+  const { t }        = useTranslation()
 
   const { login, register, isAuthenticated, isLoading, error, clearError } = useUserStore()
 
@@ -42,10 +44,10 @@ function AuthPageContent() {
   }
 
   function submitLabel() {
-    if (isLoading && tab === 'login')    return 'Signing in…'
-    if (isLoading)                       return 'Creating account…'
-    if (tab === 'login')                 return 'Sign In'
-    return 'Create Account'
+    if (isLoading && tab === 'login') return t('auth.signingIn')
+    if (isLoading)                    return t('auth.creatingAccount')
+    if (tab === 'login')              return t('auth.signIn')
+    return t('auth.createAccount')
   }
 
   const inp: React.CSSProperties = {
@@ -77,7 +79,7 @@ function AuthPageContent() {
             </div>
           </Link>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', marginTop: 6 }}>
-            AI-powered vehicle inspection
+            {t('auth.tagline')}
           </div>
         </div>
 
@@ -86,19 +88,19 @@ function AuthPageContent() {
 
           {/* Tab switcher */}
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 11, padding: 4, marginBottom: 26, gap: 4 }}>
-            {(['login', 'register'] as Tab[]).map(t => (
+            {(['login', 'register'] as Tab[]).map(tabOption => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={tabOption}
+                onClick={() => setTab(tabOption)}
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-                  background: tab === t ? 'rgba(255,255,255,0.09)' : 'transparent',
-                  color:      tab === t ? '#fff' : 'rgba(255,255,255,0.35)',
-                  boxShadow:  tab === t ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                  background: tab === tabOption ? 'rgba(255,255,255,0.09)' : 'transparent',
+                  color:      tab === tabOption ? '#fff' : 'rgba(255,255,255,0.35)',
+                  boxShadow:  tab === tabOption ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
                 }}
               >
-                {t === 'login' ? 'Sign In' : 'Create Account'}
+                {tabOption === 'login' ? t('auth.signIn') : t('auth.createAccount')}
               </button>
             ))}
           </div>
@@ -109,14 +111,14 @@ function AuthPageContent() {
             {tab === 'register' && (
               <div>
                 <label htmlFor="auth-name" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
-                  Full Name
+                  {t('auth.fullName')}
                 </label>
                 <input
                   id="auth-name"
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="Jane Smith"
+                  placeholder={t('auth.namePlaceholder')}
                   required
                   style={inp}
                 />
@@ -126,14 +128,14 @@ function AuthPageContent() {
             {/* Email */}
             <div>
               <label htmlFor="auth-email" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="auth-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 autoComplete="email"
                 style={inp}
@@ -143,7 +145,7 @@ function AuthPageContent() {
             {/* Password */}
             <div>
               <label htmlFor="auth-password" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
-                Password
+                {t('auth.password')}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -151,7 +153,7 @@ function AuthPageContent() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder={tab === 'register' ? 'Min. 8 characters' : '••••••••'}
+                  placeholder={tab === 'register' ? t('auth.passwordNew') : t('auth.passwordCurrent')}
                   required
                   minLength={tab === 'register' ? 8 : undefined}
                   autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
@@ -161,7 +163,7 @@ function AuthPageContent() {
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
                   tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                   style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center' }}
                 >
                   {showPassword ? (
@@ -180,13 +182,13 @@ function AuthPageContent() {
               </div>
             </div>
 
-            {/* Error */}
+            {/* Error — store.error now holds a translation key */}
             {error && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '11px 13px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 10, fontSize: 13, color: '#f87171', lineHeight: 1.4 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                {error}
+                {t(error)}
               </div>
             )}
 
@@ -211,7 +213,7 @@ function AuthPageContent() {
 
         {/* Footer note */}
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6 }}>
-          By signing in you agree to our terms of service.
+          {t('auth.termsNote')}
         </div>
       </div>
       </div>{/* end left column */}
@@ -231,16 +233,13 @@ function AuthPageContent() {
           style={{
             position: 'absolute', inset: 0, width: '130%', height: '100%',
             objectFit: 'cover',
-            objectPosition: '70% center',   /* shifted right for cinematic framing */
+            objectPosition: '70% center',
             right: 0, left: 'auto',
             filter: 'brightness(0.88) saturate(0.8) contrast(1.05)',
           }}
         />
-        {/* Dark overlay — ~20% more transparent than before */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(8,12,20,0.68) 0%, rgba(8,12,20,0.42) 50%, rgba(8,12,20,0.60) 100%)' }} />
-        {/* Gradient fade toward left edge to blend with form */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #080c14 0%, transparent 18%)' }} />
-        {/* Premium vignette — corner darkening */}
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 110% 90% at 60% 50%, transparent 40%, rgba(4,8,18,0.5) 75%, rgba(4,8,18,0.78) 100%)' }} />
 
         {/* Panel content */}
@@ -256,11 +255,11 @@ function AuthPageContent() {
           <div>
             <div style={{ width: 32, height: 2, background: '#22d3ee', borderRadius: 2, marginBottom: 20 }} />
             <p style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.35, marginBottom: 16, maxWidth: 360 }}>
-              Every used car has a story.<br />
-              <span style={{ color: '#22d3ee' }}>Know it before you buy.</span>
+              {t('auth.heroTitle')}<br />
+              <span style={{ color: '#22d3ee' }}>{t('auth.heroTitleAccent')}</span>
             </p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6, maxWidth: 340 }}>
-              AI-guided inspections, risk scoring, and premium vehicle history reports — built for buyers who do their homework.
+              {t('auth.heroSub')}
             </p>
           </div>
         </div>

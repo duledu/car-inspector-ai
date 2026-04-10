@@ -9,20 +9,22 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 
-const PAGE_META: Record<string, { title: string; accent?: string }> = {
-  '/dashboard':  { title: 'Overview' },
-  '/vehicle':    { title: 'Vehicles' },
-  '/inspection': { title: 'Inspection', accent: '#22d3ee' },
-  '/report':     { title: 'Report' },
-  '/premium':    { title: 'Premium', accent: '#a855f7' },
-  '/community':  { title: 'Community' },
-  '/messages':   { title: 'Messages' },
-  '/profile':    { title: 'Profile' },
+// Maps pathnames to topbar translation key slugs (used for mobile header title)
+const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
+  '/dashboard':  { slug: 'dashboard' },
+  '/vehicle':    { slug: 'vehicle' },
+  '/inspection': { slug: 'inspection', accent: '#22d3ee' },
+  '/report':     { slug: 'report' },
+  '/premium':    { slug: 'premium', accent: '#a855f7' },
+  '/community':  { slug: 'community' },
+  '/messages':   { slug: 'messages' },
+  '/profile':    { slug: 'profile' },
 }
 
 interface AppShellProps {
@@ -33,6 +35,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { isAuthenticated, refreshSession, user, logout } = useUserStore()
   const router   = useRouter()
   const pathname = usePathname()
+  const { t }    = useTranslation()
 
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => { setHydrated(true) }, [])
@@ -49,7 +52,7 @@ export default function AppShell({ children }: AppShellProps) {
   if (!hydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (!isAuthenticated) return null
 
-  const meta    = PAGE_META[pathname] ?? { title: 'Car Inspector AI' }
+  const pageMeta = PAGE_SLUG[pathname] ?? { slug: 'fallback' }
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
     : 'U'
@@ -118,7 +121,7 @@ export default function AppShell({ children }: AppShellProps) {
                 letterSpacing: '-0.4px', lineHeight: 1.1,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {meta.title}
+                {t(`topbar.${pageMeta.slug}.title`)}
               </div>
             </div>
           </div>

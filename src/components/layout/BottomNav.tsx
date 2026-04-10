@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 
-// ─── Nav items ────────────────────────────────────────────────
-const NAV_ITEMS = [
+// ─── Nav item definitions (labels resolved via t() at render time) ────────────
+const NAV_ITEM_DEFS = [
   {
     href: '/dashboard',
-    label: 'Home',
+    labelKey: 'nav.home',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
         stroke={active ? '#22d3ee' : 'rgba(255,255,255,0.38)'}
@@ -21,7 +22,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/vehicle',
-    label: 'Vehicles',
+    labelKey: 'nav.vehicles',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
         stroke={active ? '#22d3ee' : 'rgba(255,255,255,0.38)'}
@@ -34,7 +35,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/inspection',
-    label: 'Inspect',
+    labelKey: 'nav.inspect',
     isCTA: true,
     icon: (_active: boolean) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -46,7 +47,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/report',
-    label: 'Report',
+    labelKey: 'nav.report',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
         stroke={active ? '#22d3ee' : 'rgba(255,255,255,0.38)'}
@@ -60,7 +61,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/profile',
-    label: 'Profile',
+    labelKey: 'nav.profile',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
         stroke={active ? '#22d3ee' : 'rgba(255,255,255,0.38)'}
@@ -73,7 +74,8 @@ const NAV_ITEMS = [
 ]
 
 export function BottomNav() {
-  const pathname = usePathname()
+  const pathname  = usePathname()
+  const { t }     = useTranslation()
 
   return (
     <nav
@@ -97,8 +99,9 @@ export function BottomNav() {
         height: 64,
         padding: '0 4px',
       }}>
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEM_DEFS.map(item => {
           const active = pathname === item.href
+          const label  = t(item.labelKey)
 
           /* ── CTA (Inspect) button ── */
           if (item.isCTA) {
@@ -106,7 +109,7 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-label="Start Inspection"
+                aria-label={label}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -136,7 +139,7 @@ export function BottomNav() {
                   color: active ? '#22d3ee' : 'rgba(255,255,255,0.38)',
                   marginTop: 2,
                 }}>
-                  {item.label}
+                  {label}
                 </span>
               </Link>
             )
@@ -195,7 +198,7 @@ export function BottomNav() {
                 lineHeight: 1,
                 transition: 'color 0.15s ease',
               }}>
-                {item.label}
+                {label}
               </span>
             </Link>
           )

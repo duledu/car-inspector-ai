@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
+import { PWAProvider } from './pwa'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -57,9 +58,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
     >
       <body>
         {children}
+        <PWAProvider />
         <Toaster
           position="top-center"
           toastOptions={{

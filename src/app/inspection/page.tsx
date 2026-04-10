@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
@@ -29,15 +30,15 @@ const PHOTO_ANGLES = [
 ] as const
 
 // ─── Phase config ──────────────────────────────────────────────────────────────
-const PHASES: { phase: InspectionPhase; label: string; short: string; category?: ChecklistCategory }[] = [
-  { phase: 'PRE_SCREENING', label: 'Overview',   short: 'Overview',  category: 'PRE_SCREENING' },
-  { phase: 'AI_PHOTOS',     label: 'Photos + AI',short: 'Photos',    category: undefined },
-  { phase: 'EXTERIOR',      label: 'Exterior',   short: 'Exterior',  category: 'EXTERIOR' },
-  { phase: 'INTERIOR',      label: 'Interior',   short: 'Interior',  category: 'INTERIOR' },
-  { phase: 'MECHANICAL',    label: 'Mechanical', short: 'Mech',      category: 'MECHANICAL' },
-  { phase: 'TEST_DRIVE',    label: 'Test Drive', short: 'Drive',     category: 'TEST_DRIVE' },
-  { phase: 'VIN_DOCS',      label: 'Documents',  short: 'Docs',      category: 'DOCUMENTS' },
-  { phase: 'RISK_ANALYSIS', label: 'AI Score',   short: 'Score',     category: undefined },
+const PHASES: { phase: InspectionPhase; shortKey: string; category?: ChecklistCategory }[] = [
+  { phase: 'PRE_SCREENING', shortKey: 'inspection.overviewShort',  category: 'PRE_SCREENING' },
+  { phase: 'AI_PHOTOS',     shortKey: 'inspection.photosShort',    category: undefined },
+  { phase: 'EXTERIOR',      shortKey: 'inspection.exteriorShort',  category: 'EXTERIOR' },
+  { phase: 'INTERIOR',      shortKey: 'inspection.interiorShort',  category: 'INTERIOR' },
+  { phase: 'MECHANICAL',    shortKey: 'inspection.mechShort',      category: 'MECHANICAL' },
+  { phase: 'TEST_DRIVE',    shortKey: 'inspection.driveShort',     category: 'TEST_DRIVE' },
+  { phase: 'VIN_DOCS',      shortKey: 'inspection.docsShort',      category: 'DOCUMENTS' },
+  { phase: 'RISK_ANALYSIS', shortKey: 'inspection.scoreShort',     category: undefined },
 ]
 
 const STATUS_CFG = {
@@ -62,7 +63,7 @@ async function fileToBase64(file: File): Promise<string> {
   })
 }
 
-async function runAI(key: string, label: string, file: File): Promise<MockAIResult> {
+async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string): Promise<MockAIResult> {
   try {
     const imageBase64 = await fileToBase64(file)
     const res = await fetch('/api/inspection/analyze-photo', {
@@ -74,7 +75,7 @@ async function runAI(key: string, label: string, file: File): Promise<MockAIResu
     if (json?.data) return json.data as MockAIResult
     throw new Error('No data in response')
   } catch {
-    return { signal: 'Analysis unavailable', severity: 'warn', detail: 'Could not analyse this image. Check connection and try again.' }
+    return { signal: fallbackSignal, severity: 'warn', detail: fallbackDetail }
   }
 }
 
@@ -99,13 +100,14 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
 
 // ─── Photo Grid ───────────────────────────────────────────────────────────────
 function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (key: string, label: string) => void }>) {
-  const captured = photos.length
+  const { t }     = useTranslation()
+  const captured  = photos.length
   return (
     <div>
       {/* Progress summary */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>
-          {captured} of {PHOTO_ANGLES.length} captured
+          {t('inspection.photosCaptured', { count: captured, total: PHOTO_ANGLES.length })}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 80, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
@@ -138,7 +140,7 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
               }}>
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.previewUrl} alt={angle.label} className="photo-thumb" />
+                  <img src={photo.previewUrl} alt={t(`angle.${angle.key}`, { defaultValue: angle.label })} className="photo-thumb" />
                 ) : (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -155,21 +157,21 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
               {/* Info + AI result */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.80)' }}>{angle.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.80)' }}>{t(`angle.${angle.key}`, { defaultValue: angle.label })}</span>
                   {photo && !photo.aiPending && (
                     <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(34,211,238,0.1)', color: '#22d3ee', letterSpacing: '0.04em' }}>AI</span>
                   )}
                   {photo?.aiPending && (
-                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', letterSpacing: '0.04em' }}>Analysing…</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', letterSpacing: '0.04em' }}>{t('inspection.analysing')}</span>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>{angle.hint}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>{t(`hint.${angle.key}`, { defaultValue: angle.hint })}</div>
                 {photo?.aiResult && <AIBadge result={photo.aiResult} />}
               </div>
 
               {/* Capture / retake button */}
               <button
-                onClick={() => onAdd(angle.key, angle.label)}
+                onClick={() => onAdd(angle.key, t(`angle.${angle.key}`, { defaultValue: angle.label }))}
                 style={{
                   flexShrink: 0, width: 40, height: 40,
                   background: photo ? 'rgba(255,255,255,0.04)' : 'rgba(34,211,238,0.09)',
@@ -207,6 +209,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
   isLoading: boolean
   onStatus: (id: string, st: ItemStatus) => void
 }>) {
+  const { t } = useTranslation()
   if (isLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -220,7 +223,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
     return (
       <div style={{ textAlign: 'center', padding: '40px 0' }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>📋</div>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.28)' }}>No items for this category</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.28)' }}>{t('inspection.noItems')}</div>
       </div>
     )
   }
@@ -231,7 +234,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
       {/* Mini progress */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.58)', fontWeight: 500 }}>
-          {done} / {items.length} checked
+          {t('inspection.checkedProgress', { done, total: items.length })}
         </span>
         <div style={{ display: 'flex', gap: 3 }}>
           {items.map(item => (
@@ -260,7 +263,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
                 {(['OK', 'WARNING', 'PROBLEM'] as ItemStatus[]).map(st => {
                   const cfg = STATUS_CFG[st]
                   const sel = item.status === st
-                  const labels: Record<string, string> = { OK: 'OK', WARNING: 'Warning', PROBLEM: 'Issue' }
+                  const labels: Record<string, string> = { OK: t('inspection.statusOK'), WARNING: t('inspection.statusWarning'), PROBLEM: t('inspection.statusIssue') }
                   return (
                     <button
                       key={st}
@@ -296,6 +299,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
 
 // ─── Risk Analysis ─────────────────────────────────────────────────────────────
 function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
+  const { t }   = useTranslation()
   const flagged = photos.filter(p => p.aiResult && p.aiResult.severity !== 'ok')
   const allOk   = flagged.length === 0 && photos.length > 0
 
@@ -304,12 +308,12 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
       {photos.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            Photo Analysis Summary
+            {t('inspection.photoAnalysisSummary')}
           </div>
           {allOk ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>No flags raised in photo analysis</span>
+              <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -335,7 +339,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
 
       <div style={{ padding: '12px 0 4px' }}>
         <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
-          All phases complete. Calculate your full AI confidence score.
+          {t('inspection.allPhasesComplete')}
         </div>
         <Link
           href="/report"
@@ -349,7 +353,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
             width: '100%',
           }}
         >
-          View AI Confidence Report
+          {t('inspection.viewAIReport')}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </Link>
       </div>
@@ -359,6 +363,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function InspectionPage() {
+  const { t }             = useTranslation()
   const { activeVehicle } = useVehicleStore()
   const {
     session, currentPhase, checklistItems, isLoadingChecklist, error,
@@ -440,7 +445,7 @@ export default function InspectionPage() {
     const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: true }
     setPhotos(prev => [...prev.filter(p => p.key !== cameraTarget.key), entry])
     setCameraTarget(null)
-    const result = await runAI(cameraTarget.key, cameraTarget.label, file)
+    const result = await runAI(cameraTarget.key, cameraTarget.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'))
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
   }, [cameraTarget])
 
@@ -456,11 +461,11 @@ export default function InspectionPage() {
             </svg>
           </div>
           <div>
-            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px' }}>No vehicle selected</h2>
-            <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>Add or select a vehicle before starting an inspection.</p>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px' }}>{t('inspection.noVehicle')}</h2>
+            <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>{t('inspection.noVehicleDesc')}</p>
           </div>
           <Link href="/vehicle" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '14px 28px', background: '#22d3ee', color: '#000', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-            Go to Vehicles
+            {t('inspection.goToVehicles')}
           </Link>
         </div>
       </AppShell>
@@ -515,7 +520,7 @@ export default function InspectionPage() {
 
           {/* Vehicle info */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Inspecting</div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>{t('inspection.inspecting')}</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activeVehicle.make} {activeVehicle.model}
             </div>
@@ -580,7 +585,7 @@ export default function InspectionPage() {
                     : idx + 1
                   }
                 </span>
-                {p.short}
+                {t(p.shortKey)}
               </button>
             )
           })}
@@ -601,16 +606,16 @@ export default function InspectionPage() {
               {/* Accent bar */}
               <div style={{ width: 3, height: 28, borderRadius: 2, background: 'linear-gradient(to bottom, #22d3ee, rgba(34,211,238,0.2))', flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2 }}>{phaseCfg?.label}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2 }}>{phaseCfg ? t(`phase.${phaseCfg.phase}`) : ''}</div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>
-                  Step {phaseIdx + 1} of {PHASES.length}
+                  {t('inspection.stepOf', { step: phaseIdx + 1, total: PHASES.length })}
                 </div>
               </div>
             </div>
             {currentPhase === 'AI_PHOTOS' && photos.some(p => p.aiPending) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b' }}>AI Analysing</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b' }}>{t('inspection.aiAnalysing')}</span>
               </div>
             )}
           </div>
@@ -650,9 +655,9 @@ export default function InspectionPage() {
                   </svg>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>AI Photo Inspection</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>{t('inspection.aiPhotoTitle')}</div>
                   <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
-                    Photograph each area. AI analyses each image for repairs, repaints, and anomalies. Results are advisory.
+                    {t('inspection.aiPhotoDesc')}
                   </div>
                 </div>
               </div>
@@ -688,7 +693,7 @@ export default function InspectionPage() {
             }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
+            {t('common.back')}
           </button>
 
           {/* Next — solid gradient CTA */}
@@ -712,7 +717,7 @@ export default function InspectionPage() {
               transition: 'box-shadow 0.2s ease, transform 0.1s ease',
             }}
           >
-            {phaseIdx === PHASES.length - 2 ? 'Finish & Score' : `Continue`}
+            {phaseIdx === PHASES.length - 2 ? t('inspection.finishAndScore') : t('common.continue')}
             {!isLast && (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             )}

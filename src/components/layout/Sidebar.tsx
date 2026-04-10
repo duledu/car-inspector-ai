@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 const NAV = [
   {
-    label: 'Dashboard',
+    labelKey: 'nav.dashboard',
     href: '/dashboard',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -15,7 +17,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Vehicles',
+    labelKey: 'nav.vehicles',
     href: '/vehicle',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -25,7 +27,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Inspection',
+    labelKey: 'nav.inspect',
     href: '/inspection',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -34,7 +36,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Report',
+    labelKey: 'nav.report',
     href: '/report',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -44,7 +46,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Premium',
+    labelKey: 'nav.premium',
     href: '/premium',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -53,7 +55,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Community',
+    labelKey: 'nav.community',
     href: '/community',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -63,7 +65,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Messages',
+    labelKey: 'nav.messages',
     href: '/messages',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -72,7 +74,7 @@ const NAV = [
     ),
   },
   {
-    label: 'Profile',
+    labelKey: 'nav.profile',
     href: '/profile',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -84,6 +86,7 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { t } = useTranslation()
 
   return (
     <div
@@ -110,7 +113,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav style={{ padding: '10px 10px 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
@@ -132,15 +135,24 @@ export function Sidebar() {
                 }}
               >
                 <span style={{ opacity: active ? 1 : 0.78, flexShrink: 0 }}>{item.icon}</span>
-                {item.label}
+                {t(item.labelKey)}
               </div>
             </Link>
           )
         })}
       </nav>
 
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
       {/* Footer */}
-      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Language switcher */}
+        <div style={{ padding: '0 2px' }}>
+          <LanguageSwitcher />
+        </div>
+
+        {/* Back to landing */}
         <Link href="/" style={{ textDecoration: 'none' }}>
           <div
             style={{
@@ -152,12 +164,13 @@ export function Sidebar() {
               display: 'flex',
               alignItems: 'center',
               gap: 6,
+              transition: 'color 0.15s',
             }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Back to landing
+            {t('nav.backToLanding')}
           </div>
         </Link>
       </div>

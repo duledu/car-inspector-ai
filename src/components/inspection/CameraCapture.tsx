@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface CameraCaptureProps {
   readonly onCapture: (file: File, previewUrl: string) => void
@@ -9,6 +10,7 @@ interface CameraCaptureProps {
 }
 
 export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps) {
+  const { t }       = useTranslation()
   const videoRef    = useRef<HTMLVideoElement>(null)
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -34,7 +36,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
       }
       setMode('camera')
     } catch {
-      setCameraError('Camera unavailable. Use file upload instead.')
+      setCameraError(t('camera.cameraUnavailable'))
     }
   }, [])
 
@@ -116,7 +118,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
-          Cancel
+          {t('common.cancel')}
         </button>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{label}</div>
         <div style={{ width: 60 }} />
@@ -129,9 +131,9 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
         {mode === 'choose' && (
           <div style={{ padding: '32px 24px', width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ textAlign: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-                Take a photo of the <strong style={{ color: '#22d3ee' }}>{label}</strong>
-              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}
+                dangerouslySetInnerHTML={{ __html: t('camera.instruction', { label: `<strong style="color:#22d3ee">${label}</strong>` }) }}
+              />
             </div>
 
             {cameraError && (
@@ -156,7 +158,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                 <circle cx="12" cy="13" r="4"/>
               </svg>
-              Open Camera
+              {t('camera.openCamera')}
             </button>
 
             <button
@@ -175,7 +177,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              Choose from Gallery
+              {t('camera.chooseFromGallery')}
             </button>
 
             <input
@@ -312,7 +314,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                   borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#22c55e',
                 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  Photo captured
+                  {t('camera.photoCaptured')}
                 </span>
               </div>
             </div>
@@ -335,7 +337,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                Retake
+                {t('camera.retake')}
               </button>
               <button
                 onClick={handleConfirm}
@@ -348,7 +350,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                   boxShadow: '0 4px 16px rgba(34,211,238,0.3)',
                 }}
               >
-                Use Photo
+                {t('camera.usePhoto')}
               </button>
             </div>
           </div>

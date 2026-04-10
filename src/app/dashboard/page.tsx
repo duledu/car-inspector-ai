@@ -2,14 +2,9 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import AppShell from '../AppShell'
-
-const PHASE_LABELS: Record<string, string> = {
-  PRE_SCREENING: 'Pre-Screening', AI_PHOTOS: 'AI Photos', EXTERIOR: 'Exterior',
-  INTERIOR: 'Interior', MECHANICAL: 'Mechanical', TEST_DRIVE: 'Test Drive',
-  VIN_DOCS: 'Documents', RISK_ANALYSIS: 'AI Analysis',
-}
 
 function severityColor(s: string) {
   if (s === 'critical') return '#ef4444'
@@ -67,6 +62,7 @@ function SectionLabel({ text, action, actionHref }: Readonly<{ text: string; act
 
 /* ── Page ───────────────────────────────────────────────────── */
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const { activeVehicle, vehicles, fetchVehicles }                        = useVehicleStore()
   const { session, currentPhase, checklistItems, aiResults, initSession } = useInspectionStore()
   const { fetchPurchaseHistory, purchaseHistory }                         = usePaymentStore()
@@ -106,7 +102,7 @@ export default function DashboardPage() {
               {activeVehicle ? (
                 <>
                   <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>
-                    Active Vehicle
+                    {t('dashboard.activeVehicle')}
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.7px', lineHeight: 1.15, marginBottom: 6 }}>
                     {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
@@ -130,10 +126,10 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <div style={{ fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 7, letterSpacing: '-0.5px' }}>
-                    Get started
+                    {t('dashboard.getStarted')}
                   </div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6, maxWidth: 280 }}>
-                    Add a vehicle to begin your AI-guided inspection.
+                    {t('dashboard.getStartedSub')}
                   </div>
                 </>
               )}
@@ -152,7 +148,7 @@ export default function DashboardPage() {
                   {vehicles.length}
                 </div>
                 <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  cars
+                  {t('common.cars')}
                 </div>
               </div>
             )}
@@ -163,7 +159,7 @@ export default function DashboardPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>
-                  Phase: <span style={{ color: 'rgba(255,255,255,0.82)', fontWeight: 500 }}>{PHASE_LABELS[currentPhase] ?? currentPhase}</span>
+                  {t('dashboard.phase')}: <span style={{ color: 'rgba(255,255,255,0.82)', fontWeight: 500 }}>{t(`phase.${currentPhase}`, { defaultValue: currentPhase })}</span>
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#22d3ee' }}>{progress}%</span>
               </div>
@@ -192,7 +188,7 @@ export default function DashboardPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              {session ? 'Continue Inspection' : 'Start Inspection'}
+              {session ? t('dashboard.continueInspection') : t('dashboard.startInspection')}
             </Link>
             <Link href="/vehicle" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -212,15 +208,15 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
             {
-              value: vehicles.length, label: 'Vehicles', href: '/vehicle', color: '#22d3ee',
+              value: vehicles.length, labelKey: 'dashboard.vehicles', href: '/vehicle', color: '#22d3ee',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
             },
             {
-              value: progress > 0 ? `${progress}%` : '—', label: 'Progress', href: '/inspection', color: '#818cf8',
+              value: progress > 0 ? `${progress}%` : '—', labelKey: 'dashboard.progress', href: '/inspection', color: '#818cf8',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
             },
             {
-              value: paidCount, label: 'Reports', href: '/premium', color: '#a855f7',
+              value: paidCount, labelKey: 'dashboard.reports', href: '/premium', color: '#a855f7',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
             },
           ].map(s => (
@@ -242,7 +238,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(s.labelKey)}</div>
                 </div>
               </div>
             </Link>
@@ -252,16 +248,16 @@ export default function DashboardPage() {
         {/* ══ Checklist breakdown ════════════════════════════════ */}
         {session && total > 0 && (
           <div>
-            <SectionLabel text="Inspection Breakdown" action="Continue" actionHref="/inspection" />
+            <SectionLabel text={t('dashboard.inspectionBreakdown')} action={t('dashboard.continue')} actionHref="/inspection" />
             <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {[
-                { label: 'Total', value: total,           color: 'rgba(255,255,255,0.5)' },
-                { label: 'Done',  value: checked,         color: '#22c55e' },
-                { label: 'Left',  value: total - checked, color: '#f59e0b' },
+                { labelKey: 'dashboard.total', value: total,           color: 'rgba(255,255,255,0.5)' },
+                { labelKey: 'dashboard.done',  value: checked,         color: '#22c55e' },
+                { labelKey: 'dashboard.left',  value: total - checked, color: '#f59e0b' },
               ].map(item => (
-                <div key={item.label} style={{ textAlign: 'center', padding: '11px 8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12 }}>
+                <div key={item.labelKey} style={{ textAlign: 'center', padding: '11px 8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12 }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: item.color, lineHeight: 1, letterSpacing: '-0.5px' }}>{item.value}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.label}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(item.labelKey)}</div>
                 </div>
               ))}
             </div>
@@ -271,7 +267,7 @@ export default function DashboardPage() {
         {/* ══ AI signals ═════════════════════════════════════════ */}
         {latestAI && latestAI.findings.length > 0 && (
           <div>
-            <SectionLabel text="AI Risk Signals" action="Full Report" actionHref="/report" />
+            <SectionLabel text={t('dashboard.aiRiskSignals')} action={t('dashboard.fullReport')} actionHref="/report" />
             <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
               {latestAI.findings.slice(0, 4).map((f, i, arr) => (
                 <div key={f.id ?? `f-${i}`} style={{
@@ -307,16 +303,16 @@ export default function DashboardPage() {
 
         {/* ══ Quick actions ═══════════════════════════════════════ */}
         <div>
-          <SectionLabel text="Quick Actions" />
+          <SectionLabel text={t('dashboard.quickActions')} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {([
-              { label: 'View Report',  sub: 'Confidence score & verdict', href: '/report',    color: '#22d3ee',
+              { labelKey: 'dashboard.viewReport',  subKey: 'dashboard.viewReportSub',  href: '/report',    color: '#22d3ee',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
-              { label: 'Add Vehicle',  sub: 'Track a new car',           href: '/vehicle',   color: '#818cf8',
+              { labelKey: 'dashboard.addVehicle',  subKey: 'dashboard.addVehicleSub',  href: '/vehicle',   color: '#818cf8',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> },
-              { label: 'Premium',      sub: 'Unlock history data',       href: '/premium',   color: '#a855f7',
+              { labelKey: 'dashboard.premium',     subKey: 'dashboard.premiumSub',     href: '/premium',   color: '#a855f7',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
-              { label: 'Community',    sub: 'Ask fellow buyers',         href: '/community', color: '#22c55e',
+              { labelKey: 'dashboard.community',   subKey: 'dashboard.communitySub',   href: '/community', color: '#22c55e',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
             ] as const).map(action => (
               <Link key={action.href} href={action.href} style={{ textDecoration: 'none' }} className="card-hover">
@@ -334,8 +330,8 @@ export default function DashboardPage() {
                     {action.icon}
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.1px' }}>{action.label}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{action.sub}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.1px' }}>{t(action.labelKey)}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{t(action.subKey)}</div>
                   </div>
                 </div>
               </Link>
@@ -346,7 +342,7 @@ export default function DashboardPage() {
         {/* ══ Vehicles list ══════════════════════════════════════ */}
         {vehicles.length > 0 && (
           <div>
-            <SectionLabel text="Your Vehicles" action="Manage" actionHref="/vehicle" />
+            <SectionLabel text={t('dashboard.yourVehicles')} action={t('common.manage')} actionHref="/vehicle" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {vehicles.slice(0, 3).map(v => {
                 const isActive = v.id === activeVehicle?.id
@@ -362,7 +358,7 @@ export default function DashboardPage() {
                         {v.year} {v.make} {v.model}
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                        {v.mileage ? `${v.mileage.toLocaleString()} km` : 'No mileage'}
+                        {v.mileage ? `${v.mileage.toLocaleString()} km` : t('common.noMileage')}
                         {v.askingPrice ? ` · ${v.askingPrice.toLocaleString()} ${v.currency}` : ''}
                       </div>
                     </div>
@@ -372,7 +368,7 @@ export default function DashboardPage() {
                         background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)',
                         borderRadius: 6, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0,
                       }}>
-                        Active
+                        {t('common.active')}
                       </span>
                     )}
                   </div>
@@ -401,10 +397,10 @@ export default function DashboardPage() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
-                Optional Add-on
+                {t('dashboard.optionalAddOn')}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.2px' }}>Unlock vehicle history</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>Ownership, accidents & service logs.</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3, letterSpacing: '-0.2px' }}>{t('dashboard.unlockHistory')}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>{t('dashboard.unlockHistorySub')}</div>
             </div>
             <Link href="/premium" style={{
               flexShrink: 0, padding: '10px 14px',
@@ -412,7 +408,7 @@ export default function DashboardPage() {
               borderRadius: 11, fontSize: 12, fontWeight: 700, color: '#a855f7', textDecoration: 'none',
               whiteSpace: 'nowrap',
             }}>
-              Explore →
+              {t('common.explore')}
             </Link>
           </div>
         )}

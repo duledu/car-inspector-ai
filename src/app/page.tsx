@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import '@/i18n/config'
 import { useUserStore } from '@/store/useUserStore'
 
 // ══════════════════════════════════════════════════════════════
@@ -65,6 +67,7 @@ function LandingNav() {
   const [menuOpen, setMenuOpen]   = useState(false)
   const menuRef                   = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, logout } = useUserStore()
+  const { t } = useTranslation()
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20)
@@ -112,7 +115,7 @@ function LandingNav() {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Car Inspector</div>
-            <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>AI-Powered</div>
+            <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{t('landing.aiPowered')}</div>
           </div>
         </Link>
 
@@ -142,7 +145,7 @@ function LandingNav() {
               }}
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.92)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.background = 'rgba(255,255,255,0.1)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.7)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.background = 'rgba(255,255,255,0.05)'; }}
-              >Dashboard</Link>
+              >{t('landing.dashboard')}</Link>
 
               {/* Avatar button */}
               <button
@@ -180,9 +183,9 @@ function LandingNav() {
                   </div>
                   {/* Menu items */}
                   {[
-                    { label: 'Dashboard',     href: '/dashboard' },
-                    { label: 'My Inspections',href: '/inspection' },
-                    { label: 'Profile',       href: '/profile' },
+                    { label: t('landing.dashboard'),      href: '/dashboard' },
+                    { label: t('landing.myInspections'), href: '/inspection' },
+                    { label: t('nav.profile'),           href: '/profile' },
                   ].map(item => (
                     <Link key={item.label} href={item.href}
                       onClick={() => setMenuOpen(false)}
@@ -200,7 +203,7 @@ function LandingNav() {
                       cursor: 'pointer', transition: 'all 0.1s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgb(239,68,68)'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.07)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(239,68,68,0.8)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                  >Sign Out</button>
+                  >{t('landing.signOut')}</button>
                 </div>
               )}
             </div>
@@ -214,7 +217,7 @@ function LandingNav() {
               }}
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
-              >Sign In</Link>
+              >{t('common.signIn')}</Link>
               <Link href="/inspection" style={{
                 padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
                 color: '#03131A', background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
@@ -222,7 +225,7 @@ function LandingNav() {
               }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 22px rgba(34,211,238,0.5)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(34,211,238,0.3)'; (e.currentTarget as HTMLElement).style.transform = ''; }}
-              >Start Free</Link>
+              >{t('landing.startFree')}</Link>
             </>
           )}
         </div>
