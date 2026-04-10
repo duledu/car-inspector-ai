@@ -82,8 +82,11 @@ export class ScoringService {
         reasonsAgainst: scoreResult.reasonsAgainst,
       },
       create: {
-        vehicleId,
-        sessionId:     session?.id,
+        // Use relation form so Prisma's checked-input type is satisfied.
+        // Providing only vehicleId (scalar FK) triggers "Argument vehicle is missing"
+        // at runtime because Prisma resolves the CreateInput (not Unchecked) variant.
+        vehicle:   { connect: { id: vehicleId } },
+        ...(session?.id ? { session: { connect: { id: session.id } } } : {}),
         buyScore:      scoreResult.buyScore,
         riskScore:     scoreResult.riskScore,
         verdict:       scoreResult.verdict,

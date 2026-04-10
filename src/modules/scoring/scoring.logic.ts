@@ -14,6 +14,24 @@ import type {
   ServiceHistoryStatus,
 } from '@/types'
 
+// ─── Safe numeric helpers ─────────────────────────────────────────────────────
+
+/**
+ * Coerce any value to a finite number.
+ * NaN, Infinity, null, undefined → fallback.
+ */
+export function safeNumber(value: unknown, fallback: number): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
+/**
+ * Clamp score to [min, max] after coercing to a safe finite number.
+ */
+export function clampScore(value: unknown, min: number, max: number, fallback: number): number {
+  return Math.max(min, Math.min(max, Math.round(safeNumber(value, fallback))))
+}
+
 // ─── Weight Configuration ─────────────────────────────────────────────────────
 // Weights must sum to 100
 export const SCORE_WEIGHTS = {
@@ -55,11 +73,14 @@ function calculateAIScore(findings: AIFinding[]): ScoreDimension {
   score -= criticalCount * 15
   score -= warningCount  * 7
 
-  const avgConfidence = findings.reduce((sum, f) => sum + f.confidence, 0) / findings.length
+  // Guard: confidence may be undefined/null if stored before this field was added.
+  // safeNumber coerces to 80 (neutral default) when the value is missing or NaN.
+  const avgConfidence =
+    findings.reduce((sum, f) => sum + safeNumber(f.confidence, 80), 0) / findings.length
   const confidenceModifier = (avgConfidence - 50) / 200
   score = score + score * confidenceModifier
 
-  const clampedScore = Math.max(10, Math.min(100, Math.round(score)))
+  const clampedScore = clampScore(score, 10, 100, 50)
 
   const topIssue = [...findings].sort((a, b) => {
     const sev = { critical: 3, warning: 2, info: 1 }
@@ -429,10 +450,14 @@ export function calculateRiskScore(
 
   // 1. Weighted average base score
   const totalWeight = Object.values(SCORE_WEIGHTS).reduce((sum, w) => sum + w, 0)
-  const weightedSum = Object.entries(dimensions).reduce((sum, [, dim]) => {
-    return sum + dim.score * (dim.weight / totalWeight)
+  const weightedSum = Object.entries(dimensions).reduce((sum, [key, dim]) => {
+    const s = safeNumber(dim.score, 50)
+    if (!Number.isFinite(s)) {
+      console.warn(`[scoring] NaN score in dimension "${key}" — using 50 as fallback`)
+    }
+    return sum + s * (dim.weight / totalWeight)
   }, 0)
-  let buyScore = Math.max(10, Math.min(96, Math.round(weightedSum)))
+  let buyScore = clampScore(weightedSum, 10, 96, 50)
 
   // 2. Service history modifier
   const serviceStatus = input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems)

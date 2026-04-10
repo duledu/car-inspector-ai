@@ -10,11 +10,12 @@ import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 
 const photoResultSchema = z.object({
-  angle:    z.string().min(1),
-  label:    z.string().min(1),
-  signal:   z.string().min(1),
-  severity: z.enum(['ok', 'warn', 'flag']),
-  detail:   z.string(),
+  angle:      z.string().min(1),
+  label:      z.string().min(1),
+  signal:     z.string().min(1),
+  severity:   z.enum(['ok', 'warn', 'flag']),
+  detail:     z.string(),
+  confidence: z.number().int().min(0).max(100).optional().default(80),
 })
 
 const bodySchema = z.object({
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
       title:       r.signal,
       description: r.detail,
       severity:    mapSeverity(r.severity),
+      confidence:  r.confidence,
     }))
 
   // Score: start at 100, deduct per finding (critical = 20pts, warning = 8pts)
