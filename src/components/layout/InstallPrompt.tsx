@@ -106,8 +106,8 @@ export function InstallPrompt() {
 
     if (ios) {
       // iOS: no native prompt — show instructions after 4 s
-      const t = window.setTimeout(() => show('ios'), 4000)
-      return () => window.clearTimeout(t)
+      const t = setTimeout(() => show('ios'), 4000)
+      return () => clearTimeout(t)
     }
 
     // ── Android / Chrome / Edge ──────────────────────────────────────────
@@ -115,16 +115,16 @@ export function InstallPrompt() {
     // (event fired before this useEffect), promptRef.current is already set.
     // Otherwise, register a listener for when it fires later.
 
-    let scheduleTimer: ReturnType<typeof window.setTimeout> | null = null
+    let scheduleTimer: ReturnType<typeof setTimeout> | null = null
 
     function scheduleShow() {
       if (shownRef.current) return
 
-      scheduleTimer = window.setTimeout(() => show('android'), 4000)
+      scheduleTimer = setTimeout(() => show('android'), 4000)
 
       // Also trigger on first scroll — whichever comes first
       const onScroll = () => {
-        if (scheduleTimer) window.clearTimeout(scheduleTimer)
+        if (scheduleTimer) clearTimeout(scheduleTimer)
         show('android')
       }
       window.addEventListener('scroll', onScroll, { once: true, passive: true })
@@ -145,7 +145,7 @@ export function InstallPrompt() {
 
       return () => {
         window.removeEventListener('beforeinstallprompt', onPrompt)
-        if (scheduleTimer) window.clearTimeout(scheduleTimer)
+        if (scheduleTimer) clearTimeout(scheduleTimer)
       }
     }
 
@@ -157,7 +157,7 @@ export function InstallPrompt() {
 
     return () => {
       window.removeEventListener('appinstalled', onInstalled)
-      if (scheduleTimer) window.clearTimeout(scheduleTimer)
+      if (scheduleTimer) clearTimeout(scheduleTimer)
     }
   }, [show])
 
