@@ -1,67 +1,52 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-// ── Built-in demo phases — no external props required ─────────────────────────
+// ── Phase key config — module-level (no t() calls allowed here) ───────────────
+// Only translation key strings; actual translated text is derived inside the
+// component so the animation math (N, cardState, etc.) stays fully static.
 
-const PHASES = [
+type PhaseKeyConfig = {
+  titleKey:   string
+  descKey:    string
+  bulletKeys: [string, string, string]
+}
+
+const PHASE_KEYS: PhaseKeyConfig[] = [
   {
-    title: 'Model Research',
-    desc: 'Study failure patterns and recall history before you touch the car.',
-    bullets: [
-      'Review NHTSA recalls and TSB bulletins for this generation',
-      'Research known transmission, engine, and rust weak points',
-      'Note failures that affect resale value or roadworthiness',
-    ],
+    titleKey:   'scroll.research.title',
+    descKey:    'scroll.research.desc',
+    bulletKeys: ['scroll.research.b0', 'scroll.research.b1', 'scroll.research.b2'],
   },
   {
-    title: 'Exterior Inspection',
-    desc: 'Evaluate paint quality, panel fit, and structural integrity.',
-    bullets: [
-      'Check all panel gaps for uniformity — mismatches signal repairs',
-      'Inspect paint under direct light for overspray and blend lines',
-      'Probe wheel arches and sills for rust bubbling under the paint',
-    ],
+    titleKey:   'scroll.exterior.title',
+    descKey:    'scroll.exterior.desc',
+    bulletKeys: ['scroll.exterior.b0', 'scroll.exterior.b1', 'scroll.exterior.b2'],
   },
   {
-    title: 'AI Photo Analysis',
-    desc: 'Capture 16 standardised angles for AI-powered damage detection.',
-    bullets: [
-      'Photograph every panel from a consistent three-metre distance',
-      'AI compares paint reflections to detect hidden bodywork repairs',
-      'Results are stored and factored into the final confidence score',
-    ],
+    titleKey:   'scroll.photos.title',
+    descKey:    'scroll.photos.desc',
+    bulletKeys: ['scroll.photos.b0', 'scroll.photos.b1', 'scroll.photos.b2'],
   },
   {
-    title: 'Interior Check',
-    desc: 'Examine cabin wear, electronics, and water ingress signs.',
-    bullets: [
-      'Test every switch, screen, window, and HVAC control',
-      'Check seat bolster wear against the advertised mileage',
-      'Inspect headliner and carpet edges for water damage or mould',
-    ],
+    titleKey:   'scroll.interior.title',
+    descKey:    'scroll.interior.desc',
+    bulletKeys: ['scroll.interior.b0', 'scroll.interior.b1', 'scroll.interior.b2'],
   },
   {
-    title: 'Mechanical Check',
-    desc: 'Cold-start engine inspection, fluids, belts, and underbody.',
-    bullets: [
-      'Check all fluid levels and colours — dark or milky = problems',
-      'Look for fresh undercoating which can conceal structural rust',
-      'Listen for knocking, ticking, or blue smoke on cold start-up',
-    ],
+    titleKey:   'scroll.mechanical.title',
+    descKey:    'scroll.mechanical.desc',
+    bulletKeys: ['scroll.mechanical.b0', 'scroll.mechanical.b1', 'scroll.mechanical.b2'],
   },
   {
-    title: 'AI Confidence Score',
-    desc: 'Aggregated risk score with evidence from every inspection phase.',
-    bullets: [
-      'Score weights safety, mechanical, and cosmetic findings separately',
-      'Each risk flag is backed by the specific checklist item or photo',
-      'Generates a shareable PDF report for price negotiation leverage',
-    ],
+    titleKey:   'scroll.score.title',
+    descKey:    'scroll.score.desc',
+    bulletKeys: ['scroll.score.b0', 'scroll.score.b1', 'scroll.score.b2'],
   },
 ]
 
-const N = PHASES.length
+const N = PHASE_KEYS.length
 
 // ── Layer state ────────────────────────────────────────────────────────────────
 
@@ -126,6 +111,7 @@ function findScroller(el: HTMLElement): Element {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PhaseScrollStack() {
+  const { t }    = useTranslation()
   const outerRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>(new Array(N).fill(null))
   const dotRefs  = useRef<(HTMLDivElement | null)[]>(new Array(N).fill(null))
@@ -235,7 +221,7 @@ export function PhaseScrollStack() {
           perspective: '1100px',
           perspectiveOrigin: '50% -6%',
         }}>
-          {PHASES.map((phase, idx) => {
+          {PHASE_KEYS.map((pk, idx) => {
             let initS: S
             if (idx === 0) initS = ACTIVE
             else if (idx === 1) initS = INCOMING
@@ -252,7 +238,7 @@ export function PhaseScrollStack() {
 
             return (
               <div
-                key={phase.title}
+                key={idx}
                 ref={el => { cardRefs.current[idx] = el }}
                 style={{
                   position: 'absolute',
@@ -310,7 +296,7 @@ export function PhaseScrollStack() {
                       fontSize: 10, fontWeight: 700, color: '#22d3ee',
                       letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10,
                     }}>
-                      Step {idx + 1}
+                      {t('scroll.step')} {idx + 1}
                     </div>
 
                     {/* Title */}
@@ -319,7 +305,7 @@ export function PhaseScrollStack() {
                       color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.15,
                       marginBottom: 10,
                     }}>
-                      {phase.title}
+                      {t(pk.titleKey)}
                     </div>
 
                     {/* Description */}
@@ -327,13 +313,13 @@ export function PhaseScrollStack() {
                       fontSize: 13, color: 'rgba(255,255,255,0.5)',
                       lineHeight: 1.65, marginBottom: 20,
                     }}>
-                      {phase.desc}
+                      {t(pk.descKey)}
                     </div>
 
                     {/* Bullets */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                      {phase.bullets.map((bullet) => (
-                        <div key={bullet} style={{
+                      {pk.bulletKeys.map((bulletKey, bIdx) => (
+                        <div key={bIdx} style={{
                           display: 'flex', gap: 11, alignItems: 'flex-start',
                           padding: '10px 14px',
                           background: 'rgba(255,255,255,0.025)',
@@ -349,7 +335,7 @@ export function PhaseScrollStack() {
                             fontSize: 12.5, color: 'rgba(255,255,255,0.72)',
                             lineHeight: 1.55,
                           }}>
-                            {bullet}
+                            {t(bulletKey)}
                           </span>
                         </div>
                       ))}
@@ -367,9 +353,9 @@ export function PhaseScrollStack() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7, marginTop: 18, zIndex: 200,
         }}>
-          {PHASES.map((phase, idx) => (
+          {PHASE_KEYS.map((_pk, idx) => (
             <div
-              key={phase.title}
+              key={idx}
               ref={el => { dotRefs.current[idx] = el }}
               style={{
                 height: 4, borderRadius: 2,
@@ -399,7 +385,7 @@ export function PhaseScrollStack() {
             textTransform: 'uppercase', whiteSpace: 'nowrap',
             color: 'rgba(255,255,255,0.18)',
           }}>
-            scroll to explore
+            {t('scroll.scrollHint')}
           </span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
             stroke="rgba(255,255,255,0.14)" strokeWidth="2.5"

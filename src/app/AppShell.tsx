@@ -33,7 +33,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isAuthenticated, refreshSession, user, logout } = useUserStore()
+  const { isAuthenticated, refreshSession, user } = useUserStore()
   const router   = useRouter()
   const pathname = usePathname()
   const { t }    = useTranslation()
@@ -57,11 +57,6 @@ export default function AppShell({ children }: AppShellProps) {
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
     : 'U'
-
-  const handleLogout = async () => {
-    await logout()
-    router.push('/auth')
-  }
 
   return (
     <>
@@ -145,21 +140,21 @@ export default function AppShell({ children }: AppShellProps) {
               Pro
             </Link>
 
-            {/* Avatar / logout */}
-            <button
-              onClick={handleLogout}
-              aria-label="Sign out"
+            {/* Avatar → profile */}
+            <Link
+              href="/profile"
+              aria-label="View profile"
               style={{
                 width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
                 background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(129,140,248,0.15))',
                 border: '1.5px solid rgba(34,211,238,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 800, color: '#22d3ee',
-                cursor: 'pointer', letterSpacing: '0.02em',
+                textDecoration: 'none', letterSpacing: '0.02em',
               }}
             >
               {initials}
-            </button>
+            </Link>
           </div>
         </header>
 

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { useUserStore, useVehicleStore, usePaymentStore } from '@/store'
+import { useUserStore, useVehicleStore, usePaymentStore, useInspectionStore } from '@/store'
 import AppShell from '../AppShell'
 
 const STATUS_COLOR: Record<string, string> = {
@@ -32,6 +33,12 @@ export default function ProfilePage() {
   const { user, logout, updateProfile } = useUserStore()
   const { vehicles }    = useVehicleStore()
   const { purchaseHistory } = usePaymentStore()
+  const { session, currentPhase, checklistItems } = useInspectionStore()
+
+  const hasActiveSession = !!session && currentPhase !== 'FINAL_REPORT'
+  const pending   = checklistItems.filter(i => i.status === 'PENDING').length
+  const total     = checklistItems.length
+  const progress  = total > 0 ? Math.round(((total - pending) / total) * 100) : 0
 
   const [editing,   setEditing]   = useState(false)
   const [name,      setName]      = useState(user?.name ?? '')
@@ -140,6 +147,43 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* ── Active inspection ── */}
+        {hasActiveSession && (
+          <Link href="/inspection" style={{ textDecoration: 'none' }}>
+            <div style={{
+              padding: '14px 16px',
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.09) 0%, rgba(129,140,248,0.05) 100%)',
+              border: '1px solid rgba(34,211,238,0.25)',
+              borderRadius: 14,
+              display: 'flex', alignItems: 'center', gap: 14,
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 2 }}>
+                  {t('profile.activeInspection')}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.1px' }}>
+                  {t(`phase.${currentPhase}`, { defaultValue: currentPhase })}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>
+                  {progress}% {t('dashboard.resumeComplete')}
+                </div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.45)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </Link>
+        )}
 
         {/* ── Stats ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>

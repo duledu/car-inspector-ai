@@ -154,6 +154,19 @@ export const useInspectionStore = create<InspectionStore>()(
       },
 
       resetSession: () => {
+        // Clear persisted photo drafts for the vehicle being reset
+        const vehicleId = get().session?.vehicleId
+        if (vehicleId) {
+          try {
+            const raw = localStorage.getItem('uci-photo-drafts')
+            if (raw) {
+              const remaining = (JSON.parse(raw) as Array<{ vehicleId: string }>)
+                .filter(d => d.vehicleId !== vehicleId)
+              if (remaining.length === 0) localStorage.removeItem('uci-photo-drafts')
+              else localStorage.setItem('uci-photo-drafts', JSON.stringify(remaining))
+            }
+          } catch { /* ignore */ }
+        }
         set((state) => {
           state.session = null
           state.currentPhase = 'PRE_SCREENING'

@@ -72,6 +72,8 @@ export default function DashboardPage() {
     if (activeVehicle?.id && session === null) initSession(activeVehicle.id)
   }, [activeVehicle?.id])
 
+  const hasActiveSession = !!session && currentPhase !== 'FINAL_REPORT'
+
   const pending   = checklistItems.filter(i => i.status === 'PENDING').length
   const total     = checklistItems.length
   const checked   = total - pending
@@ -83,6 +85,44 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* ══ Resume inspection banner ═══════════════════════════ */}
+        {hasActiveSession && (
+          <Link href="/inspection" style={{ textDecoration: 'none' }}>
+            <div style={{
+              padding: '14px 16px',
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.10) 0%, rgba(129,140,248,0.06) 100%)',
+              border: '1px solid rgba(34,211,238,0.28)',
+              borderRadius: 16,
+              display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: '0 0 24px rgba(34,211,238,0.08)',
+            }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.25)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>
+                  {t('dashboard.resumeBadge')}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' }}>
+                  {t('dashboard.resumeTitle')}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                  {t(`phase.${currentPhase}`, { defaultValue: currentPhase })} · {progress}% {t('dashboard.resumeComplete')}
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.5)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </Link>
+        )}
 
         {/* ══ Hero card — 3D glass ════════════════════════════════ */}
         <div className="glass-card-wrap">

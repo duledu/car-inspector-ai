@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore } from '@/store'
@@ -51,6 +51,58 @@ const STATUS_CFG = {
 type PhotoEntry   = { key: string; label: string; file: File; previewUrl: string; aiPending: boolean; aiResult?: MockAIResult }
 type MockAIResult = { signal: string; severity: 'ok' | 'warn' | 'flag'; detail: string }
 type ChecklistRow = { id: string; itemLabel: string; status: ItemStatus; notes?: string | null }
+
+// ─── Photo draft persistence (survives refresh / navigation) ──────────────────
+const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
+
+interface PhotoDraft {
+  vehicleId: string
+  key: string
+  label: string
+  thumbUrl: string        // compressed data URL (~40 KB), safe for localStorage
+  aiResult?: MockAIResult
+}
+
+function loadPhotoDrafts(vehicleId: string): PhotoDraft[] {
+  try {
+    const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
+    if (!raw) return []
+    return (JSON.parse(raw) as PhotoDraft[]).filter(d => d.vehicleId === vehicleId)
+  } catch { return [] }
+}
+
+function savePhotoDraft(draft: PhotoDraft) {
+  try {
+    const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
+    const all: PhotoDraft[] = raw ? JSON.parse(raw) : []
+    // Replace existing entry for same vehicle+angle, then append
+    const filtered = all.filter(d => !(d.vehicleId === draft.vehicleId && d.key === draft.key))
+    filtered.push(draft)
+    localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(filtered))
+  } catch { /* localStorage quota exceeded — skip */ }
+}
+
+/** Downsample a File to a ≤360px-wide JPEG data URL (~30–60 KB). */
+async function toThumbnailDataUrl(file: File, maxWidth = 360): Promise<string> {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const scale   = Math.min(1, maxWidth / img.width)
+        const canvas  = document.createElement('canvas')
+        canvas.width  = Math.round(img.width  * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.65))
+      }
+      img.onerror = () => resolve('')
+      img.src = reader.result as string
+    }
+    reader.onerror = () => resolve('')
+    reader.readAsDataURL(file)
+  })
+}
 
 // ─── Real AI analysis via OpenAI Vision ───────────────────────────────────────
 
@@ -204,12 +256,42 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
 }
 
 // ─── Checklist Phase ──────────────────────────────────────────────────────────
-function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
+function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
   items: ChecklistRow[]
   isLoading: boolean
   onStatus: (id: string, st: ItemStatus) => void
+  onNotes:  (id: string, notes: string) => void
 }>) {
   const { t } = useTranslation()
+
+  // ── Notes state ──────────────────────────────────────────────────────────────
+  // Initialise from persisted notes on mount; draft state is the source of truth in-UI
+  const [noteExpanded, setNoteExpanded] = useState<Record<string, boolean>>({})
+  const [noteDraft,    setNoteDraft]    = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    items.forEach(i => { init[i.id] = i.notes ?? '' })
+    return init
+  })
+  const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  // Keep draft in sync if items reload from Zustand (e.g. after session restore)
+  useEffect(() => {
+    setNoteDraft(prev => {
+      const next = { ...prev }
+      items.forEach(i => {
+        if (next[i.id] === undefined) next[i.id] = i.notes ?? ''
+      })
+      return next
+    })
+  }, [items])
+
+  const handleNoteChange = (id: string, value: string) => {
+    setNoteDraft(prev => ({ ...prev, [id]: value }))
+    clearTimeout(noteTimers.current[id])
+    noteTimers.current[id] = setTimeout(() => onNotes(id, value), 500)
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -249,7 +331,9 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map(item => {
-          const s = STATUS_CFG[item.status]
+          const s         = STATUS_CFG[item.status]
+          const hasNote   = !!(noteDraft[item.id])
+          const expanded  = noteExpanded[item.id] ?? false
           return (
             <div key={item.id} style={{
               padding: '13px 14px', borderRadius: 12,
@@ -259,6 +343,7 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
               <div style={{ fontSize: 13, fontWeight: 500, color: item.status === 'PENDING' ? 'rgba(255,255,255,0.82)' : '#fff', marginBottom: 10, lineHeight: 1.4 }}>
                 {item.itemLabel}
               </div>
+              {/* Status buttons */}
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['OK', 'WARNING', 'PROBLEM'] as ItemStatus[]).map(st => {
                   const cfg = STATUS_CFG[st]
@@ -288,6 +373,54 @@ function ChecklistPhase({ items, isLoading, onStatus }: Readonly<{
                     </button>
                   )
                 })}
+              </div>
+
+              {/* Note toggle + textarea */}
+              <div style={{ marginTop: 9 }}>
+                <button
+                  onClick={() => setNoteExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 8px',
+                    background: 'transparent',
+                    border: `1px solid ${hasNote ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.06)'}`,
+                    borderRadius: 6,
+                    fontSize: 11, fontWeight: 500,
+                    color: hasNote ? 'rgba(34,211,238,0.7)' : 'rgba(255,255,255,0.28)',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                >
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  {t('inspection.note')}
+                  {hasNote && (
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#22d3ee', flexShrink: 0 }} />
+                  )}
+                </button>
+
+                {expanded && (
+                  <textarea
+                    value={noteDraft[item.id] ?? ''}
+                    onChange={e => handleNoteChange(item.id, e.target.value)}
+                    placeholder={t('inspection.notePlaceholder')}
+                    rows={2}
+                    style={{
+                      display: 'block', marginTop: 7, width: '100%',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 9,
+                      padding: '9px 11px',
+                      color: 'rgba(255,255,255,0.75)',
+                      fontSize: 12, lineHeight: 1.6,
+                      fontFamily: 'var(--font-sans)',
+                      resize: 'none', outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )}
               </div>
             </div>
           )
@@ -379,6 +512,23 @@ export default function InspectionPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVehicle?.id])
 
+  // Restore photo drafts when a persisted session is loaded (survives refresh / reopen)
+  useEffect(() => {
+    const vehicleId = session?.vehicleId
+    if (!vehicleId) return
+    const drafts = loadPhotoDrafts(vehicleId)
+    if (drafts.length === 0) return
+    setPhotos(drafts.map(d => ({
+      key:       d.key,
+      label:     d.label,
+      file:      new File([], d.key, { type: 'image/jpeg' }), // placeholder — AI already done
+      previewUrl: d.thumbUrl,
+      aiPending: false,
+      aiResult:  d.aiResult,
+    })))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.vehicleId])
+
   // When the user reaches the RISK_ANALYSIS phase, persist all photo AI findings
   // to the DB so the scoring service can factor them in, and push into the store
   // so the report's "AI Findings" section is populated.
@@ -434,7 +584,27 @@ export default function InspectionPage() {
   const goNext = () => { const n = PHASES[phaseIdx + 1]; if (n) setPhase(n.phase) }
   const goPrev = () => { const p = PHASES[phaseIdx - 1]; if (p) setPhase(p.phase) }
 
-  const handleStatus = (itemId: string, status: ItemStatus) => updateChecklistItem(itemId, status)
+  // ── Autosave indicator ────────────────────────────────────────────────────
+  const [showSaved,   setShowSaved]  = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const markSaved = useCallback(() => {
+    setShowSaved(true)
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setShowSaved(false), 2200)
+  }, [])
+
+  const handleStatus = (itemId: string, status: ItemStatus) => {
+    updateChecklistItem(itemId, status).then(markSaved).catch(() => {})
+  }
+
+  const handleNotes = useCallback(
+    (itemId: string, notes: string) => {
+      const item = checklistItems.find(i => i.id === itemId)
+      if (item) updateChecklistItem(itemId, item.status, notes).then(markSaved).catch(() => {})
+    },
+    [checklistItems, updateChecklistItem, markSaved]
+  )
 
   const handleOpenCamera = useCallback((key: string, label: string) => {
     setCameraTarget({ key, label })
@@ -445,9 +615,25 @@ export default function InspectionPage() {
     const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: true }
     setPhotos(prev => [...prev.filter(p => p.key !== cameraTarget.key), entry])
     setCameraTarget(null)
-    const result = await runAI(cameraTarget.key, cameraTarget.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'))
+
+    // Step 1: generate thumbnail (fast ~100ms) and save immediately
+    // This guarantees the photo is persisted even if the user closes the app
+    // before AI analysis completes.
+    const thumbUrl     = await toThumbnailDataUrl(file)
+    const vehicleId    = session?.vehicleId
+    if (vehicleId && thumbUrl) {
+      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl })
+    }
+
+    // Step 2: run AI analysis
+    const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'))
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
-  }, [cameraTarget])
+
+    // Step 3: update persisted draft with AI result
+    if (vehicleId && thumbUrl) {
+      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
+    }
+  }, [cameraTarget, session, t])
 
   // ── No vehicle ──
   if (!activeVehicle) {
@@ -612,12 +798,33 @@ export default function InspectionPage() {
                 </div>
               </div>
             </div>
-            {currentPhase === 'AI_PHOTOS' && photos.some(p => p.aiPending) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b' }}>{t('inspection.aiAnalysing')}</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Autosave confirmation pill */}
+              {showSaved && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '4px 9px',
+                  background: 'rgba(34,197,94,0.07)',
+                  border: '1px solid rgba(34,197,94,0.18)',
+                  borderRadius: 7,
+                  animation: 'fadeIn 0.18s ease',
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', letterSpacing: '0.02em' }}>
+                    {t('inspection.saved')}
+                  </span>
+                </div>
+              )}
+              {/* AI analysing pill */}
+              {currentPhase === 'AI_PHOTOS' && photos.some(p => p.aiPending) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b' }}>{t('inspection.aiAnalysing')}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* PRE_SCREENING */}
@@ -670,7 +877,7 @@ export default function InspectionPage() {
 
           {/* All checklist phases */}
           {currentPhase !== 'AI_PHOTOS' && currentPhase !== 'RISK_ANALYSIS' && currentPhase !== 'PRE_SCREENING' && (
-            <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} />
+            <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} onNotes={handleNotes} />
           )}
         </div>
 
