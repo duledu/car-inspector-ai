@@ -1,8 +1,6 @@
 // =============================================================================
 // Google OAuth Callback
 // GET /api/auth/google/callback
-// Verifies CSRF state, exchanges code for tokens, upserts user, issues JWTs,
-// stores the client session, then redirects to /dashboard.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,6 +15,7 @@ interface GoogleTokenResponse {
   id_token: string
   token_type: string
   error?: string
+  error_description?: string
 }
 
 interface GoogleUserInfo {
@@ -36,108 +35,169 @@ function htmlEscapeJson(value: unknown) {
     .replaceAll('\u2029', String.raw`\u2029`)
 }
 
-export async function GET(req: NextRequest) {
-  const clientId = process.env.GOOGLE_CLIENT_ID ?? ''
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
-  // Use the actual request origin — not NEXT_PUBLIC_APP_URL — so the
-  // redirect_uri sent to Google for token exchange always matches what
-  // the init route registered. This makes localhost and production
-  // work independently without changing env vars.
-  const origin = req.nextUrl.origin
-  const callbackUrl = new URL('/api/auth/google/callback', origin).toString()
-  const authUrl = new URL('/auth', origin)
-  const dashboardUrl = new URL('/dashboard', origin)
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-  function redirectAuthError(error: 'googleDenied' | 'googleFailed') {
-    authUrl.searchParams.set('error', error)
-    const response = NextResponse.redirect(authUrl)
-    response.headers.set('Cache-Control', 'no-store')
-    return response
+async function exchangeCodeForTokens(
+  code: string,
+  clientId: string,
+  clientSecret: string,
+  callbackUrl: string,
+): Promise<{ ok: true; data: GoogleTokenResponse } | { ok: false; error: string; description: string }> {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id:     clientId,
+      client_secret: clientSecret,
+      redirect_uri:  callbackUrl,
+      grant_type:    'authorization_code',
+    }),
+  })
+  const data: GoogleTokenResponse = await res.json()
+  if (!res.ok || data.error) {
+    return { ok: false, error: data.error ?? `http_${res.status}`, description: data.error_description ?? '' }
+  }
+  return { ok: true, data }
+}
+
+async function fetchGoogleUser(
+  accessToken: string,
+): Promise<{ ok: true; user: GoogleUserInfo } | { ok: false; status: number }> {
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) return { ok: false, status: res.status }
+  return { ok: true, user: await res.json() }
+}
+
+async function upsertGoogleUser(googleUser: GoogleUserInfo) {
+  const existing = await prisma.user.findUnique({ where: { googleId: googleUser.sub } })
+  if (existing) return { user: existing, action: 'found' as const }
+
+  const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } })
+  if (byEmail) {
+    const linked = await prisma.user.update({
+      where: { id: byEmail.id },
+      data: {
+        googleId:      googleUser.sub,
+        emailVerified: byEmail.emailVerified ?? new Date(),
+        avatarUrl:     byEmail.avatarUrl ?? googleUser.picture ?? null,
+      },
+    })
+    return { user: linked, action: 'linked' as const }
   }
 
-  const { searchParams } = req.nextUrl
-  const code = searchParams.get('code')
-  const state = searchParams.get('state')
-  const errorParam = searchParams.get('error')
+  const created = await prisma.user.create({
+    data: {
+      googleId:      googleUser.sub,
+      email:         googleUser.email,
+      name:          googleUser.name || googleUser.email.split('@')[0],
+      avatarUrl:     googleUser.picture ?? null,
+      emailVerified: new Date(),
+      role:          'USER',
+    },
+  })
+  return { user: created, action: 'created' as const }
+}
+
+// ── Route handler ──────────────────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  const tag = '[google/callback]'
+
+  const clientId     = process.env.GOOGLE_CLIENT_ID ?? ''
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
+  const jwtSecret    = process.env.JWT_SECRET ?? ''
+
+  // Derive origin from the request so redirect_uri always matches what
+  // init registered — works correctly on both localhost and production.
+  const origin       = req.nextUrl.origin
+  const callbackUrl  = new URL('/api/auth/google/callback', origin).toString()
+  const authUrl      = new URL('/auth', origin)
+  const dashboardUrl = new URL('/dashboard', origin)
+
+  console.log(`${tag} origin=${origin} callbackUrl=${callbackUrl}`)
+
+  function redirectError(reason: 'googleDenied' | 'googleFailed') {
+    authUrl.searchParams.set('error', reason)
+    const r = NextResponse.redirect(authUrl)
+    r.headers.set('Cache-Control', 'no-store')
+    return r
+  }
+
+  // ── Env checks ────────────────────────────────────────────────────────────
+  if (!clientId)     { console.error(`${tag} FAIL: GOOGLE_CLIENT_ID not set`);     return redirectError('googleFailed') }
+  if (!clientSecret) { console.error(`${tag} FAIL: GOOGLE_CLIENT_SECRET not set`); return redirectError('googleFailed') }
+  if (!jwtSecret)    { console.error(`${tag} FAIL: JWT_SECRET not set`);            return redirectError('googleFailed') }
+
+  // ── OAuth params ──────────────────────────────────────────────────────────
+  const code       = req.nextUrl.searchParams.get('code')
+  const state      = req.nextUrl.searchParams.get('state')
+  const errorParam = req.nextUrl.searchParams.get('error')
+
+  console.log(`${tag} params: code=${code ? 'yes' : 'NO'} state=${state ? 'yes' : 'NO'} error=${errorParam ?? 'none'}`)
 
   if (errorParam === 'access_denied') {
-    return redirectAuthError('googleDenied')
+    console.error(`${tag} FAIL: user denied consent`)
+    return redirectError('googleDenied')
   }
 
   if (!code || !state) {
-    return redirectAuthError('googleFailed')
+    console.error(`${tag} FAIL: missing code=${!!code} state=${!!state}`)
+    return redirectError('googleFailed')
   }
 
+  // ── CSRF check ────────────────────────────────────────────────────────────
   const cookieState = req.cookies.get('gauth_state')?.value
-  if (!cookieState || cookieState !== state) {
-    console.error('[google/callback] CSRF state mismatch')
-    return redirectAuthError('googleFailed')
+
+  if (!cookieState) {
+    console.error(`${tag} FAIL: gauth_state cookie missing — cookie blocked, wrong domain, or secure/SameSite mismatch`)
+    return redirectError('googleFailed')
+  }
+
+  if (cookieState !== state) {
+    console.error(`${tag} FAIL: CSRF mismatch. cookie="${cookieState.slice(0, 8)}…" param="${state.slice(0, 8)}…"`)
+    return redirectError('googleFailed')
   }
 
   try {
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: callbackUrl,
-        grant_type: 'authorization_code',
-      }),
-    })
+    // ── Token exchange ────────────────────────────────────────────────────
+    console.log(`${tag} exchanging code for tokens…`)
+    const tokenResult = await exchangeCodeForTokens(code, clientId, clientSecret, callbackUrl)
 
-    const tokenData: GoogleTokenResponse = await tokenRes.json()
-
-    if (!tokenRes.ok || tokenData.error) {
-      console.error('[google/callback] token exchange failed:', tokenData)
-      return redirectAuthError('googleFailed')
+    if (!tokenResult.ok) {
+      console.error(`${tag} FAIL: token exchange — error=${tokenResult.error} desc=${tokenResult.description}`)
+      return redirectError('googleFailed')
     }
 
-    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    })
+    console.log(`${tag} token exchange OK`)
 
-    if (!userInfoRes.ok) {
-      console.error('[google/callback] userinfo fetch failed')
-      return redirectAuthError('googleFailed')
+    // ── User info ─────────────────────────────────────────────────────────
+    console.log(`${tag} fetching user info…`)
+    const userResult = await fetchGoogleUser(tokenResult.data.access_token)
+
+    if (!userResult.ok) {
+      console.error(`${tag} FAIL: userinfo fetch status=${userResult.status}`)
+      return redirectError('googleFailed')
     }
 
-    const googleUser: GoogleUserInfo = await userInfoRes.json()
+    const { user: googleUser } = userResult
+    console.log(`${tag} userinfo OK. email=${googleUser.email ? 'yes' : 'NO'} verified=${googleUser.email_verified}`)
 
     if (!googleUser.email || !googleUser.email_verified) {
-      console.error('[google/callback] unverified or missing email')
-      return redirectAuthError('googleFailed')
+      console.error(`${tag} FAIL: email missing or unverified`)
+      return redirectError('googleFailed')
     }
 
-    let user = await prisma.user.findUnique({ where: { googleId: googleUser.sub } })
+    // ── DB upsert ─────────────────────────────────────────────────────────
+    console.log(`${tag} upserting user…`)
+    const { user, action } = await upsertGoogleUser(googleUser)
+    console.log(`${tag} DB OK. action=${action} userId=${user.id}`)
 
-    if (!user) {
-      const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } })
-      if (byEmail) {
-        user = await prisma.user.update({
-          where: { id: byEmail.id },
-          data: {
-            googleId: googleUser.sub,
-            emailVerified: byEmail.emailVerified ?? new Date(),
-            avatarUrl: byEmail.avatarUrl ?? googleUser.picture ?? null,
-          },
-        })
-      } else {
-        user = await prisma.user.create({
-          data: {
-            googleId: googleUser.sub,
-            email: googleUser.email,
-            name: googleUser.name || googleUser.email.split('@')[0],
-            avatarUrl: googleUser.picture ?? null,
-            emailVerified: new Date(),
-            role: 'USER',
-          },
-        })
-      }
-    }
-
+    // ── Session ───────────────────────────────────────────────────────────
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+    console.log(`${tag} session OK. expiresAt=${new Date(expiresAt).toISOString()}`)
 
     const persistedSession = {
       state: {
@@ -146,11 +206,11 @@ export async function GET(req: NextRequest) {
           refreshToken,
           expiresAt,
           user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
+            id:        user.id,
+            email:     user.email,
+            name:      user.name,
             avatarUrl: user.avatarUrl,
-            role: user.role,
+            role:      user.role,
             createdAt: user.createdAt.toISOString(),
           },
         },
@@ -158,6 +218,9 @@ export async function GET(req: NextRequest) {
       },
       version: 0,
     }
+
+    // ── Success ───────────────────────────────────────────────────────────
+    console.log(`${tag} SUCCESS — redirecting to ${dashboardUrl}`)
 
     const response = new NextResponse(
       `<!doctype html>
@@ -190,8 +253,9 @@ export async function GET(req: NextRequest) {
     response.cookies.delete('gauth_session')
 
     return response
+
   } catch (err) {
-    console.error('[google/callback] unexpected error:', err)
-    return redirectAuthError('googleFailed')
+    console.error(`${tag} FAIL: unexpected exception —`, err)
+    return redirectError('googleFailed')
   }
 }

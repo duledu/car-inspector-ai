@@ -31,6 +31,124 @@ const SVC_HISTORY_CFG: Record<string, { labelKey: string; color: string }> = {
 }
 
 const SEV_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', info: '#22d3ee' }
+type Translate = (key: string, options?: Record<string, unknown>) => string
+
+function translateDimensionExplanation(key: string, text: string | undefined, t: Translate): string | undefined {
+  if (!text) return undefined
+
+  if (text === 'No AI findings. Photos appear clean.') return t('report.dimExplanation.ai.clean')
+  if (text === 'Checklist not completed for this section.') return t('report.dimExplanation.checklist.notCompleted')
+  if (text === 'No items assessed yet.') return t('report.dimExplanation.checklist.notAssessed')
+  if (text === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return t('report.dimExplanation.vin.basic')
+  if (text === 'Test drive not yet completed.') return t('report.dimExplanation.testDrive.notCompleted')
+
+  const aiMatch = text.match(/^(\d+) issue(s)? detected\. Primary concern: (.+) \(confidence (\d+)%\)\.$/)
+  if (aiMatch) {
+    return t('report.dimExplanation.ai.issues', {
+      count: Number(aiMatch[1]),
+      title: aiMatch[3],
+      confidence: Number(aiMatch[4]),
+    })
+  }
+
+  const checklistMatch = text.match(/^(\d+) OK · (\d+) warnings · (\d+) problems across (\d+) items\.$/)
+  if (checklistMatch) {
+    return t('report.dimExplanation.checklist.summary', {
+      ok: Number(checklistMatch[1]),
+      warnings: Number(checklistMatch[2]),
+      problems: Number(checklistMatch[3]),
+      total: Number(checklistMatch[4]),
+    })
+  }
+
+  const vinMatch = text.match(/^(\d+) accident\(s\)\. (\d+) open recall\(s\)\. Mileage: (consistent|inconsistent)\.$/)
+  if (vinMatch) {
+    return t('report.dimExplanation.vin.summary', {
+      accidents: Number(vinMatch[1]),
+      recalls: Number(vinMatch[2]),
+      mileage: t(`report.mileage.${vinMatch[3]}`),
+    })
+  }
+
+  const testDriveMatch = text.match(/^(\d+) good · (\d+) concerns · (\d+) problems observed during test drive\.$/)
+  if (testDriveMatch) {
+    return t('report.dimExplanation.testDrive.summary', {
+      good: Number(testDriveMatch[1]),
+      concerns: Number(testDriveMatch[2]),
+      problems: Number(testDriveMatch[3]),
+    })
+  }
+
+  return t(`report.dimExplanation.${key}.fallback`, { defaultValue: text })
+}
+
+function translateReason(text: string, t: Translate): string {
+  const exact: Record<string, string> = {
+    'Full service history verified': 'report.reason.fullServiceHistory',
+    'No write-off or total loss recorded': 'report.reason.noTotalLoss',
+    'No outstanding finance found': 'report.reason.noOutstandingFinance',
+    'Vehicle not reported stolen': 'report.reason.notStolen',
+    'Mileage progression is consistent': 'report.reason.mileageConsistent',
+    'No critical AI anomalies detected in photos': 'report.reason.noCriticalAi',
+    'No verified service history — major risk factor': 'report.reason.noServiceHistory',
+    'Service records appear suspicious or inconsistent': 'report.reason.suspiciousServiceRecords',
+    'High recorded repair costs in vehicle history': 'report.reason.highRepairCosts',
+    'Outstanding finance found — legal risk': 'report.reason.outstandingFinance',
+    'Mileage inconsistency detected': 'report.reason.mileageInconsistent',
+  }
+  if (exact[text]) return t(exact[text])
+
+  const ownerMatch = text.match(/^Only (\d+) previous owner\(s\)$/)
+  if (ownerMatch) return t('report.reason.previousOwners', { count: Number(ownerMatch[1]) })
+
+  const checklistPassedMatch = text.match(/^(\d+) checklist items passed inspection$/)
+  if (checklistPassedMatch) return t('report.reason.checklistPassed', { count: Number(checklistPassedMatch[1]) })
+
+  const damageCountMatch = text.match(/^(\d+)\+ accidents recorded in vehicle history$/)
+  if (damageCountMatch) return t('report.reason.accidentsAtLeast', { count: Number(damageCountMatch[1]) })
+
+  const criticalAiMatch = text.match(/^AI detected (\d+) critical visual anomaly$/)
+  if (criticalAiMatch) return t('report.reason.criticalAi', { count: Number(criticalAiMatch[1]) })
+
+  const warningAiMatch = text.match(/^(\d+) AI warnings \(paint, gaps, or trim\)$/)
+  if (warningAiMatch) return t('report.reason.aiWarnings', { count: Number(warningAiMatch[1]) })
+
+  const accidentMatch = text.match(/^(\d+) accident\(s\) recorded in history$/)
+  if (accidentMatch) return t('report.reason.accidentsRecorded', { count: Number(accidentMatch[1]) })
+
+  const recallMatch = text.match(/^(\d+) outstanding safety recall\(s\)$/)
+  if (recallMatch) return t('report.reason.openRecalls', { count: Number(recallMatch[1]) })
+
+  const problemMatch = text.match(/^(\d+) checklist item\(s\) marked as problem$/)
+  if (problemMatch) return t('report.reason.checklistProblems', { count: Number(problemMatch[1]) })
+
+  return text
+}
+
+function translateNegotiationHint(text: string, t: Translate): string {
+  const exact: Record<string, string> = {
+    'Obtain full service records before finalising purchase.': 'report.hint.obtainServiceRecords',
+    'No verified service history — negotiate a price reduction of €1,000–€3,000.': 'report.hint.noServiceHistoryDiscount',
+    'Request an independent pre-purchase inspection as a condition of sale.': 'report.hint.independentInspection',
+    'Budget for an immediate full service if you proceed.': 'report.hint.immediateService',
+    'Suspicious or inconsistent service records — treat as no history.': 'report.hint.suspiciousRecords',
+    'Negotiate a price reduction of €2,000–€4,000.': 'report.hint.suspiciousRecordsDiscount',
+    'Walk away unless the seller can provide verifiable original receipts.': 'report.hint.requireReceipts',
+  }
+  if (exact[text]) return t(exact[text])
+
+  const accidentsMatch = text.match(/^(\d+) recorded accidents — negotiate at least €1,500 off asking price\.$/)
+  if (accidentsMatch) return t('report.hint.accidentDiscount', { count: Number(accidentsMatch[1]) })
+
+  const repairMatch = text.match(/^High recorded repair costs \(>(.+) EUR\) — budget for potential recurring issues\.$/)
+  if (repairMatch) return t('report.hint.highRepairCosts', { amount: repairMatch[1] })
+
+  return text
+}
+
+function recommendationKey(verdict: string): string {
+  return `report.recommendation.${verdict}`
+}
 
 // ─── Score ring ───────────────────────────────────────────────────────────────
 function ScoreRing({ score, color }: Readonly<{ score: number; color: string }>) {
@@ -152,7 +270,7 @@ export default function ReportPage() {
       const s = await inspectionApi.calculateScore(vehicleId)
       setRiskScore(s)
     } catch (err: unknown) {
-      setCalcError((err as { message?: string })?.message ?? 'Failed to calculate score')
+      setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
     } finally {
       setCalculating(false)
     }
@@ -316,7 +434,7 @@ export default function ReportPage() {
                         {riskScore.reasonsFor.map((r) => (
                           <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="20 6 9 17 4 12"/></svg>
-                            {r}
+                            {translateReason(r, t)}
                           </div>
                         ))}
                       </div>
@@ -329,7 +447,7 @@ export default function ReportPage() {
                         {riskScore.reasonsAgainst.map((r) => (
                           <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            {r}
+                            {translateReason(r, t)}
                           </div>
                         ))}
                       </div>
@@ -348,7 +466,7 @@ export default function ReportPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
                   {dims.map(d => {
                     const dim = riskScore.dimensions[d.key]
-                    return <DimBar key={d.key} label={t(`dim.${d.key}`)} score={dim.score} explanation={dim.explanation} />
+                    return <DimBar key={d.key} label={t(`dim.${d.key}`)} score={dim.score} explanation={translateDimensionExplanation(d.key, dim.explanation, t)} />
                   })}
                 </div>
               </div>
@@ -377,19 +495,13 @@ export default function ReportPage() {
                       // eslint-disable-next-line react/no-array-index-key
                       <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
                         <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', flexShrink: 0, marginTop: 7 }} />
-                        {hint}
+                        {translateNegotiationHint(hint, t)}
                       </div>
                     ))}
                   </div>
                   {/* Overall recommendation */}
                   <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(245,158,11,0.15)', fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.55 }}>
-                    {riskScore.verdict === 'STRONG_BUY'
-                      ? 'This vehicle passes all major checks. Proceed with confidence — or use minor findings to negotiate a small discount.'
-                      : riskScore.verdict === 'BUY_WITH_CAUTION'
-                      ? 'Proceed only after resolving all concerns above. Use the checklist to negotiate a fair price.'
-                      : riskScore.verdict === 'HIGH_RISK'
-                      ? 'This vehicle carries significant risk. Only proceed if the seller agrees to a major price reduction or addresses all issues.'
-                      : 'Based on the evidence, walking away is the safest option. Significant issues detected that are likely to cost more than the asking price.'}
+                    {t(recommendationKey(riskScore.verdict))}
                   </div>
                 </div>
               </div>
@@ -411,7 +523,7 @@ export default function ReportPage() {
                         {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2, lineHeight: 1.5 }}>{f.description}</div>}
                       </div>
                       <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 2 }}>
-                        {f.severity}
+                        {t(`report.severity.${f.severity}`)}
                       </span>
                     </div>
                   ))}

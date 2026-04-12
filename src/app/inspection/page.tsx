@@ -128,7 +128,7 @@ function getAuthHeader(): string {
   return ''
 }
 
-async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string): Promise<MockAIResult> {
+async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string): Promise<MockAIResult> {
   try {
     const imageBase64 = await fileToBase64(file)
     const authHeader = getAuthHeader()
@@ -138,7 +138,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
         'Content-Type': 'application/json',
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
-      body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg', angle: key, angleLabel: label }),
+      body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg', angle: key, angleLabel: label, locale }),
     })
     const json = await res.json()
     if (json?.data) return json.data as MockAIResult
@@ -513,7 +513,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function InspectionPage() {
-  const { t }             = useTranslation()
+  const { t, i18n }       = useTranslation()
   const { activeVehicle } = useVehicleStore()
   const {
     session, currentPhase, checklistItems, isLoadingChecklist, error,
@@ -635,14 +635,15 @@ export default function InspectionPage() {
     }
 
     // Step 2: run AI analysis
-    const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'))
+    const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
+    const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale)
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
 
     // Step 3: update persisted draft with AI result
     if (vehicleId && thumbUrl) {
       savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
     }
-  }, [cameraTarget, session, t])
+  }, [cameraTarget, i18n.language, i18n.resolvedLanguage, session, t])
 
   // ── No vehicle ──
   if (!activeVehicle) {

@@ -12,11 +12,50 @@ const schema = z.object({
   mimeType:    z.string().default('image/jpeg'),
   angle:       z.string().min(1),        // e.g. "FRONT", "LEFT_SIDE"
   angleLabel:  z.string().min(1),        // human label e.g. "Front"
+  locale:      z.string().min(2).max(10).optional().default('en'),
 })
 
 // ─── Prompt per angle ────────────────────────────────────────────────────────
 
-function buildPrompt(angle: string, angleLabel: string): string {
+function localeInstruction(locale: string): string {
+  const language: Record<string, string> = {
+    en: 'English',
+    sr: 'Serbian',
+    de: 'German',
+    mk: 'Macedonian',
+    sq: 'Albanian',
+  }
+  return language[locale.split('-')[0]] ?? 'English'
+}
+
+function fallbackAnalysis(locale: string): { signal: string; detail: string } {
+  const lang = locale.split('-')[0]
+  const messages: Record<string, { signal: string; detail: string }> = {
+    en: {
+      signal: 'Analysis unavailable',
+      detail: 'Could not analyse this image. Please check your connection and try again.',
+    },
+    sr: {
+      signal: 'Analiza nije dostupna',
+      detail: 'Nije moguće analizirati ovu fotografiju. Proverite vezu i pokušajte ponovo.',
+    },
+    de: {
+      signal: 'Analyse nicht verfügbar',
+      detail: 'Dieses Bild konnte nicht analysiert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.',
+    },
+    mk: {
+      signal: 'Анализата не е достапна',
+      detail: 'Не можеше да се анализира оваа фотографија. Проверете ја врската и обидете се повторно.',
+    },
+    sq: {
+      signal: 'Analiza nuk është e disponueshme',
+      detail: 'Nuk mundëm ta analizonim këtë fotografi. Kontrolloni lidhjen dhe provoni përsëri.',
+    },
+  }
+  return messages[lang] ?? messages.en
+}
+
+function buildPrompt(angle: string, angleLabel: string, locale: string): string {
   const areaGuide: Record<string, string> = {
     FRONT:       'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
     REAR:        'Focus on: rear bumper alignment, tail-light symmetry, trunk gap, colour tone vs quarter panels.',
@@ -41,6 +80,8 @@ function buildPrompt(angle: string, angleLabel: string): string {
   return `You are an expert pre-purchase car inspector analysing a photo of the vehicle's ${angleLabel} area.
 
 ${areaFocus}
+
+Write the JSON string values in ${localeInstruction(locale)} using natural, professional automotive language.
 
 Assess the image carefully and respond ONLY with valid JSON — no prose, no markdown fences:
 
@@ -80,7 +121,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Validation failed', code: 'VALIDATION_ERROR' }, { status: 422 })
   }
 
-  const { imageBase64, mimeType, angle, angleLabel } = parsed.data
+  const { imageBase64, mimeType, angle, angleLabel, locale } = parsed.data
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -121,7 +162,7 @@ export async function POST(req: NextRequest) {
               },
               {
                 type: 'text',
-                text: buildPrompt(angle, angleLabel),
+                text: buildPrompt(angle, angleLabel, locale),
               },
             ],
           },
@@ -163,12 +204,13 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('[analyze-photo] ERROR:', error)
+    const fallback = fallbackAnalysis(locale)
     return NextResponse.json(
       {
         data: {
-          signal:   'Analysis unavailable',
+          signal:   fallback.signal,
           severity: 'warn',
-          detail:   'Could not analyse this image. Please check your connection and try again.',
+          detail:   fallback.detail,
           confidence: 0,
         },
       },
