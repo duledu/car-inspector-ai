@@ -14,6 +14,10 @@ function section(id: string, title: string, items: ResearchIssue[]): ResearchSec
   return { id, title, items }
 }
 
+function normalizeLocale(locale?: string): string {
+  return (locale ?? 'en').toLowerCase().split('-')[0]
+}
+
 // ─── Brand-specific knowledge ─────────────────────────────────────────────────
 
 const BMW_KNOWLEDGE = {
@@ -222,6 +226,59 @@ function buildGenericResult(make: string, model: string, year: number): VehicleR
   }
 }
 
+function buildLocalizedGenericResult(make: string, model: string, year: number, locale?: string): VehicleResearchResult {
+  const lang = normalizeLocale(locale)
+  if (lang !== 'sr' && lang !== 'mk') return buildGenericResult(make, model, year)
+
+  const vehicleKey = `${year} ${make} ${model}`
+  const sr = lang === 'sr'
+
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: 'low',
+    overallRiskLevel: 'moderate',
+    summary: sr
+      ? `Detaljno AI istraživanje za ${vehicleKey} trenutno nije dostupno. Vodič ispod pokriva univerzalne prioritete pregleda polovnih vozila.`
+      : `Деталното AI истражување за ${vehicleKey} моментално не е достапно. Водичот подолу ги покрива универзалните приоритети за преглед на половни возила.`,
+    sections: {
+      commonProblems: section('commonProblems', sr ? 'Česti problemi' : 'Чести проблеми', [
+        item(sr ? 'Potrošnja motornog ulja' : 'Потрошувачка на моторно масло', sr ? 'Proverite nivo ulja i tragove curenja. Nizak nivo ili sveži tragovi ulja ukazuju na problem koji treba dodatno proveriti.' : 'Проверете го нивото на масло и траги од истекување. Ниско ниво или свежи траги од масло укажуваат на проблем што треба дополнително да се провери.', 'medium', ['COMMON_ISSUE']),
+        item(sr ? 'Habanje automatskog menjača' : 'Абење на автоматскиот менувач', sr ? 'Kašnjenje, trzaji ili proklizavanje pri promeni stepena prenosa zahtevaju pregled specijaliste za menjače.' : 'Доцнење, трзање или пролизгување при менување брзини бара преглед кај специјалист за менувачи.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item(sr ? 'Rđa na nosećim delovima' : 'Рѓа на носечки делови', sr ? 'Pregledajte pragove, pod, nosače i rubove blatobrana. Površinska rđa je jedno, a dubinska korozija može biti bezbednosni problem.' : 'Проверете прагови, под, носачи и рабови на крила. Површинската рѓа е едно, а длабоката корозија може да биде безбедносен проблем.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      highPriorityChecks: section('highPriorityChecks', sr ? 'Prioritetne provere' : 'Приоритетни проверки', [
+        item(sr ? 'Servisna istorija' : 'Сервисна историја', sr ? 'Uporedite servisnu knjižicu, račune i kilometražu. Praznine u istoriji servisa su važna osnova za pregovore.' : 'Споредете сервисна книшка, сметки и километража. Празнини во сервисната историја се важна основа за преговори.', 'high', ['HIGH_ATTENTION']),
+        item(sr ? 'OBD dijagnostika' : 'OBD дијагностика', sr ? 'Očitajte aktivne i zapamćene greške pre test vožnje. Nedavno obrisane greške mogu prikriti ponavljajuće kvarove.' : 'Прочитајте активни и запаметени грешки пред тест возење. Неодамна избришани грешки може да прикријат повторливи дефекти.', 'high', ['HIGH_ATTENTION']),
+        item(sr ? 'Nezavisan pregled pre kupovine' : 'Независен преглед пред купување', sr ? 'Pregled kod nezavisnog mehaničara je najbezbedniji korak pre kupovine skupljeg polovnog vozila.' : 'Преглед кај независен механичар е најбезбеден чекор пред купување поскапо половно возило.', 'high', ['HIGH_ATTENTION']),
+      ]),
+      visualAttention: section('visualAttention', sr ? 'Vizuelne tačke pažnje' : 'Визуелни точки за внимание', [
+        item(sr ? 'Razlika u boji i zazorima panela' : 'Разлика во боја и празнини меѓу панели', sr ? 'Gledajte vozilo iz više uglova na dnevnom svetlu. Razlike u nijansi, neravni zazori ili narandžasta kora mogu ukazati na popravku karoserije.' : 'Гледајте го возилото од повеќе агли на дневна светлина. Разлики во нијанса, нерамни празнини или портокалова кора може да укажуваат на каросериска поправка.', 'medium', ['VISUAL_CHECK']),
+        item(sr ? 'Podvozje, curenja i korozija' : 'Подвозје, истекувања и корозија', sr ? 'Baterijskom lampom proverite podvozje, tragove ulja, rashladne tečnosti i stanje nosača.' : 'Со батериска ламба проверете подвозје, траги од масло, разладна течност и состојба на носачи.', 'high', ['VISUAL_CHECK']),
+        item(sr ? 'Gume i obrazac habanja' : 'Гуми и шема на абење', sr ? 'Neravnomerno habanje guma ukazuje na problem sa trapom, geometrijom ili amortizerima.' : 'Нерамномерно абење на гумите укажува на проблем со подвесување, геометрија или амортизери.', 'medium', ['VISUAL_CHECK']),
+      ]),
+      mechanicalWatchouts: section('mechanicalWatchouts', sr ? 'Mehaničke provere' : 'Механички проверки', [
+        item(sr ? 'Zupčasti kaiš ili lanac' : 'Ремен или ланец за развод', sr ? 'Potvrdite da li motor koristi kaiš ili lanac i kada je poslednji put servisiran. Propušten interval može izazvati težak kvar motora.' : 'Потврдете дали моторот користи ремен или ланец и кога последен пат е сервисиран. Пропуштен интервал може да предизвика тежок дефект на моторот.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item(sr ? 'Rashladni sistem' : 'Систем за ладење', sr ? 'Rashladna tečnost mora biti odgovarajuće boje i stabilnog nivoa. Često dolivanje nije normalno.' : 'Разладната течност мора да има соодветна боја и стабилно ниво. Често долевање не е нормално.', 'high', ['COMMON_ISSUE']),
+        item(sr ? 'Kvačilo kod manuelnog menjača' : 'Спојка кај мануелен менувач', sr ? 'Kvačilo treba da hvata glatko i predvidljivo. Visoko hvatanje ili proklizavanje znači da je pri kraju.' : 'Спојката треба да фаќа мазно и предвидливо. Високо фаќање или пролизгување значи дека е при крај.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      testDriveFocus: section('testDriveFocus', sr ? 'Fokus na test vožnji' : 'Фокус на тест возење', [
+        item(sr ? 'Hladan start' : 'Ладен старт', sr ? 'Startujte motor hladan. Preteran dim, neravnomeran rad ili lampice upozorenja su ozbiljni signali.' : 'Стартувајте го моторот ладен. Прекумерен чад, нерамномерен работ или предупредувачки ламби се сериозни сигнали.', 'high', ['TEST_DRIVE']),
+        item(sr ? 'Kočenje' : 'Сопирање', sr ? 'Pri bezbednom kočenju auto treba da ostane pravolinijski, bez vibracija, zanošenja ili pulsiranja pedale.' : 'При безбедно сопирање автомобилот треба да остане праволиниски, без вибрации, влечење на страна или пулсирање на педалата.', 'high', ['TEST_DRIVE']),
+        item(sr ? 'Ubrzanje i promene brzina' : 'Забрзување и менување брзини', sr ? 'Ubrzajte kroz niže stepene prenosa. Zastajkivanje, dim ili neobični zvuci pod opterećenjem ukazuju na motor ili pogon.' : 'Забрзајте низ пониските брзини. Задржување, чад или необични звуци под оптоварување укажуваат на мотор или погон.', 'medium', ['TEST_DRIVE']),
+      ]),
+      costAwareness: section('costAwareness', sr ? 'Troškovi i pregovori' : 'Трошоци и преговори', [
+        item(sr ? 'Veliki servis' : 'Голем сервис', sr ? 'Ako je interval nepoznat ili prekoračen, uračunajte veliki servis u pregovore pre kupovine.' : 'Ако интервалот е непознат или надминат, вклучете голем сервис во преговорите пред купување.', 'high', ['EXPENSIVE_RISK']),
+        item(sr ? 'Osnovni servis odmah posle kupovine' : 'Основен сервис веднаш по купување', sr ? 'Planirajte zamenu ulja, filtera, kočione tečnosti i osnovnih potrošnih delova bez obzira na tvrdnje prodavca.' : 'Планирајте замена на масло, филтри, течност за сопирачки и основни потрошни делови без оглед на тврдењата на продавачот.', 'medium', ['EXPENSIVE_RISK']),
+        item(sr ? 'Pregled kod specijaliste' : 'Преглед кај специјалист', sr ? 'Specijalista za marku može otkriti skrivene kvarove koji nisu vidljivi na kratkoj probnoj vožnji.' : 'Специјалист за марката може да открие скриени дефекти што не се видливи на кратко пробно возење.', 'medium', ['HIGH_ATTENTION']),
+      ]),
+    },
+    disclaimer: sr
+      ? 'Ovaj vodič je zasnovan na opštim pravilima pregleda vozila jer detaljni podaci za model nisu dostupni. Koristite ga kao početnu listu i proverite vozilo kod kvalifikovanog mehaničara pre kupovine.'
+      : 'Овој водич е заснован на општи правила за преглед на возила бидејќи детални податоци за моделот не се достапни. Користете го како почетна листа и проверете го возилото кај квалификуван механичар пред купување.',
+  }
+}
+
 // ─── Brand matcher ────────────────────────────────────────────────────────────
 
 function buildBrandResult(make: string, model: string, year: number): VehicleResearchResult {
@@ -263,6 +320,12 @@ export function generateFallbackResult(params: {
   year: number
   engine?: string
   trim?: string
+  locale?: string
 }): VehicleResearchResult {
+  const lang = normalizeLocale(params.locale)
+  if (lang === 'sr' || lang === 'mk') {
+    return buildLocalizedGenericResult(params.make, params.model, params.year, params.locale)
+  }
+
   return buildBrandResult(params.make, params.model, params.year)
 }

@@ -38,6 +38,7 @@ interface UserState {
 interface UserActions {
   login: (credentials: LoginCredentials) => Promise<void>
   register: (payload: RegisterPayload) => Promise<void>
+  loginWithGoogle: (session: AuthSession) => void
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
   clearError: () => void
@@ -96,6 +97,16 @@ export const useUserStore = create<UserStore>()(
         }
       },
 
+      loginWithGoogle: (session) => {
+        set((state) => {
+          state.user          = session.user
+          state.session       = session
+          state.isAuthenticated = true
+          state.isLoading     = false
+          state.error         = null
+        })
+      },
+
       logout: async () => {
         try {
           await authApi.logout()
@@ -142,13 +153,29 @@ export const useUserStore = create<UserStore>()(
     })),
     {
       name: 'uci-user-store',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       // Only persist session tokens — never full user data in localStorage in production
+      onRehydrateStorage: () => {
+        try {
+          const legacy = localStorage.getItem('uci-user-store')
+          if (legacy && !sessionStorage.getItem('uci-user-store')) {
+            sessionStorage.setItem('uci-user-store', legacy)
+          }
+          localStorage.removeItem('uci-user-store')
+        } catch { /* ignore legacy auth cache */ }
+      },
       partialize: (state) => ({
-        user: state.user,
         session: state.session,
         isAuthenticated: state.isAuthenticated,
       }),
+      merge: (persisted, current) => {
+        const state = persisted as Partial<UserStore>
+        return {
+          ...current,
+          ...state,
+          user: state.session?.user ?? null,
+        }
+      },
     }
   )
 )

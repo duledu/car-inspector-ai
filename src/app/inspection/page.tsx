@@ -50,7 +50,7 @@ const STATUS_CFG = {
 
 type PhotoEntry   = { key: string; label: string; file: File; previewUrl: string; aiPending: boolean; aiResult?: MockAIResult }
 type MockAIResult = { signal: string; severity: 'ok' | 'warn' | 'flag'; detail: string }
-type ChecklistRow = { id: string; itemLabel: string; status: ItemStatus; notes?: string | null }
+type ChecklistRow = { id: string; itemKey: string; itemLabel: string; status: ItemStatus; notes?: string | null }
 
 // ─── Photo draft persistence (survives refresh / navigation) ──────────────────
 const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
@@ -115,12 +115,29 @@ async function fileToBase64(file: File): Promise<string> {
   })
 }
 
+function getAuthHeader(): string {
+  try {
+    const stored = sessionStorage.getItem('uci-user-store')
+    if (stored) {
+      const token = JSON.parse(stored)?.state?.session?.accessToken
+      if (token) return `Bearer ${token}`
+    }
+  } catch { /* ignore */ }
+
+  try { localStorage.removeItem('uci-user-store') } catch { /* ignore legacy auth cache */ }
+  return ''
+}
+
 async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string): Promise<MockAIResult> {
   try {
     const imageBase64 = await fileToBase64(file)
+    const authHeader = getAuthHeader()
     const res = await fetch('/api/inspection/analyze-photo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
       body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg', angle: key, angleLabel: label }),
     })
     const json = await res.json()
@@ -341,7 +358,7 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
               transition: 'background 0.15s, border-color 0.15s',
             }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: item.status === 'PENDING' ? 'rgba(255,255,255,0.82)' : '#fff', marginBottom: 10, lineHeight: 1.4 }}>
-                {item.itemLabel}
+                {t(`checklist.${item.itemKey}`, { defaultValue: item.itemLabel })}
               </div>
               {/* Status buttons */}
               <div style={{ display: 'flex', gap: 6 }}>
@@ -550,15 +567,7 @@ export default function InspectionPage() {
       detail:   p.aiResult!.detail,
     }))
 
-    // Get JWT from localStorage (same pattern as apiClient interceptor)
-    let authHeader = ''
-    try {
-      const stored = localStorage.getItem('uci-user-store')
-      if (stored) {
-        const token = JSON.parse(stored)?.state?.session?.accessToken
-        if (token) authHeader = `Bearer ${token}`
-      }
-    } catch { /* ignore */ }
+    const authHeader = getAuthHeader()
 
     fetch('/api/ai-analysis/analyze', {
       method:  'POST',

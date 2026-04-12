@@ -1,16 +1,14 @@
+'use client'
+
 // =============================================================================
-// i18n Configuration — react-i18next
-//
-// • English is ALWAYS the default language.
-// • Language NEVER auto-switches based on browser/device settings.
-// • The only way to change language is via the LanguageSwitcher component
-//   (explicit user action), which writes the choice to localStorage.
-// • On boot: read localStorage → use that lang OR fall back to 'en'.
-// • Translations are bundled (no async loading = no flash of raw keys).
+// i18n Configuration - react-i18next
+// Client-only module. Do not import this from Server Components.
 // =============================================================================
 
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
+import { FALLBACK_LANG, LANG_COOKIE, SUPPORTED_LANGS, isSupportedLang } from './shared'
+import type { SupportedLang } from './shared'
 
 import en from './locales/en'
 import sr from './locales/sr'
@@ -18,38 +16,18 @@ import de from './locales/de'
 import mk from './locales/mk'
 import sq from './locales/sq'
 
-// ─── Constants (exported for LanguageSwitcher and pwa.tsx) ────────────────────
-
-export const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq'] as const
-export type SupportedLang     = (typeof SUPPORTED_LANGS)[number]
-export const FALLBACK_LANG: SupportedLang = 'en'
-export const LS_KEY = 'car_inspector_lang'
-
-export const LANG_META: Record<SupportedLang, { label: string; flag: string; full: string }> = {
-  en: { label: 'EN', flag: '🇬🇧', full: 'English'     },
-  sr: { label: 'SR', flag: '🇷🇸', full: 'Srpski'      },
-  de: { label: 'DE', flag: '🇩🇪', full: 'Deutsch'     },
-  mk: { label: 'МК', flag: '🇲🇰', full: 'Македонски'  },
-  sq: { label: 'SQ', flag: '🇦🇱', full: 'Shqip'       },
+function readCookieLang(): SupportedLang | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(`${LANG_COOKIE}=`))
+  const value = match ? decodeURIComponent(match.split('=')[1] ?? '') : null
+  return isSupportedLang(value) ? value : null
 }
-
-// ─── Determine initial language ───────────────────────────────────────────────
-// Always start with FALLBACK_LANG ('en') on BOTH the server and the client's
-// initial render. This guarantees the SSR output and the client's first paint
-// are identical — no React hydration mismatch.
-//
-// The stored language preference is applied AFTER hydration in pwa.tsx via
-// i18n.changeLanguage(), which is safe to call post-mount.
-//
-// Do NOT read localStorage here — module-level code runs during the client
-// render phase, before React can reconcile, so any mismatch with SSR output
-// will throw a hydration error.
 
 function getInitialLang(): SupportedLang {
-  return FALLBACK_LANG   // 'en' on both server and client initial render
+  return readCookieLang() ?? FALLBACK_LANG
 }
-
-// ─── Init (idempotent — safe to import multiple times) ────────────────────────
 
 if (!i18n.isInitialized) {
   i18n
@@ -62,14 +40,13 @@ if (!i18n.isInitialized) {
         mk: { translation: mk },
         sq: { translation: sq },
       },
-      lng:           getInitialLang(),   // explicit — no auto-detection
-      fallbackLng:   FALLBACK_LANG,
+      lng: getInitialLang(),
+      fallbackLng: FALLBACK_LANG,
       supportedLngs: SUPPORTED_LANGS,
-      // Prevent react-i18next from splitting keys on dots
-      keySeparator:  false,
-      nsSeparator:   false,
+      keySeparator: false,
+      nsSeparator: false,
       interpolation: { escapeValue: false },
-      react:         { useSuspense: false },
+      react: { useSuspense: false },
     })
 }
 

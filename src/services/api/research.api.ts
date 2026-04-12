@@ -19,6 +19,7 @@ export interface ResearchRequestPayload {
   transmission?: string
   bodyType?: string
   mileage?: number
+  locale?: string
 }
 
 export const researchApi = {

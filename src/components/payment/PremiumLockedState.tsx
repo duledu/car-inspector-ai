@@ -7,6 +7,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
 import type { Vehicle, PremiumProduct } from '@/types'
 
@@ -17,25 +18,25 @@ interface Props {
 
 const PRODUCT_FEATURES: Record<PremiumProduct, string[]> = {
   CARVERTICAL_REPORT: [
-    'Full accident & damage history',
-    'Mileage verification (50+ sources)',
-    'Ownership history chain',
-    'Total loss / write-off check',
-    'Theft database match',
-    'Import & export records',
-    'Outstanding finance search',
-    'Risk flags & premium scoring',
+    'premiumPage.locked.features.carvertical.accident',
+    'premiumPage.locked.features.carvertical.mileage',
+    'premiumPage.locked.features.carvertical.ownership',
+    'premiumPage.locked.features.carvertical.totalLoss',
+    'premiumPage.locked.features.carvertical.theft',
+    'premiumPage.locked.features.carvertical.importExport',
+    'premiumPage.locked.features.carvertical.finance',
+    'premiumPage.locked.features.carvertical.scoring',
   ],
   AI_DEEP_SCAN: [
-    'Extended AI paint analysis',
-    'Full panel symmetry mapping',
-    'Frame straightness check',
-    'High-confidence damage zones',
+    'premiumPage.locked.features.aiDeepScan.paint',
+    'premiumPage.locked.features.aiDeepScan.symmetry',
+    'premiumPage.locked.features.aiDeepScan.frame',
+    'premiumPage.locked.features.aiDeepScan.damage',
   ],
   FULL_INSPECTION_BUNDLE: [
-    'Everything in CarVertical Report',
-    'Everything in AI Deep Scan',
-    'Priority support',
+    'premiumPage.locked.features.bundle.carvertical',
+    'premiumPage.locked.features.bundle.aiDeepScan',
+    'premiumPage.locked.features.bundle.support',
   ],
 }
 
@@ -46,6 +47,7 @@ const PRODUCT_PRICES: Record<PremiumProduct, string> = {
 }
 
 export function PremiumLockedState({ vehicle, productType }: Props) {
+  const { t } = useTranslation()
   const { startCheckout, isCreatingCheckout, error } = usePaymentStore()
   const [clicked, setClicked] = useState(false)
 
@@ -87,10 +89,10 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             marginBottom: 8,
           }}
         >
-          Premium Add-on Required
+          {t('premiumPage.locked.badge')}
         </div>
         <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-          CarVertical Full History Report
+          {t('premiumPage.locked.title')}
         </div>
         <div
           style={{
@@ -100,11 +102,11 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             marginBottom: 12,
           }}
         >
-          You are currently using the{' '}
-          <strong style={{ color: 'var(--color-text-primary)' }}>free inspection tools</strong>.
-          The full vehicle history from CarVertical is a{' '}
-          <strong style={{ color: '#a855f7' }}>separately purchased premium add-on</strong> — not
-          included in your basic inspection workflow.
+          {t('premiumPage.locked.noticePrefix')}{' '}
+          <strong style={{ color: 'var(--color-text-primary)' }}>{t('premiumPage.locked.noticeFreeTools')}</strong>.
+          {' '}{t('premiumPage.locked.noticeMiddle')}{' '}
+          <strong style={{ color: '#a855f7' }}>{t('premiumPage.locked.noticeAddOn')}</strong>{' '}
+          {t('premiumPage.locked.noticeSuffix')}
         </div>
         <div
           style={{
@@ -117,11 +119,11 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             lineHeight: 1.7,
           }}
         >
-          ⚠️ Access is granted only after successful payment. This purchase unlocks the report for{' '}
+          {t('premiumPage.locked.accessPrefix')}{' '}
           <strong>
             {vehicle.year} {vehicle.make} {vehicle.model}
           </strong>{' '}
-          specifically. The report data will also improve your Final Report accuracy.
+          {t('premiumPage.locked.accessSuffix')}
         </div>
       </div>
 
@@ -162,7 +164,7 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
               marginBottom: 14,
             }}
           >
-            PREMIUM REPORT
+            {t('premiumPage.locked.reportBadge')}
           </div>
           <div
             style={{
@@ -177,7 +179,7 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             {price}
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            One-time purchase · This vehicle only · Lifetime access
+            {t('premiumPage.locked.purchaseTerms')}
           </div>
         </div>
 
@@ -197,7 +199,7 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
               }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
-              {feat}
+              {t(feat)}
             </div>
           ))}
         </div>
@@ -222,7 +224,7 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             transition: 'all 0.2s ease',
           }}
         >
-          {isCreatingCheckout ? 'Preparing checkout…' : `Purchase Report — ${price}`}
+          {isCreatingCheckout ? t('premiumPage.locked.preparingCheckout') : t('premiumPage.locked.purchaseReport', { price })}
         </button>
 
         {error && (
@@ -250,7 +252,7 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             opacity: 0.6,
           }}
         >
-          Secured by Stripe · SSL encrypted · GDPR compliant · No subscription
+          {t('premiumPage.locked.securityNote')}
         </div>
       </div>
     </div>

@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
     )
     return NextResponse.json({ data: checkout }, { status: 201 })
   } catch (err: any) {
+    if (err.message === 'VEHICLE_NOT_FOUND') {
+      return NextResponse.json({ message: 'Vehicle not found', code: 'NOT_FOUND' }, { status: 404 })
+    }
     if (err.message?.startsWith('ALREADY_PURCHASED')) {
       return NextResponse.json({ message: err.message, code: 'ALREADY_PURCHASED' }, { status: 409 })
     }

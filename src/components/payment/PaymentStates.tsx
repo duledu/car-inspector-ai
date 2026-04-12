@@ -6,12 +6,15 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
 import type { Vehicle, PremiumProduct } from '@/types'
 
 // ─── Pending ─────────────────────────────────────────────────────────────────
 
 export function PaymentPendingState() {
+  const { t } = useTranslation()
+
   return (
     <div
       style={{
@@ -25,7 +28,7 @@ export function PaymentPendingState() {
       <div style={{ width: 56, height: 56, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Confirming Payment</div>
+      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{t('premiumPage.payment.pendingTitle')}</div>
       <div
         style={{
           fontSize: 14,
@@ -35,8 +38,7 @@ export function PaymentPendingState() {
           margin: '0 auto',
         }}
       >
-        Your payment is being confirmed with Stripe. This usually takes a few seconds. Do not
-        close this page.
+        {t('premiumPage.payment.pendingDesc')}
       </div>
       <div
         style={{
@@ -61,6 +63,7 @@ interface SuccessProps {
 
 export function PaymentSuccessState({ vehicle }: SuccessProps) {
   const router = useRouter()
+  const { t } = useTranslation()
 
   return (
     <div
@@ -76,7 +79,7 @@ export function PaymentSuccessState({ vehicle }: SuccessProps) {
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#00e676', marginBottom: 8 }}>
-        Payment Successful!
+        {t('premiumPage.payment.successTitle')}
       </div>
       <div
         style={{
@@ -87,11 +90,11 @@ export function PaymentSuccessState({ vehicle }: SuccessProps) {
           margin: '0 auto 28px',
         }}
       >
-        Your CarVertical report is now permanently unlocked for{' '}
+        {t('premiumPage.payment.successPrefix')}{' '}
         <strong style={{ color: 'var(--color-text-primary)' }}>
           {vehicle.year} {vehicle.make} {vehicle.model}
         </strong>
-        . Access is tied to your account and never expires.
+        {t('premiumPage.payment.successSuffix')}
       </div>
       <button
         onClick={() => router.refresh()}
@@ -107,7 +110,7 @@ export function PaymentSuccessState({ vehicle }: SuccessProps) {
           cursor: 'pointer',
         }}
       >
-        View Full Report →
+        {t('premiumPage.payment.viewFullReport')}
       </button>
     </div>
   )
@@ -123,6 +126,7 @@ interface FailedProps {
 export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
   const { startCheckout, isCreatingCheckout } = usePaymentStore()
   const router = useRouter()
+  const { t } = useTranslation()
 
   const handleRetry = async () => {
     try {
@@ -147,7 +151,7 @@ export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#ff4757', marginBottom: 8 }}>
-        Payment Failed
+        {t('premiumPage.payment.failedTitle')}
       </div>
       <div
         style={{
@@ -158,8 +162,7 @@ export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
           margin: '0 auto 28px',
         }}
       >
-        Your payment could not be processed. No charge was made. Please check your card details
-        and try again.
+        {t('premiumPage.payment.failedDesc')}
       </div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         <button
@@ -176,7 +179,7 @@ export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
             cursor: 'pointer',
           }}
         >
-          ← Back
+          {t('common.back')}
         </button>
         <button
           onClick={handleRetry}
@@ -194,7 +197,7 @@ export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
             opacity: isCreatingCheckout ? 0.7 : 1,
           }}
         >
-          {isCreatingCheckout ? 'Loading…' : 'Retry Payment'}
+          {isCreatingCheckout ? t('common.loading') : t('premiumPage.payment.retryPayment')}
         </button>
       </div>
     </div>

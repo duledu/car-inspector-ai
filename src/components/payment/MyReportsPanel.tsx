@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
 
 export function MyReportsPanel() {
+  const { t, i18n } = useTranslation()
   const { purchaseHistory, fetchPurchaseHistory } = usePaymentStore()
 
   useEffect(() => {
@@ -20,11 +22,11 @@ export function MyReportsPanel() {
   }
 
   const STATUS_LABEL: Record<string, string> = {
-    PAID: 'Active',
-    PENDING: 'Pending',
-    FAILED: 'Failed',
-    REFUNDED: 'Refunded',
-    EXPIRED: 'Expired',
+    PAID: t('premiumPage.reports.status.active'),
+    PENDING: t('premiumPage.reports.status.pending'),
+    FAILED: t('premiumPage.reports.status.failed'),
+    REFUNDED: t('premiumPage.reports.status.refunded'),
+    EXPIRED: t('premiumPage.reports.status.expired'),
     NOT_PURCHASED: '—',
   }
 
@@ -38,7 +40,7 @@ export function MyReportsPanel() {
       }}
     >
       <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 14 }}>
-        My Reports
+        {t('premiumPage.reports.title')}
       </div>
 
       {purchaseHistory.length === 0 ? (
@@ -47,7 +49,7 @@ export function MyReportsPanel() {
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
-            No reports purchased yet
+            {t('premiumPage.reports.empty')}
           </div>
         </div>
       ) : (
@@ -64,7 +66,7 @@ export function MyReportsPanel() {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-                  {p.productType === 'CARVERTICAL_REPORT' ? 'CarVertical Report' : p.productType}
+                  {p.productType === 'CARVERTICAL_REPORT' ? t('premiumPage.reports.carverticalReport') : p.productType}
                 </div>
                 <div
                   style={{
@@ -82,7 +84,7 @@ export function MyReportsPanel() {
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
                 {p.amountCents / 100} {p.currency} ·{' '}
-                {p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString() : 'Not completed'}
+                {p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString(i18n.language) : t('premiumPage.reports.notCompleted')}
               </div>
             </div>
           ))}

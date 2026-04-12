@@ -7,6 +7,7 @@
 
 import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { useVehicleStore, usePaymentStore } from '@/store'
 import { PremiumLockedState } from '@/components/payment/PremiumLockedState'
 import { PremiumUnlockedReport } from '@/components/payment/PremiumUnlockedReport'
@@ -26,6 +27,7 @@ export default function PremiumPage() {
 
 function PremiumPageContent() {
   const searchParams = useSearchParams()
+  const { t } = useTranslation()
   const { activeVehicle } = useVehicleStore()
   const { getStatus, hasAccess, pollPurchaseStatus } = usePaymentStore()
 
@@ -53,9 +55,9 @@ function PremiumPageContent() {
               <circle cx="7.5" cy="17.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" />
             </svg>
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No vehicle selected</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>{t('premiumPage.noVehicleTitle')}</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginBottom: 20 }}>
-            Add a vehicle first to purchase its history report
+            {t('premiumPage.noVehicleDesc')}
           </div>
         </div>
       )
@@ -83,9 +85,9 @@ function PremiumPageContent() {
   return (
     <AppShell>
       <div style={{ maxWidth: 1100 }}>
-        <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>Premium Reports</h1>
+        <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('premiumPage.title')}</h1>
         <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.38)' }}>
-          CarVertical full vehicle history — separately paid premium add-on
+          {t('premiumPage.subtitle')}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>

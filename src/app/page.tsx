@@ -121,12 +121,16 @@ function LandingNav() {
         </Link>
 
         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} className="desktop-only">
-          {(['Inspection', 'Premium', 'Community'] as const).map(label => (
-            <Link key={label} href={`/${label.toLowerCase()}`} style={{
+          {[
+            { label: t('nav.inspect'), href: '/inspection' },
+            { label: t('nav.premium'), href: '/premium' },
+            { label: t('nav.community'), href: '/community' },
+          ].map(item => (
+            <Link key={item.href} href={item.href} style={{
               padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
               color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'all 0.15s',
             }}>
-              {label}
+              {item.label}
             </Link>
           ))}
         </div>
@@ -250,6 +254,7 @@ function LandingNav() {
 
 function HeroCard() {
   const [hovered, setHovered] = useState(false)
+  const { t } = useTranslation()
 
   return (
     <div className="animate-fade-up delay-2" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -331,7 +336,7 @@ function HeroCard() {
                     border: '1px solid rgba(34,211,238,0.2)',
                   }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px #22d3ee', animation: 'pulse-dot 2s infinite', flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live Inspection</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('landing.heroCard.liveInspection')}</span>
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.6px', lineHeight: 1.15, marginBottom: 5, textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>2019 BMW 3 Series</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', letterSpacing: '-0.1px' }}>87 000 km &nbsp;·&nbsp; 14 500 EUR</div>
@@ -375,7 +380,7 @@ function HeroCard() {
             {/* ══ PROGRESS ══ */}
             <div style={{ padding: '0 22px 18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, letterSpacing: '0.02em' }}>Inspection progress</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('landing.heroCard.progress')}</span>
                 <span style={{ fontSize: 12, color: '#22d3ee', fontWeight: 800, letterSpacing: '-0.3px' }}>73%</span>
               </div>
               {/* Track */}
@@ -402,10 +407,10 @@ function HeroCard() {
             {/* ══ PHASE CHIPS ══ */}
             <div style={{ padding: '0 22px 18px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {[
-                { l: 'Exterior',   done: true  },
-                { l: 'Interior',   done: true  },
-                { l: 'Mechanical', done: false },
-                { l: 'Test Drive', done: false },
+                { l: t('phase.EXTERIOR'),   done: true  },
+                { l: t('phase.INTERIOR'),   done: true  },
+                { l: t('phase.MECHANICAL'), done: false },
+                { l: t('phase.TEST_DRIVE'), done: false },
               ].map(p => (
                 <span key={p.l} style={{
                   padding: '5px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
@@ -443,15 +448,15 @@ function HeroCard() {
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                   </svg>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Findings</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t('report.aiFindings')}</span>
                 </div>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>3 detected</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{t('landing.heroCard.detected', { count: 3 })}</span>
               </div>
               {/* Findings rows */}
               {[
-                { l: 'Left door panel gap',  s: 'warn', label: 'Warning' },
-                { l: 'Rear bumper repaint',  s: 'warn', label: 'Warning' },
-                { l: 'Engine bay clean',     s: 'ok',   label: 'Clear'   },
+                { l: t('landing.heroCard.finding.panelGap'),  s: 'warn', label: t('inspection.statusWarning') },
+                { l: t('landing.heroCard.finding.repaint'),   s: 'warn', label: t('inspection.statusWarning') },
+                { l: t('landing.heroCard.finding.engineBay'), s: 'ok',   label: t('landing.heroCard.clear')   },
               ].map((f, i, arr) => (
                 <div key={f.l} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -491,7 +496,7 @@ function HeroCard() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(34,211,238,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 10px #22d3ee, 0 0 20px rgba(34,211,238,0.5)', animation: 'pulse-dot 2s infinite', flexShrink: 0 }} />
-            AI analysing photos…
+            {t('landing.heroCard.analysingPhotos')}
           </div>
         </div>
       </div>
@@ -500,6 +505,8 @@ function HeroCard() {
 }
 
 function Hero() {
+  const { t } = useTranslation()
+
   return (
     <section style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden', padding: '100px 20px 80px' }}>
 
@@ -621,19 +628,19 @@ function Hero() {
                 fontSize: 12, fontWeight: 600, color: '#22d3ee',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 8px #22d3ee', animation: 'pulse-dot 2s infinite' }} />
-                AI-Powered Inspection Platform
+                {t('landing.hero.badge')}
               </span>
             </div>
 
             <h1 style={{ margin: '0 0 20px', fontSize: 'clamp(36px, 6vw, 60px)', fontWeight: 900, letterSpacing: '-2.5px', lineHeight: 1.03, color: '#fff' }}>
-              Buy used cars<br />
+              {t('landing.hero.title')}<br />
               <span style={{ background: 'linear-gradient(95deg, #22d3ee 0%, #818cf8 60%, #a78bfa 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                with confidence.
+                {t('landing.hero.titleAccent')}
               </span>
             </h1>
 
             <p style={{ margin: '0 0 32px', fontSize: 17, color: 'rgba(255,255,255,0.48)', lineHeight: 1.7, maxWidth: 440 }}>
-              AI-guided inspection, smart risk scoring, and premium vehicle history — everything a serious buyer needs before signing anything.
+              {t('landing.hero.subtitle')}
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
@@ -651,7 +658,7 @@ function Hero() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
-                Start Free Inspection
+                {t('landing.hero.startInspection')}
               </Link>
               <Link href="/dashboard" style={{
                 padding: '15px 24px', borderRadius: 14,
@@ -663,19 +670,23 @@ function Hero() {
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.1)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.color = 'rgba(255,255,255,0.92)'; el.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.05)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.7)'; el.style.transform = ''; }}
               >
-                View Dashboard
+                {t('landing.hero.viewDashboard')}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
             </div>
 
             {/* Trust strip */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0 }}>
-              {[{ v: '124K+', l: 'Inspections' }, { v: '96%', l: 'Accuracy' }, { v: '31K', l: 'Reports' }].map((t, i) => (
-                <div key={t.l} style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
+              {[
+                { v: '124K+', l: t('landing.hero.trust.inspections') },
+                { v: '96%', l: t('landing.hero.trust.accuracy') },
+                { v: '31K', l: t('landing.hero.trust.reports') },
+              ].map((trust, i) => (
+                <div key={trust.l} style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
                   {i > 0 && <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.1)', margin: '0 10px' }} />}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 'clamp(14px, 3.8vw, 18px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t.v}</span>
-                    <span style={{ fontSize: 'clamp(9px, 2.4vw, 11px)', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{t.l}</span>
+                    <span style={{ fontSize: 'clamp(14px, 3.8vw, 18px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{trust.v}</span>
+                    <span style={{ fontSize: 'clamp(9px, 2.4vw, 11px)', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{trust.l}</span>
                   </div>
                 </div>
               ))}
@@ -696,22 +707,23 @@ function Hero() {
 
 function StatsSection() {
   const { ref, visible } = useReveal(0.2)
+  const { t } = useTranslation()
 
   const stats = [
     {
-      target: 124, suffix: 'K+', label: 'Inspections Analyzed', sub: 'Across all vehicle types and markets', color: '#22d3ee', delay: 0,
+      target: 124, suffix: 'K+', label: t('landing.stats.inspections.label'), sub: t('landing.stats.inspections.sub'), color: '#22d3ee', delay: 0,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>,
     },
     {
-      target: 89, suffix: 'K', label: 'Risk Signals Identified', sub: 'Hidden issues surfaced before purchase', color: '#818cf8', delay: 150,
+      target: 89, suffix: 'K', label: t('landing.stats.risks.label'), sub: t('landing.stats.risks.sub'), color: '#818cf8', delay: 150,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>,
     },
     {
-      target: 31, suffix: 'K', label: 'Premium Reports Unlocked', sub: 'Deep vehicle history accessed', color: '#a855f7', delay: 300,
+      target: 31, suffix: 'K', label: t('landing.stats.reports.label'), sub: t('landing.stats.reports.sub'), color: '#a855f7', delay: 300,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
     },
     {
-      target: 96, suffix: '%', label: 'Buyer Confidence Rate', sub: 'Decisions backed by AI intelligence', color: '#22c55e', delay: 450,
+      target: 96, suffix: '%', label: t('landing.stats.confidence.label'), sub: t('landing.stats.confidence.sub'), color: '#22c55e', delay: 450,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
     },
   ]
@@ -735,13 +747,13 @@ function StatsSection() {
         <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 5vw, 56px)' as any }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px #22d3ee' }} />
-            Platform Scale
+            {t('landing.stats.badge')}
           </div>
           <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
-            Trusted by serious car buyers
+            {t('landing.stats.title')}
           </h2>
           <p style={{ margin: '0 auto', fontSize: 15, color: 'rgba(255,255,255,0.38)', maxWidth: 420, lineHeight: 1.65 }}>
-            Real data from real inspections — every number represents a buyer who made a smarter decision.
+            {t('landing.stats.subtitle')}
           </p>
         </div>
 
@@ -827,22 +839,23 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered,
 
 function Features() {
   const { ref, visible } = useReveal(0.1)
+  const { t } = useTranslation()
 
   const features = [
-    { title: 'AI Risk Scoring', desc: 'Multi-vector analysis across inspection inputs — a calibrated risk score with category breakdowns.', href: '/inspection', cta: 'Run inspection', color: '#22d3ee', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
-    { title: 'AI Model Research', desc: 'Before inspection begins, AI surfaces known issues and failure patterns specific to this exact model.', href: '/inspection', cta: 'See it in action', color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
-    { title: 'Photo AI Analysis', desc: 'Take photos. AI detects repaints, panel gaps, structural deformations, and colour inconsistencies.', href: '/inspection', cta: 'Start capturing', color: '#22d3ee', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> },
-    { title: 'Guided Inspection', desc: 'Step-by-step flow across Exterior, Interior, Mechanical, Test Drive, and Documents. Nothing missed.', href: '/inspection', cta: 'View flow', color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
-    { title: 'Premium History', desc: 'Optional deep-dive: ownership chain, accident records, service history, odometer verification.', href: '/premium', cta: 'Learn more', color: '#a855f7', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
-    { title: 'Confidence Report', desc: 'AI risk score, full inspection breakdown, and a clear buy / pass verdict in one compiled report.', href: '/report', cta: 'View format', color: '#22c55e', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+    { title: t('landing.features.risk.title'), desc: t('landing.features.risk.desc'), href: '/inspection', cta: t('landing.features.risk.cta'), color: '#22d3ee', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+    { title: t('landing.features.research.title'), desc: t('landing.features.research.desc'), href: '/inspection', cta: t('landing.features.research.cta'), color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
+    { title: t('landing.features.photo.title'), desc: t('landing.features.photo.desc'), href: '/inspection', cta: t('landing.features.photo.cta'), color: '#22d3ee', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> },
+    { title: t('landing.features.guided.title'), desc: t('landing.features.guided.desc'), href: '/inspection', cta: t('landing.features.guided.cta'), color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
+    { title: t('landing.features.premium.title'), desc: t('landing.features.premium.desc'), href: '/premium', cta: t('landing.features.premium.cta'), color: '#a855f7', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+    { title: t('landing.features.report.title'), desc: t('landing.features.report.desc'), href: '/report', cta: t('landing.features.report.cta'), color: '#22c55e', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
   ]
 
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px' }}>
       <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 5vw, 56px)' as any }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>Platform Capabilities</div>
-        <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>Built for serious buyers</h2>
-        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>Every layer is purpose-built to give you a cleaner, more confident view of any used vehicle.</p>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>{t('landing.features.badge')}</div>
+        <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>{t('landing.features.title')}</h2>
+        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>{t('landing.features.subtitle')}</p>
       </div>
 
       <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
@@ -903,12 +916,13 @@ const STEP_COLORS = ['#22d3ee', '#818cf8', '#a855f7', '#22c55e'] as const
 
 function HowItWorks() {
   const { ref, visible } = useReveal(0.1)
+  const { t } = useTranslation()
 
   const steps = [
-    { n: '01', title: 'Add your vehicle', desc: 'Enter make, model, year. The platform anchors all AI data, inspection records, and reports to this exact car.', href: '/vehicle' },
-    { n: '02', title: 'AI researches it', desc: 'Instantly surfaces known issues, common failure points, and what to look for — before you touch a panel.', href: '/inspection' },
-    { n: '03', title: 'Run the inspection', desc: 'Step-by-step guided flow. Take photos. AI analyses each one in real time for visual anomalies.', href: '/inspection' },
-    { n: '04', title: 'Get your verdict', desc: 'AI risk score, full breakdown, and a clear buy/pass recommendation compiled into one report.', href: '/report' },
+    { n: '01', title: t('landing.workflow.step1.title'), desc: t('landing.workflow.step1.desc'), href: '/vehicle' },
+    { n: '02', title: t('landing.workflow.step2.title'), desc: t('landing.workflow.step2.desc'), href: '/inspection' },
+    { n: '03', title: t('landing.workflow.step3.title'), desc: t('landing.workflow.step3.desc'), href: '/inspection' },
+    { n: '04', title: t('landing.workflow.step4.title'), desc: t('landing.workflow.step4.desc'), href: '/report' },
   ]
 
   return (
@@ -938,13 +952,13 @@ function HowItWorks() {
         <div style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 64px)' as any }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 100, background: 'rgba(129,140,248,0.07)', border: '1px solid rgba(129,140,248,0.18)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#818cf8', marginBottom: 20 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 6px #818cf8' }} />
-            Workflow
+            {t('landing.workflow.badge')}
           </div>
           <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
-            Four steps to a confident decision
+            {t('landing.workflow.title')}
           </h2>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.38)', maxWidth: 420, margin: '0 auto', lineHeight: 1.65 }}>
-            A structured, intelligent buying workflow — from first look to final verdict.
+            {t('landing.workflow.subtitle')}
           </p>
         </div>
 
@@ -992,7 +1006,7 @@ function HowItWorks() {
                     fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', whiteSpace: 'nowrap',
                     color: STEP_COLORS[i], flexShrink: 1,
                   }}>
-                    STEP {step.n}
+                    {t('landing.workflow.stepLabel')} {step.n}
                   </div>
 
                   {/* Icon in glowing circle */}
@@ -1020,7 +1034,7 @@ function HowItWorks() {
 
                 {/* Bottom CTA arrow */}
                 <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: STEP_COLORS[i] }}>
-                  Get started
+                  {t('landing.workflow.cta')}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </div>
               </div>
@@ -1048,6 +1062,15 @@ function HowItWorks() {
 
 function PremiumSection() {
   const { ref, visible } = useReveal(0.15)
+  const { t } = useTranslation()
+  const included = [
+    'landing.premium.includes.ownership',
+    'landing.premium.includes.accident',
+    'landing.premium.includes.service',
+    'landing.premium.includes.odometer',
+    'landing.premium.includes.theft',
+    'landing.premium.includes.market',
+  ]
 
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px clamp(56px, 8vw, 96px)' }}>
@@ -1063,35 +1086,35 @@ function PremiumSection() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 0 }}>
           <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 100, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', fontSize: 11, fontWeight: 700, color: '#a855f7', letterSpacing: '0.06em', marginBottom: 20 }}>
-              OPTIONAL PREMIUM ADD-ON
+              {t('landing.premium.badge')}
             </div>
             <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(22px, 3.5vw, 34px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
-              Go deeper with<br />
+              {t('landing.premium.title')}<br />
               <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                premium history intelligence
+                {t('landing.premium.titleAccent')}
               </span>
             </h2>
             <p style={{ margin: '0 0 28px', fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
-              Free inspection gives you a strong foundation. Premium unlocks ownership chains, accident records, service logs, and title verification.
+              {t('landing.premium.subtitle')}
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Link href="/premium" style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)', color: '#22d3ee', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                Learn about Premium
+                {t('landing.premium.learn')}
               </Link>
               <Link href="/vehicle" style={{ padding: '12px 20px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                View Vehicles
+                {t('landing.premium.vehicles')}
               </Link>
             </div>
           </div>
 
           <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Report Includes</div>
-            {['Ownership & Title History', 'Accident & Damage Records', 'Service & Maintenance Log', 'Odometer Verification', 'Theft & Recall Alerts', 'Market Value Comparison'].map(item => (
-              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>{t('landing.premium.includesTitle')}</div>
+            {included.map(itemKey => (
+              <div key={itemKey} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{t(itemKey)}</span>
               </div>
             ))}
           </div>
@@ -1107,20 +1130,21 @@ function PremiumSection() {
 
 function Testimonials() {
   const { ref, visible } = useReveal(0.15)
+  const { t } = useTranslation()
 
   const posts = [
-    { initials: 'MK', name: 'M. Kovač', text: 'Found hidden frame damage on a 2018 Civic using the checklist. The AI flagged the panel gap before I even looked closely. Saved me thousands.', time: '2h ago' },
-    { initials: 'RA', name: 'R. Andric', text: 'The AI risk score flagged a cooling issue before the mechanic opened the hood. Bought the car at a €1,200 discount because I had the data to negotiate.', time: '5h ago' },
-    { initials: 'JB', name: 'J. Berisha', text: "Premium report showed 3 previous owners the seller never mentioned. That's the kind of information that changes a buying decision completely.", time: '1d ago' },
+    { initials: 'MK', name: 'M. Kovač', text: t('landing.testimonials.post1.text'), time: t('landing.testimonials.post1.time') },
+    { initials: 'RA', name: 'R. Andric', text: t('landing.testimonials.post2.text'), time: t('landing.testimonials.post2.time') },
+    { initials: 'JB', name: 'J. Berisha', text: t('landing.testimonials.post3.text'), time: t('landing.testimonials.post3.time') },
   ]
 
   return (
     <section style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.005)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px, 4vw, 48px)' as any }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>Community</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>{t('landing.testimonials.badge')}</div>
           <h2 style={{ margin: 0, fontSize: 'clamp(24px, 3.5vw, 38px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
-            Real buyers. Real results.
+            {t('landing.testimonials.title')}
           </h2>
         </div>
 
@@ -1159,6 +1183,7 @@ function Testimonials() {
 
 function ClosingCTA() {
   const { ref, visible } = useReveal(0.2)
+  const { t } = useTranslation()
 
   return (
     <section style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px clamp(56px, 8vw, 96px)' }}>
@@ -1174,15 +1199,15 @@ function ClosingCTA() {
         <div style={{ position: 'absolute', bottom: -60, left: -40, width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.06), transparent)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>Get Started Free</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>{t('landing.closing.badge')}</div>
           <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(26px, 4vw, 46px)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', lineHeight: 1.05, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-            Your next car decision<br />
+            {t('landing.closing.title')}<br />
             <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              deserves better data.
+              {t('landing.closing.titleAccent')}
             </span>
           </h2>
           <p style={{ margin: '0 auto 36px', fontSize: 15, color: 'rgba(255,255,255,0.42)', maxWidth: 420, lineHeight: 1.65 }}>
-            Start with a free inspection. Add premium history when you need it. Know what you're buying before you sign anything.
+            {t('landing.closing.subtitle')}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
             <Link href="/inspection" style={{
@@ -1195,13 +1220,13 @@ function ClosingCTA() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.55)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(34,211,238,0.35)'; }}
             >
-              Start Free Inspection
+              {t('landing.hero.startInspection')}
             </Link>
             <Link href="/premium" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.1)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.color = 'rgba(255,255,255,0.92)'; el.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.05)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.65)'; el.style.transform = ''; }}
             >
-              Explore Premium
+              {t('landing.closing.explorePremium')}
             </Link>
           </div>
         </div>
@@ -1237,6 +1262,7 @@ function FooterLink({ href, children }: Readonly<{ href: string; children: React
 function Footer() {
   const [signinHovered, setSigninHovered] = useState(false)
   const [startHovered,  setStartHovered]  = useState(false)
+  const { t } = useTranslation()
 
   return (
     <footer style={{
@@ -1259,23 +1285,23 @@ function Footer() {
               <span style={{ color: '#22d3ee' }}>Car Inspector</span> AI
             </div>
             <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>
-              AI-powered inspection intelligence for smarter used car buying decisions.
+              {t('landing.footer.description')}
             </p>
           </div>
 
           {/* Nav columns */}
           {[
-            { title: 'Inspect', links: [
-              { label: 'Start Inspection', href: '/inspection' },
-              { label: 'My Vehicles',      href: '/vehicle' },
-              { label: 'View Reports',     href: '/report' },
-              { label: 'Premium History',  href: '/premium' },
+            { title: t('landing.footer.inspect'), links: [
+              { label: t('dashboard.startInspection'), href: '/inspection' },
+              { label: t('nav.vehicles'),             href: '/vehicle' },
+              { label: t('dashboard.viewReport'),     href: '/report' },
+              { label: t('landing.footer.premiumHistory'), href: '/premium' },
             ]},
-            { title: 'Platform', links: [
-              { label: 'Dashboard',  href: '/dashboard' },
-              { label: 'Community',  href: '/community' },
-              { label: 'Messages',   href: '/messages' },
-              { label: 'Profile',    href: '/profile' },
+            { title: t('landing.footer.platform'), links: [
+              { label: t('nav.dashboard'), href: '/dashboard' },
+              { label: t('nav.community'), href: '/community' },
+              { label: t('nav.messages'),  href: '/messages' },
+              { label: t('nav.profile'),   href: '/profile' },
             ]},
           ].map(col => (
             <div key={col.title}>
@@ -1307,7 +1333,7 @@ function Footer() {
           gap: 16,
         }}>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '-0.1px' }}>
-            Car Inspector AI — AI-guided automotive intelligence.
+            {t('landing.footer.tagline')}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <Link
@@ -1322,7 +1348,7 @@ function Footer() {
                 letterSpacing: '-0.1px',
               }}
             >
-              Sign In
+              {t('common.signIn')}
             </Link>
             <Link
               href="/inspection"
@@ -1340,7 +1366,7 @@ function Footer() {
                 transition: 'all 0.18s ease',
               }}
             >
-              Start Free
+              {t('landing.startFree')}
             </Link>
           </div>
         </div>

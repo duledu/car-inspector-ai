@@ -14,6 +14,14 @@ export class ScoringService {
    * Fetches all inspection data for a vehicle, runs scoring logic, saves result.
    */
   async computeAndPersist(vehicleId: string, userId: string): Promise<RiskScore> {
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: vehicleId, userId },
+      select: { id: true },
+    })
+    if (!vehicle) {
+      throw new Error('VEHICLE_NOT_FOUND')
+    }
+
     const [session, aiResults, vinHistory, purchase] = await Promise.all([
       prisma.inspectionSession.findFirst({
         where: { vehicleId, userId },
@@ -63,46 +71,49 @@ export class ScoringService {
       serviceHistoryStatus:  scoreResult.serviceHistoryStatus,
     }
 
-    const saved = await prisma.riskScore.upsert({
-      where: { sessionId: session?.id ?? '' },
-      update: {
-        buyScore:      scoreResult.buyScore,
-        riskScore:     scoreResult.riskScore,
-        verdict:       scoreResult.verdict,
-        aiScore:       scoreResult.dimensions.ai.score,
-        exteriorScore: scoreResult.dimensions.exterior.score,
-        interiorScore: scoreResult.dimensions.interior.score,
-        mechanicalScore: scoreResult.dimensions.mechanical.score,
-        vinScore:      scoreResult.dimensions.vin.score,
-        testDriveScore: scoreResult.dimensions.testDrive.score,
-        documentScore: scoreResult.dimensions.documents.score,
-        hasPremuimData: scoreResult.hasPremiumData,
-        breakdown:     breakdownJson as any,
-        reasonsFor:    scoreResult.reasonsFor,
-        reasonsAgainst: scoreResult.reasonsAgainst,
-      },
-      create: {
-        // Use relation form so Prisma's checked-input type is satisfied.
-        // Providing only vehicleId (scalar FK) triggers "Argument vehicle is missing"
-        // at runtime because Prisma resolves the CreateInput (not Unchecked) variant.
-        vehicle:   { connect: { id: vehicleId } },
-        ...(session?.id ? { session: { connect: { id: session.id } } } : {}),
-        buyScore:      scoreResult.buyScore,
-        riskScore:     scoreResult.riskScore,
-        verdict:       scoreResult.verdict,
-        aiScore:       scoreResult.dimensions.ai.score,
-        exteriorScore: scoreResult.dimensions.exterior.score,
-        interiorScore: scoreResult.dimensions.interior.score,
-        mechanicalScore: scoreResult.dimensions.mechanical.score,
-        vinScore:      scoreResult.dimensions.vin.score,
-        testDriveScore: scoreResult.dimensions.testDrive.score,
-        documentScore: scoreResult.dimensions.documents.score,
-        hasPremuimData: scoreResult.hasPremiumData,
-        breakdown:     breakdownJson as any,
-        reasonsFor:    scoreResult.reasonsFor,
-        reasonsAgainst: scoreResult.reasonsAgainst,
-      },
-    })
+    const scoreData = {
+      buyScore:      scoreResult.buyScore,
+      riskScore:     scoreResult.riskScore,
+      verdict:       scoreResult.verdict,
+      aiScore:       scoreResult.dimensions.ai.score,
+      exteriorScore: scoreResult.dimensions.exterior.score,
+      interiorScore: scoreResult.dimensions.interior.score,
+      mechanicalScore: scoreResult.dimensions.mechanical.score,
+      vinScore:      scoreResult.dimensions.vin.score,
+      testDriveScore: scoreResult.dimensions.testDrive.score,
+      documentScore: scoreResult.dimensions.documents.score,
+      hasPremuimData: scoreResult.hasPremiumData,
+      breakdown:     breakdownJson as any,
+      reasonsFor:    scoreResult.reasonsFor,
+      reasonsAgainst: scoreResult.reasonsAgainst,
+    }
+
+    let saved
+    if (session?.id) {
+      saved = await prisma.riskScore.upsert({
+        where: { sessionId: session.id },
+        update: scoreData,
+        create: {
+          vehicle: { connect: { id: vehicleId } },
+          session: { connect: { id: session.id } },
+          ...scoreData,
+        },
+      })
+    } else {
+      const existing = await prisma.riskScore.findFirst({
+        where: { vehicleId, sessionId: null },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      saved = existing
+        ? await prisma.riskScore.update({ where: { id: existing.id }, data: scoreData })
+        : await prisma.riskScore.create({
+            data: {
+              vehicle: { connect: { id: vehicleId } },
+              ...scoreData,
+            },
+          })
+    }
 
     return this.mapToDto(saved)
   }

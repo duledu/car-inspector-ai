@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { requireAuth } from '@/utils/auth.middleware'
 
 const schema = z.object({
   imageBase64: z.string().min(100),
@@ -62,6 +63,11 @@ If the image is blurry, dark, or not showing the expected area, set severity "wa
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req)
+  if (!auth.success) {
+    return NextResponse.json({ message: auth.reason, code: 'UNAUTHORIZED' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()

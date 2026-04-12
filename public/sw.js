@@ -1,92 +1,167 @@
 'use strict';
 
 // =============================================================================
-// Service Worker — Car Inspector AI  v3
+// Service Worker - Car Inspector AI
 // Strategy:
-//   • Static Next.js chunks  → cache-first (they have content hashes)
-//   • Page navigations       → network-first, fall back to cache
-//   • API routes             → network-only (never cache dynamic data)
+//   - Auth routes: never intercepted, never cached
+//   - API routes: network-only
+//   - Static Next.js chunks: cache-first
+//   - Normal same-origin page navigations/assets: network-first with cache fallback
 //
-// Update lifecycle:
-//   • New SW installs but stays in "waiting" — does NOT auto-activate.
-//   • App detects reg.waiting and shows an update prompt to the user.
-//   • User clicks "Update now" → app posts { type: 'SKIP_WAITING' }.
-//   • SW calls skipWaiting() → fires controllerchange on client → reload.
+// Important: OAuth redirects and session pages must pass straight through the
+// browser. Caching or replaying any part of that flow can consume one-time
+// cookies, serve stale auth pages, or trigger Response.clone() after the body
+// stream has already been handed to the browser.
 // =============================================================================
 
-const CACHE_NAME = 'car-inspector-v3';
+const CACHE_NAME = 'car-inspector-v6';
 
-function isApiRequest(url) {
-  return new URL(url).pathname.startsWith('/api/');
+function toUrl(input) {
+  return new URL(typeof input === 'string' ? input : input.url);
 }
 
-function isStaticAsset(url) {
-  return new URL(url).pathname.startsWith('/_next/static/');
+function isSameOriginUrl(url) {
+  return url.origin === self.location.origin;
 }
 
-// ─── Install — do NOT skipWaiting automatically ───────────────────────────────
-// The new SW will stay in "waiting" until the client grants permission.
-self.addEventListener('install', (event) => {
+function isApiPath(pathname) {
+  return pathname === '/api' || pathname.startsWith('/api/');
+}
+
+function isAuthPath(pathname) {
+  return (
+    pathname === '/auth' ||
+    pathname.startsWith('/auth/') ||
+    pathname === '/api/auth' ||
+    pathname.startsWith('/api/auth/')
+  );
+}
+
+function isGoogleAuthPath(pathname) {
+  return (
+    pathname === '/api/auth/google/init' ||
+    pathname === '/api/auth/google/callback' ||
+    pathname === '/api/auth/google/session' ||
+    pathname === '/auth/google/complete'
+  );
+}
+
+function isStaticAssetPath(pathname) {
+  return pathname.startsWith('/_next/static/');
+}
+
+function isRedirectResponse(response) {
+  return response.redirected || (response.status >= 300 && response.status < 400);
+}
+
+function isCacheableResponse(response) {
+  return response.ok && response.type === 'basic' && !isRedirectResponse(response);
+}
+
+function isCacheableRequest(request) {
+  const url = toUrl(request);
+
+  if (request.method !== 'GET') return false;
+  if (!isSameOriginUrl(url)) return false;
+  if (isAuthPath(url.pathname) || isGoogleAuthPath(url.pathname)) return false;
+  if (isApiPath(url.pathname)) return false;
+
+  // OAuth and auth hand-offs commonly use query params. Do not cache any URL
+  // carrying those markers even if the path is later changed.
+  if (
+    url.searchParams.has('code') ||
+    url.searchParams.has('state') ||
+    url.searchParams.has('oauth') ||
+    url.searchParams.has('error')
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function isCacheableNavigationRequest(request) {
+  if (!isCacheableRequest(request)) return false;
+  const url = toUrl(request);
+  return request.mode === 'navigate' || request.destination === 'document' || url.pathname === '/';
+}
+
+function isCacheableRuntimeAssetRequest(request) {
+  if (!isCacheableRequest(request)) return false;
+  return ['font', 'image', 'manifest', 'script', 'style'].includes(request.destination);
+}
+
+async function putInCache(request, response) {
+  if (!isCacheableRequest(request) || !isCacheableResponse(response)) return;
+
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response);
+}
+
+// Critical auth-routing fix: activate this worker immediately so older workers
+// with broad page caching cannot keep intercepting OAuth completion pages.
+globalThis.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(() => {
-      // Cache is open and ready; stay in waiting state.
-    })
+    caches
+      .open(CACHE_NAME)
+      .then(() => globalThis.skipWaiting())
   );
 });
 
-// ─── Message — allow client to trigger activation ─────────────────────────────
 globalThis.addEventListener('message', (event) => {
-  if (event.origin !== self.location.origin) return; // verify same origin
+  if (event.origin !== self.location.origin) return;
   if (event.data?.type === 'SKIP_WAITING') {
     globalThis.skipWaiting();
   }
 });
 
-// ─── Activate — purge old caches, claim clients ───────────────────────────────
-self.addEventListener('activate', (event) => {
+globalThis.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
       )
-      .then(() => self.clients.claim())
+      .then(() => globalThis.clients.claim())
   );
 });
 
-// ─── Fetch ────────────────────────────────────────────────────────────────────
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
+globalThis.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = toUrl(request);
 
-  // Only handle GET
-  if (req.method !== 'GET') return;
+  // Let the browser own every unsafe, cross-origin, API, and auth request. This
+  // intentionally avoids event.respondWith() for Google OAuth and email/password
+  // auth so redirects, cookies, and session reads remain untouched by the SW.
+  if (!isCacheableRequest(request)) return;
 
-  // API → always network, never cached
-  if (isApiRequest(req.url)) return;
-
-  // Static Next.js assets → cache-first (immutable, content-hashed)
-  if (isStaticAsset(req.url)) {
+  if (isStaticAssetPath(url.pathname)) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
-        const hit = await cache.match(req);
-        if (hit) return hit;
-        const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
-        return res;
+        const cached = await cache.match(request);
+        if (cached) return cached;
+
+        const response = await fetch(request);
+        if (isCacheableResponse(response)) {
+          event.waitUntil(putInCache(request, response.clone()).catch(() => undefined));
+        }
+        return response;
       })
     );
     return;
   }
 
-  // Everything else (pages, icons, fonts) → network-first
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        if (res.ok) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, res.clone()));
-        }
-        return res;
-      })
-      .catch(() => caches.match(req))
-  );
+  // Keep normal app pages and same-origin runtime assets available offline.
+  if (isCacheableNavigationRequest(request) || isCacheableRuntimeAssetRequest(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (isCacheableResponse(response)) {
+            event.waitUntil(putInCache(request, response.clone()).catch(() => undefined));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached ?? Response.error()))
+    );
+  }
 });

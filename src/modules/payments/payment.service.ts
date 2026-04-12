@@ -54,6 +54,14 @@ export class PaymentService {
     const product = PRODUCT_PRICES[payload.productType]
     if (!product) throw new Error(`Unknown product type: ${payload.productType}`)
 
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: payload.vehicleId, userId },
+      select: { id: true },
+    })
+    if (!vehicle) {
+      throw new Error('VEHICLE_NOT_FOUND')
+    }
+
     // Idempotency: if already paid, return early
     const existing = await prisma.premiumPurchase.findFirst({
       where: { userId, vehicleId: payload.vehicleId, productType: payload.productType as any },
@@ -168,6 +176,30 @@ export class PaymentService {
   }
 
   // ─── Private event handlers ─────────────────────────────────────────────────
+
+  /**
+   * getPurchaseHistory
+   */
+  async getPurchaseHistory(userId: string): Promise<PremiumPurchase[]> {
+    const purchases = await prisma.premiumPurchase.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return purchases.map((purchase) => ({
+      id: purchase.id,
+      userId: purchase.userId,
+      vehicleId: purchase.vehicleId,
+      productType: purchase.productType as any,
+      status: purchase.status as any,
+      amountCents: purchase.amountCents,
+      currency: purchase.currency,
+      providerTxId: purchase.providerTxId,
+      purchasedAt: purchase.purchasedAt?.toISOString() ?? null,
+      expiresAt: purchase.expiresAt?.toISOString() ?? null,
+      createdAt: purchase.createdAt.toISOString(),
+    }))
+  }
 
   private async onPaymentSucceeded(data: { metadata?: { purchaseId: string } }) {
     const purchaseId = data?.metadata?.purchaseId

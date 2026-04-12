@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SUPPORTED_LANGS, LANG_META, LS_KEY } from '@/i18n'
+import { SUPPORTED_LANGS, LANG_META, LS_KEY, LANG_COOKIE } from '@/i18n'
 import type { SupportedLang } from '@/i18n'
 
 export function LanguageSwitcher() {
@@ -24,7 +24,8 @@ export function LanguageSwitcher() {
   const switchTo = useCallback((lang: SupportedLang) => {
     if (lang === current) { setOpen(false); return }
     i18n.changeLanguage(lang)
-    localStorage.setItem(LS_KEY, lang)
+    try { localStorage.setItem(LS_KEY, lang) } catch { /* ignore */ }
+    document.cookie = `${LANG_COOKIE}=${encodeURIComponent(lang)}; Path=/; Max-Age=31536000; SameSite=Lax`
     setOpen(false)
   }, [current, i18n])
 

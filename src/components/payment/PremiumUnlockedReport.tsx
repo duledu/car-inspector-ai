@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VehicleHistoryResult } from '@/types'
 import { apiClient } from '@/services/api/client'
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function PremiumUnlockedReport({ vehicleId }: Props) {
+  const { t, i18n } = useTranslation()
   const [report, setReport] = useState<VehicleHistoryResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -23,10 +25,10 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
         setLoading(false)
       })
       .catch((err) => {
-        setError(err?.message ?? 'Failed to load report')
+        setError(err?.message ?? t('premiumPage.unlocked.loadError'))
         setLoading(false)
       })
-  }, [vehicleId])
+  }, [vehicleId, t])
 
   if (loading) {
     return (
@@ -42,7 +44,7 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
             margin: '0 auto 16px',
           }}
         />
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>Loading vehicle history report…</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>{t('premiumPage.unlocked.loading')}</div>
       </div>
     )
   }
@@ -62,22 +64,22 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>
-          Unable to load report
+          {t('premiumPage.unlocked.unableTitle')}
         </div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{error ?? 'Report data unavailable'}</div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{error ?? t('premiumPage.unlocked.unavailable')}</div>
       </div>
     )
   }
 
   const riskFlagLabels: Record<string, string> = {
-    MILEAGE_ROLLBACK: 'Odometer rollback detected',
-    ACCIDENT_HISTORY: 'Accident history found',
-    TOTAL_LOSS: 'Previously declared total loss',
-    STOLEN: 'Reported stolen',
-    OUTSTANDING_FINANCE: 'Outstanding finance',
-    IMPORT: 'Import vehicle',
-    TAXI_USE: 'Previous taxi/fleet use',
-    FLOOD_DAMAGE: 'Flood damage history',
+    MILEAGE_ROLLBACK: t('premiumPage.unlocked.risk.mileageRollback'),
+    ACCIDENT_HISTORY: t('premiumPage.unlocked.risk.accidentHistory'),
+    TOTAL_LOSS: t('premiumPage.unlocked.risk.totalLoss'),
+    STOLEN: t('premiumPage.unlocked.risk.stolen'),
+    OUTSTANDING_FINANCE: t('premiumPage.unlocked.risk.outstandingFinance'),
+    IMPORT: t('premiumPage.unlocked.risk.import'),
+    TAXI_USE: t('premiumPage.unlocked.risk.taxiUse'),
+    FLOOD_DAMAGE: t('premiumPage.unlocked.risk.floodDamage'),
   }
 
   return (
@@ -96,13 +98,13 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
       >
         <div>
           <div style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
-            Premium Vehicle History
+            {t('premiumPage.unlocked.header')}
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
             {report.year} {report.make} {report.model}
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-            VIN: {report.vin}
+            {t('premiumPage.unlocked.vin')}: {report.vin}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -128,10 +130,10 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
                 background: report.riskFlags.length === 0 ? '#22c55e' : '#ef4444',
               }}
             />
-            {report.riskFlags.length === 0 ? 'No risk flags' : `${report.riskFlags.length} risk flag${report.riskFlags.length > 1 ? 's' : ''}`}
+            {report.riskFlags.length === 0 ? t('premiumPage.unlocked.noRiskFlags') : t('premiumPage.unlocked.riskFlagCount', { count: report.riskFlags.length })}
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>
-            Source: {report.dataSource} · {new Date(report.fetchedAt).toLocaleDateString()}
+            {t('premiumPage.unlocked.source')}: {report.dataSource} · {new Date(report.fetchedAt).toLocaleDateString(i18n.language)}
           </div>
         </div>
       </div>
@@ -147,7 +149,7 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>
-            Risk Flags
+            {t('premiumPage.unlocked.riskFlags')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {report.riskFlags.map((flag) => (
@@ -163,12 +165,12 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
       {/* Overview grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         {[
-          { label: 'Accidents', value: report.accidentCount.toString(), alert: report.accidentCount > 0 },
-          { label: 'Owners', value: report.ownershipHistory.length.toString(), alert: false },
-          { label: 'Theft Status', value: report.theftStatus === 'clean' ? 'Clean' : 'Reported Stolen', alert: report.theftStatus !== 'clean' },
-          { label: 'Finance', value: report.outstandingFinance ? 'Outstanding' : 'Clear', alert: report.outstandingFinance },
-          { label: 'Total Loss', value: report.totalLoss ? 'Yes' : 'No', alert: report.totalLoss },
-          { label: 'Recalls', value: report.recalls.length.toString(), alert: report.recalls.some((r) => r.status === 'incomplete') },
+          { label: t('premiumPage.unlocked.overview.accidents'), value: report.accidentCount.toString(), alert: report.accidentCount > 0 },
+          { label: t('premiumPage.unlocked.overview.owners'), value: report.ownershipHistory.length.toString(), alert: false },
+          { label: t('premiumPage.unlocked.overview.theftStatus'), value: report.theftStatus === 'clean' ? t('premiumPage.unlocked.value.clean') : t('premiumPage.unlocked.value.reportedStolen'), alert: report.theftStatus !== 'clean' },
+          { label: t('premiumPage.unlocked.overview.finance'), value: report.outstandingFinance ? t('premiumPage.unlocked.value.outstanding') : t('premiumPage.unlocked.value.clear'), alert: report.outstandingFinance },
+          { label: t('premiumPage.unlocked.overview.totalLoss'), value: report.totalLoss ? t('premiumPage.unlocked.value.yes') : t('premiumPage.unlocked.value.no'), alert: report.totalLoss },
+          { label: t('premiumPage.unlocked.overview.recalls'), value: report.recalls.length.toString(), alert: report.recalls.some((r) => r.status === 'incomplete') },
         ].map((item) => (
           <div
             key={item.label}
@@ -196,7 +198,7 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>
-            Ownership History
+            {t('premiumPage.unlocked.ownershipHistory')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {report.ownershipHistory.map((owner, idx) => (
@@ -212,12 +214,12 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
               >
                 <div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
-                    {owner.ownerType.charAt(0).toUpperCase() + owner.ownerType.slice(1)} Owner
+                    {t(`premiumPage.unlocked.ownerType.${owner.ownerType}`, { defaultValue: owner.ownerType.charAt(0).toUpperCase() + owner.ownerType.slice(1) })} {t('premiumPage.unlocked.owner')}
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{owner.country}</div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                  {owner.fromDate} {owner.toDate ? `→ ${owner.toDate}` : '→ now'}
+                  {owner.fromDate} → {owner.toDate ?? t('premiumPage.unlocked.now')}
                 </div>
               </div>
             ))}
@@ -236,7 +238,7 @@ export function PremiumUnlockedReport({ vehicleId }: Props) {
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>
-            Mileage Records
+            {t('premiumPage.unlocked.mileageRecords')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {report.mileageHistory.slice(0, 6).map((rec) => (

@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { cookies } from 'next/headers'
 import { Toaster } from 'react-hot-toast'
+import { I18nBootstrap } from '@/components/layout/I18nBootstrap'
+import { FALLBACK_LANG, LANG_COOKIE, isSupportedLang } from '@/i18n/shared'
 import { PWAProvider } from './pwa'
 import './globals.css'
 
@@ -54,14 +57,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const cookieLocale = cookies().get(LANG_COOKIE)?.value
+  const initialLocale = isSupportedLang(cookieLocale) ? cookieLocale : FALLBACK_LANG
+
   return (
     <html
-      lang="en"
+      lang={initialLocale}
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body>
-        {children}
+        <I18nBootstrap initialLocale={initialLocale}>
+          {children}
+        </I18nBootstrap>
         <PWAProvider />
         <Toaster
           position="top-center"

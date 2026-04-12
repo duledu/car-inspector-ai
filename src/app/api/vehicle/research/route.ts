@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { vehicleResearchService } from '@/modules/research/research.service'
+import { requireAuth } from '@/utils/auth.middleware'
 
 const schema = z.object({
   make:         z.string().min(1).max(60),
@@ -22,9 +23,15 @@ const schema = z.object({
   transmission: z.enum(['manual', 'automatic']).optional(),
   bodyType:     z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
   mileage:      z.number().int().positive().optional(),
+  locale:       z.string().min(2).max(10).optional().default('en'),
 })
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req)
+  if (!auth.success) {
+    return NextResponse.json({ message: auth.reason, code: 'UNAUTHORIZED' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()
@@ -40,12 +47,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType, mileage } = parsed.data
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType, mileage, locale } = parsed.data
 
   // research() never throws — it always returns useful content
   const result = await vehicleResearchService.research({
     make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency,
-    fuelType, transmission, bodyType, mileage,
+    fuelType, transmission, bodyType, mileage, locale,
   })
 
   return NextResponse.json({

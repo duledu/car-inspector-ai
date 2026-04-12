@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     const score = await scoringService.computeAndPersist(parsed.data.vehicleId, auth.userId)
     return NextResponse.json({ data: score })
   } catch (err: any) {
+    if (err?.message === 'VEHICLE_NOT_FOUND') {
+      return NextResponse.json({ message: 'Vehicle not found', code: 'NOT_FOUND' }, { status: 404 })
+    }
     return NextResponse.json({ message: err?.message ?? 'Score calculation failed' }, { status: 500 })
   }
 }

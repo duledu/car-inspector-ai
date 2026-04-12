@@ -47,6 +47,14 @@ export async function POST(req: NextRequest) {
 
   const { vehicleId, photoResults } = parsed.data
 
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { id: vehicleId, userId: auth.userId },
+    select: { id: true },
+  })
+  if (!vehicle) {
+    return NextResponse.json({ message: 'Vehicle not found', code: 'NOT_FOUND' }, { status: 404 })
+  }
+
   // Convert per-photo results → AIFinding[] (skip "ok" ones to reduce noise)
   const findings = photoResults
     .filter(r => r.severity !== 'ok')

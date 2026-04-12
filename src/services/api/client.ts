@@ -16,9 +16,41 @@ export const apiClient = axios.create({
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function clearSessionAndRedirect() {
+  try { sessionStorage.removeItem('uci-user-store') } catch { /* ignore */ }
   try { localStorage.removeItem('uci-user-store') } catch { /* ignore */ }
   // Use replace so the user can't navigate back to the broken state
   globalThis.location.replace('/auth')
+}
+
+function readStoredAuthState(): any | null {
+  try {
+    const stored = sessionStorage.getItem('uci-user-store')
+    if (stored) return JSON.parse(stored)
+  } catch {
+    // Silently ignore storage parse errors
+  }
+
+  try {
+    const legacy = localStorage.getItem('uci-user-store')
+    if (legacy) {
+      sessionStorage.setItem('uci-user-store', legacy)
+      localStorage.removeItem('uci-user-store')
+      return JSON.parse(legacy)
+    }
+  } catch {
+    try { localStorage.removeItem('uci-user-store') } catch { /* ignore legacy auth cache */ }
+  }
+
+  return null
+}
+
+function writeStoredAuthState(state: any) {
+  try {
+    sessionStorage.setItem('uci-user-store', JSON.stringify(state))
+    localStorage.removeItem('uci-user-store')
+  } catch {
+    // Silently ignore storage write errors
+  }
 }
 
 // A promise that never resolves — used to swallow the error chain when we
@@ -30,12 +62,9 @@ const REDIRECT_PENDING = new Promise<never>(() => {})
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('uci-user-store')
-      if (stored) {
-        const state = JSON.parse(stored)
-        const token = state?.state?.session?.accessToken
-        if (token) config.headers.Authorization = `Bearer ${token}`
-      }
+      const state = readStoredAuthState()
+      const token = state?.state?.session?.accessToken
+      if (token) config.headers.Authorization = `Bearer ${token}`
     } catch {
       // Silently ignore storage parse errors
     }
@@ -69,8 +98,8 @@ apiClient.interceptors.response.use(
     if (status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       try {
-        const stored = localStorage.getItem('uci-user-store')
-        const refreshToken = stored ? JSON.parse(stored)?.state?.session?.refreshToken : null
+        const storeState = readStoredAuthState()
+        const refreshToken = storeState?.state?.session?.refreshToken ?? null
 
         if (!refreshToken) {
           // No refresh token available — nothing we can do.
@@ -79,15 +108,17 @@ apiClient.interceptors.response.use(
         }
 
         const { data } = await axios.post('/api/auth/refresh', { refreshToken })
+        const refreshed = data?.data
 
         // Persist the new access token
-        const storeState = JSON.parse(localStorage.getItem('uci-user-store') ?? '{}')
-        if (storeState?.state?.session) {
-          storeState.state.session.accessToken = data.accessToken
-          localStorage.setItem('uci-user-store', JSON.stringify(storeState))
+        if (storeState?.state?.session && refreshed?.accessToken) {
+          storeState.state.session = refreshed
+          storeState.state.user = refreshed.user
+          storeState.state.isAuthenticated = true
+          writeStoredAuthState(storeState)
         }
 
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`
         return apiClient(originalRequest)
       } catch {
         // Refresh failed — session is unrecoverable.

@@ -23,6 +23,7 @@ export interface ResearchParams {
   transmission?: string
   bodyType?: string
   mileage?: number
+  locale?: string
 }
 
 export interface ResearchOutput extends VehicleResearchResult {
@@ -30,6 +31,25 @@ export interface ResearchOutput extends VehicleResearchResult {
 }
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
+
+function normalizeLocale(locale?: string): string {
+  return (locale ?? 'en').toLowerCase().split('-')[0]
+}
+
+function languageInstruction(locale?: string): string {
+  switch (normalizeLocale(locale)) {
+    case 'sr':
+      return 'Respond in Serbian (Latin script). Use natural, professional automotive terminology used in Serbia. Keep all JSON keys exactly as specified in English.'
+    case 'mk':
+      return 'Respond in Macedonian. Use professional automotive terminology. Keep all JSON keys exactly as specified in English.'
+    case 'de':
+      return 'Respond in German. Use professional automotive terminology. Keep all JSON keys exactly as specified in English.'
+    case 'sq':
+      return 'Respond in Albanian. Use professional automotive terminology. Keep all JSON keys exactly as specified in English.'
+    default:
+      return 'Respond in English. Use professional automotive terminology. Keep all JSON keys exactly as specified.'
+  }
+}
 
 function buildPrompt(params: ResearchParams): string {
   const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType } = params
@@ -78,11 +98,14 @@ ${priceInstruction}
 Generate a practical pre-inspection guide based on real known issues, owner reports, and expert knowledge for this exact vehicle.
 
 Rules:
+- ${languageInstruction(params.locale)}
 - Specific to this make/model/year AND engine variant where provided
 - Use "commonly reported", "owners often note" language
 - Focus on what a buyer physically checking this car should look for
 - Include repair cost context for genuine financial risks
 - Be concise and actionable
+- Translate all user-facing JSON string values into the requested language: summary, priceContext.evaluationLabel, priceContext.summary, section titles, item titles, item descriptions, and disclaimer
+- Do NOT translate JSON property names, enum values, ids, severity values, confidence values, or tag values
 
 IMPORTANT — priceContext:
 - Always populate priceContext — never omit it
@@ -127,6 +150,7 @@ function buildPriceContext(
   market: MarketPriceResult,
   askingPrice?: number,
   currency = 'EUR',
+  locale = 'en',
 ): PriceContext {
   const { minPrice, maxPrice, avgPrice, confidence, source, listingCount, filtersUsed } = market
 
@@ -135,10 +159,11 @@ function buildPriceContext(
   let evaluation: PriceContext['evaluation']
   let evaluationLabel: string
   let summary: string
+  const lang = normalizeLocale(locale)
 
   if (askingPrice == null) {
     evaluation      = 'fair'
-    evaluationLabel = 'Estimate only'
+    evaluationLabel = lang === 'sr' ? 'Samo procena' : lang === 'mk' ? 'Само проценка' : lang === 'de' ? 'Nur Schätzung' : lang === 'sq' ? 'Vetëm vlerësim' : 'Estimate only'
     summary = `Estimated Serbia market range for this vehicle: ${rangeStr} (avg €${avgPrice.toLocaleString('de-DE')}).`
   } else if (askingPrice < minPrice * 0.9) {
     evaluation      = 'low'
@@ -152,6 +177,53 @@ function buildPriceContext(
     evaluation      = 'fair'
     evaluationLabel = 'Fair market value'
     summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} sits within the typical Serbia range of ${rangeStr}.`
+  }
+
+  if (lang !== 'en') {
+    const localizedLabels = {
+      estimate: lang === 'sr' ? 'Samo procena' : lang === 'mk' ? 'Само проценка' : lang === 'de' ? 'Nur Schätzung' : 'Vetëm vlerësim',
+      low:      lang === 'sr' ? 'Ispod tržišta - proveriti razlog' : lang === 'mk' ? 'Под пазарот - проверете ја причината' : lang === 'de' ? 'Unter Marktwert - Grund prüfen' : 'Nën treg - kontrolloni arsyen',
+      fair:     lang === 'sr' ? 'U okviru tržišta' : lang === 'mk' ? 'Во рамки на пазарот' : lang === 'de' ? 'Marktgerechter Preis' : 'Brenda tregut',
+      high:     lang === 'sr' ? 'Iznad tržišta' : lang === 'mk' ? 'Над пазарот' : lang === 'de' ? 'Über Marktwert' : 'Mbi treg',
+    }
+
+    if (askingPrice == null) {
+      evaluationLabel = localizedLabels.estimate
+      summary = lang === 'sr'
+        ? `Procenjen tržišni raspon u Srbiji za ovo vozilo: ${rangeStr} (prosek EUR ${avgPrice.toLocaleString('de-DE')}).`
+        : lang === 'mk'
+          ? `Проценет пазарен опсег во Србија за ова возило: ${rangeStr} (просек EUR ${avgPrice.toLocaleString('de-DE')}).`
+          : lang === 'de'
+            ? `Geschätzte Marktspanne in Serbien für dieses Fahrzeug: ${rangeStr} (Durchschnitt EUR ${avgPrice.toLocaleString('de-DE')}).`
+            : `Gama e vlerësuar e tregut në Serbi për këtë automjet: ${rangeStr} (mesatarja EUR ${avgPrice.toLocaleString('de-DE')}).`
+    } else if (evaluation === 'low') {
+      evaluationLabel = localizedLabels.low
+      summary = lang === 'sr'
+        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je ispod tipičnog raspona u Srbiji (${rangeStr}). Neuobičajeno niska cena zahteva dodatnu proveru.`
+        : lang === 'mk'
+          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е под типичниот опсег во Србија (${rangeStr}). Невообичаено ниска цена бара дополнителна проверка.`
+          : lang === 'de'
+            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt unter der typischen Spanne in Serbien (${rangeStr}). Ungewöhnlich niedrige Preise sollten genauer geprüft werden.`
+            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është nën gamën tipike në Serbi (${rangeStr}). Çmimet shumë të ulëta kërkojnë kontroll shtesë.`
+    } else if (evaluation === 'high') {
+      evaluationLabel = localizedLabels.high
+      summary = lang === 'sr'
+        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je iznad tipičnog raspona u Srbiji (${rangeStr}). Pregovarajte ili proverite da li oprema i stanje opravdavaju razliku.`
+        : lang === 'mk'
+          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е над типичниот опсег во Србија (${rangeStr}). Преговарајте или проверете дали опремата и состојбата ја оправдуваат разликата.`
+          : lang === 'de'
+            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt über der typischen Spanne in Serbien (${rangeStr}). Verhandeln Sie oder prüfen Sie, ob Ausstattung und Zustand den Aufpreis rechtfertigen.`
+            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është mbi gamën tipike në Serbi (${rangeStr}). Negocioni ose verifikoni nëse pajisjet dhe gjendja e justifikojnë diferencën.`
+    } else {
+      evaluationLabel = localizedLabels.fair
+      summary = lang === 'sr'
+        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je u okviru tipičnog raspona u Srbiji (${rangeStr}).`
+        : lang === 'mk'
+          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е во рамки на типичниот опсег во Србија (${rangeStr}).`
+          : lang === 'de'
+            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt innerhalb der typischen Spanne in Serbien (${rangeStr}).`
+            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është brenda gamës tipike në Serbi (${rangeStr}).`
+    }
   }
 
   const filtersMatched = filtersUsed
@@ -262,6 +334,7 @@ export class VehicleResearchService {
         pricingOutcome.value,
         params.askingPrice,
         params.currency,
+        params.locale,
       )
       console.log('[pricing] Context set from pricing service')
     } else if (!base.priceContext) {

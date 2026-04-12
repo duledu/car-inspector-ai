@@ -811,6 +811,7 @@ export function ModelResearchGuide({
   make, model, year, engineCc, powerKw, engine, trim,
   askingPrice, currency, fuelType, transmission, bodyType, mileage,
 }: Readonly<ModelResearchGuideProps>) {
+  const { i18n, t } = useTranslation()
   // Build a human-readable vehicle identity for display (e.g. "2013 BMW 530 2.0L 135kW")
   const litreStr  = engineCc ? ` ${(engineCc / 1000).toFixed(1)}L` : ''
   const kwStr     = powerKw  ? ` ${powerKw}kW`                     : ''
@@ -834,17 +835,18 @@ export function ModelResearchGuide({
         transmission: transmission ?? undefined,
         bodyType:     bodyType     ?? undefined,
         mileage:      mileage      ?? undefined,
+        locale:       (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0],
         engine, trim,
       })
       setResult(data)
       setState('success')
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message
-        ?? 'Could not connect to research service. Check your connection and try again.'
+        ?? t('research.errorConnection')
       setErrorMsg(msg)
       setState('error')
     }
-  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, bodyType, mileage, engine, trim])
+  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, bodyType, mileage, i18n.resolvedLanguage, i18n.language, engine, trim, t])
 
   const reset = useCallback(() => {
     setState('idle')
