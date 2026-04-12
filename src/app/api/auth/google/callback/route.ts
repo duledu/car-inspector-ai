@@ -1,14 +1,26 @@
 // =============================================================================
 // Google OAuth Callback
 // GET /api/auth/google/callback
+//
+// Receives the authorization code from Google, exchanges it for tokens,
+// upserts the user in the database, issues app JWT tokens, and hands the
+// session off to the browser by embedding it in sessionStorage via an
+// inline HTML+JS page (no intermediate cookie/page roundtrip required).
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { issueTokens } from '@/utils/auth.middleware'
+import { resolveAppOrigin, CANONICAL_HOST } from '@/utils/app-origin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const TAG = '[google/callback]'
+
+// ---------------------------------------------------------------------------
+// Interfaces
+// ---------------------------------------------------------------------------
 
 interface GoogleTokenResponse {
   access_token: string
@@ -26,16 +38,22 @@ interface GoogleUserInfo {
   email_verified: boolean
 }
 
-function htmlEscapeJson(value: unknown) {
+// ---------------------------------------------------------------------------
+// HTML encoding — safe embedding of JSON in inline <script>
+// ---------------------------------------------------------------------------
+
+function htmlEscapeJson(value: unknown): string {
   return JSON.stringify(value)
-    .replaceAll('<', String.raw`\u003c`)
-    .replaceAll('>', String.raw`\u003e`)
-    .replaceAll('&', String.raw`\u0026`)
+    .replaceAll('<',      String.raw`\u003c`)
+    .replaceAll('>',      String.raw`\u003e`)
+    .replaceAll('&',      String.raw`\u0026`)
     .replaceAll('\u2028', String.raw`\u2028`)
     .replaceAll('\u2029', String.raw`\u2029`)
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 async function exchangeCodeForTokens(
   code: string,
@@ -101,47 +119,14 @@ async function upsertGoogleUser(googleUser: GoogleUserInfo) {
   return { user: created, action: 'created' as const }
 }
 
-// ── Origin helper ──────────────────────────────────────────────────────────
-
-/**
- * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
- *
- * Priority:
- *   1. X-Forwarded-Proto + X-Forwarded-Host (nginx/Caddy/Cloudflare forwarded headers)
- *   2. NEXT_PUBLIC_APP_URL (explicit env var — reliable if set correctly)
- *   3. req.nextUrl.origin (local dev without proxy)
- */
-function getAppOrigin(req: NextRequest): string {
-  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
-  const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-                ?? req.headers.get('host')
-
-  if (proto && host) return `${proto}://${host}`
-
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (envUrl) return envUrl.replace(/\/$/, '')
-
-  return req.nextUrl.origin
-}
-
-// ── Route handler ──────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest) {
-  const tag = '[google/callback]'
-
-  const clientId     = process.env.GOOGLE_CLIENT_ID ?? ''
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
-  const jwtSecret    = process.env.JWT_SECRET ?? ''
-
-  // Derive origin — accounts for nginx SSL termination via X-Forwarded-Proto.
-  const origin       = getAppOrigin(req)
-  const callbackUrl  = new URL('/api/auth/google/callback', origin).toString()
-  const authUrl      = new URL('/auth', origin)
-  const dashboardUrl = new URL('/dashboard', origin)
-
-  const fwdProto = req.headers.get('x-forwarded-proto') ?? 'none'
-  const fwdHost  = req.headers.get('x-forwarded-host') ?? 'none'
-  console.log(`${tag} origin=${origin} callbackUrl=${callbackUrl} fwd-proto=${fwdProto} fwd-host=${fwdHost}`)
+  // ── Resolve origin ────────────────────────────────────────────────────────
+  const resolved = resolveAppOrigin(req)
+  const authUrl  = new URL('/auth', resolved.origin)
 
   function redirectError(reason: 'googleDenied' | 'googleFailed') {
     authUrl.searchParams.set('error', reason)
@@ -150,80 +135,145 @@ export async function GET(req: NextRequest) {
     return r
   }
 
+  // ── Diagnostic log ────────────────────────────────────────────────────────
+  const rawStateCookie = req.cookies.get('gauth_state')?.value
+  const code           = req.nextUrl.searchParams.get('code')
+  const stateParam     = req.nextUrl.searchParams.get('state')
+  const errorParam     = req.nextUrl.searchParams.get('error')
+
+  console.log(
+    `${TAG} origin=${resolved.origin} source=${resolved.source}` +
+    ` allowed=${resolved.allowed}` +
+    ` canonical=${CANONICAL_HOST ?? '(none)'}` +
+    ` fwd-proto=${req.headers.get('x-forwarded-proto') ?? 'none'}` +
+    ` fwd-host=${req.headers.get('x-forwarded-host') ?? 'none'}` +
+    ` req-origin=${req.nextUrl.origin}` +
+    ` has-state-cookie=${!!rawStateCookie}` +
+    ` has-code=${!!code}` +
+    ` has-state-param=${!!stateParam}` +
+    ` error-param=${errorParam ?? 'none'}`
+  )
+
+  // ── Origin validation ─────────────────────────────────────────────────────
+  if (!resolved.allowed) {
+    console.error(
+      `${TAG} FAIL: resolved host "${resolved.host}" not in allowed set` +
+      ` (canonical="${CANONICAL_HOST ?? 'none'}")`
+    )
+    return redirectError('googleFailed')
+  }
+
   // ── Env checks ────────────────────────────────────────────────────────────
-  if (!clientId)     { console.error(`${tag} FAIL: GOOGLE_CLIENT_ID not set`);     return redirectError('googleFailed') }
-  if (!clientSecret) { console.error(`${tag} FAIL: GOOGLE_CLIENT_SECRET not set`); return redirectError('googleFailed') }
-  if (!jwtSecret)    { console.error(`${tag} FAIL: JWT_SECRET not set`);            return redirectError('googleFailed') }
+  const clientId     = process.env.GOOGLE_CLIENT_ID     ?? ''
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
+  const jwtSecret    = process.env.JWT_SECRET            ?? ''
 
-  // ── OAuth params ──────────────────────────────────────────────────────────
-  const code       = req.nextUrl.searchParams.get('code')
-  const state      = req.nextUrl.searchParams.get('state')
-  const errorParam = req.nextUrl.searchParams.get('error')
+  if (!clientId)     { console.error(`${TAG} FAIL: GOOGLE_CLIENT_ID not set`);     return redirectError('googleFailed') }
+  if (!clientSecret) { console.error(`${TAG} FAIL: GOOGLE_CLIENT_SECRET not set`); return redirectError('googleFailed') }
+  if (!jwtSecret)    { console.error(`${TAG} FAIL: JWT_SECRET not set`);            return redirectError('googleFailed') }
 
-  console.log(`${tag} params: code=${code ? 'yes' : 'NO'} state=${state ? 'yes' : 'NO'} error=${errorParam ?? 'none'}`)
-
+  // ── OAuth error from Google ───────────────────────────────────────────────
   if (errorParam === 'access_denied') {
-    console.error(`${tag} FAIL: user denied consent`)
+    console.error(`${TAG} FAIL: user denied consent`)
     return redirectError('googleDenied')
   }
 
-  if (!code || !state) {
-    console.error(`${tag} FAIL: missing code=${!!code} state=${!!state}`)
+  if (!code || !stateParam) {
+    console.error(`${TAG} FAIL: missing code=${!!code} state=${!!stateParam}`)
+    return redirectError('googleFailed')
+  }
+
+  // ── Parse state cookie ────────────────────────────────────────────────────
+  //
+  // The cookie is base64url(JSON({ t: csrfToken, cb: callbackUrl })).
+  // Storing cb in the cookie guarantees the token exchange uses the exact URL
+  // that was registered with Google in the init route — no recomputation.
+  //
+  if (!rawStateCookie) {
+    console.error(
+      `${TAG} FAIL: gauth_state cookie missing — ` +
+      `cookie may be blocked, wrong domain, SameSite/Secure mismatch, or proxy stripping cookies`
+    )
+    return redirectError('googleFailed')
+  }
+
+  let storedState: string
+  let callbackUrl: string
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(rawStateCookie, 'base64url').toString('utf-8')
+    ) as unknown
+
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).t !== 'string' ||
+      typeof (parsed as Record<string, unknown>).cb !== 'string'
+    ) {
+      throw new Error('invalid shape')
+    }
+
+    storedState = (parsed as { t: string; cb: string }).t
+    callbackUrl = (parsed as { t: string; cb: string }).cb
+    console.log(`${TAG} state cookie parsed OK. callbackUrl=${callbackUrl}`)
+  } catch {
+    console.error(`${TAG} FAIL: gauth_state cookie malformed (new deployment with in-flight old cookie?)`)
     return redirectError('googleFailed')
   }
 
   // ── CSRF check ────────────────────────────────────────────────────────────
-  const cookieState = req.cookies.get('gauth_state')?.value
-
-  if (!cookieState) {
-    console.error(`${tag} FAIL: gauth_state cookie missing — cookie blocked, wrong domain, or secure/SameSite mismatch`)
-    return redirectError('googleFailed')
-  }
-
-  if (cookieState !== state) {
-    console.error(`${tag} FAIL: CSRF mismatch. cookie="${cookieState.slice(0, 8)}…" param="${state.slice(0, 8)}…"`)
+  if (storedState !== stateParam) {
+    console.error(`${TAG} FAIL: CSRF mismatch — state param does not match cookie token`)
     return redirectError('googleFailed')
   }
 
   try {
     // ── Token exchange ────────────────────────────────────────────────────
-    console.log(`${tag} exchanging code for tokens…`)
+    console.log(`${TAG} exchanging code for tokens…`)
     const tokenResult = await exchangeCodeForTokens(code, clientId, clientSecret, callbackUrl)
 
     if (!tokenResult.ok) {
-      console.error(`${tag} FAIL: token exchange — error=${tokenResult.error} desc=${tokenResult.description}`)
+      console.error(
+        `${TAG} FAIL: token exchange — error=${tokenResult.error} desc=${tokenResult.description}` +
+        ` callbackUrl=${callbackUrl}`
+      )
       return redirectError('googleFailed')
     }
 
-    console.log(`${tag} token exchange OK`)
+    console.log(`${TAG} token exchange OK`)
 
     // ── User info ─────────────────────────────────────────────────────────
-    console.log(`${tag} fetching user info…`)
     const userResult = await fetchGoogleUser(tokenResult.data.access_token)
 
     if (!userResult.ok) {
-      console.error(`${tag} FAIL: userinfo fetch status=${userResult.status}`)
+      console.error(`${TAG} FAIL: userinfo fetch status=${userResult.status}`)
       return redirectError('googleFailed')
     }
 
     const { user: googleUser } = userResult
-    console.log(`${tag} userinfo OK. email=${googleUser.email ? 'yes' : 'NO'} verified=${googleUser.email_verified}`)
+    console.log(`${TAG} userinfo OK. email-present=${!!googleUser.email} verified=${googleUser.email_verified}`)
 
     if (!googleUser.email || !googleUser.email_verified) {
-      console.error(`${tag} FAIL: email missing or unverified`)
+      console.error(`${TAG} FAIL: email missing or unverified`)
       return redirectError('googleFailed')
     }
 
     // ── DB upsert ─────────────────────────────────────────────────────────
-    console.log(`${tag} upserting user…`)
     const { user, action } = await upsertGoogleUser(googleUser)
-    console.log(`${tag} DB OK. action=${action} userId=${user.id}`)
+    console.log(`${TAG} DB OK. action=${action} userId=${user.id}`)
 
-    // ── Session ───────────────────────────────────────────────────────────
+    // ── Issue app tokens ──────────────────────────────────────────────────
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
-    console.log(`${tag} session OK. expiresAt=${new Date(expiresAt).toISOString()}`)
+    console.log(`${TAG} tokens issued. expiresAt=${new Date(expiresAt).toISOString()}`)
 
-    const persistedSession = {
+    // ── Build Zustand persist payload ─────────────────────────────────────
+    //
+    // The callback hands the session to the browser by writing directly to
+    // sessionStorage in the format Zustand's persist middleware expects.
+    // This avoids an extra cookie+roundtrip (the old gauth_session flow).
+    //
+    const zustandPayload = {
       state: {
         session: {
           accessToken,
@@ -243,9 +293,20 @@ export async function GET(req: NextRequest) {
       version: 0,
     }
 
-    // ── Success ───────────────────────────────────────────────────────────
-    console.log(`${tag} SUCCESS — redirecting to ${dashboardUrl}`)
+    const dashboardUrl = new URL('/dashboard', resolved.origin)
 
+    console.log(`${TAG} SUCCESS — redirecting to ${dashboardUrl}`)
+
+    // ── Response ──────────────────────────────────────────────────────────
+    //
+    // Returns a minimal HTML page that:
+    //   1. Writes the session to sessionStorage under the Zustand key.
+    //   2. Immediately replaces the current URL with /dashboard.
+    //
+    // The window.location.replace call is intentional — it removes the OAuth
+    // callback URL (with `code` and `state` params) from history so the user
+    // cannot accidentally re-use it.
+    //
     const response = new NextResponse(
       `<!doctype html>
 <html>
@@ -258,7 +319,7 @@ export async function GET(req: NextRequest) {
   <body>
     <script>
       try {
-        sessionStorage.setItem('uci-user-store', ${htmlEscapeJson(JSON.stringify(persistedSession))});
+        sessionStorage.setItem('uci-user-store', ${htmlEscapeJson(JSON.stringify(zustandPayload))});
       } catch (err) {}
       window.location.replace(${htmlEscapeJson(dashboardUrl.toString())});
     </script>
@@ -267,19 +328,19 @@ export async function GET(req: NextRequest) {
       {
         status: 200,
         headers: {
-          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Type':  'text/html; charset=utf-8',
           'Cache-Control': 'no-store',
         },
       }
     )
 
+    // Clear the CSRF state cookie — it is single-use.
     response.cookies.delete('gauth_state')
-    response.cookies.delete('gauth_session')
 
     return response
 
   } catch (err) {
-    console.error(`${tag} FAIL: unexpected exception —`, err)
+    console.error(`${TAG} FAIL: unexpected exception —`, err)
     return redirectError('googleFailed')
   }
 }

@@ -38,11 +38,13 @@ function isAuthPath(pathname) {
 }
 
 function isGoogleAuthPath(pathname) {
+  // Only the two live Google OAuth routes exist.
+  // /api/auth/google/session and /auth/google/complete were removed — the
+  // callback now writes the session to sessionStorage directly and redirects
+  // to /dashboard without an intermediate page.
   return (
     pathname === '/api/auth/google/init' ||
-    pathname === '/api/auth/google/callback' ||
-    pathname === '/api/auth/google/session' ||
-    pathname === '/auth/google/complete'
+    pathname === '/api/auth/google/callback'
   );
 }
 
