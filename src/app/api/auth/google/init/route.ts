@@ -1,59 +1,50 @@
 // =============================================================================
 // Google OAuth — Init
 // GET /api/auth/google/init
-//
-// 1. Resolves the canonical app origin (proxy-aware via app-origin helper).
-// 2. Generates a CSRF state token.
-// 3. Persists { t: state, cb: callbackUrl } in a signed httpOnly cookie so
-//    the callback route uses the *exact* same redirect_uri without recomputing
-//    it — eliminating any possibility of origin drift between the two routes.
-// 4. Redirects to Google's OAuth consent screen.
+// Generates CSRF state, sets httpOnly cookie, redirects to Google consent screen.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'node:crypto'
-import { resolveAppOrigin, CANONICAL_HOST } from '@/utils/app-origin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const TAG = '[google/init]'
+/**
+ * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
+ *
+ * Priority:
+ *   1. X-Forwarded-Proto + X-Forwarded-Host (nginx/Caddy/Cloudflare forwarded headers)
+ *   2. NEXT_PUBLIC_APP_URL (explicit env var — reliable if set correctly)
+ *   3. req.nextUrl.origin (local dev without proxy)
+ */
+function getAppOrigin(req: NextRequest): string {
+  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+                ?? req.headers.get('host')
+
+  if (proto && host) return `${proto}://${host}`
+
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (envUrl) return envUrl.replace(/\/$/, '')
+
+  return req.nextUrl.origin
+}
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
-
-  // ── Resolve origin ────────────────────────────────────────────────────────
-  const resolved = resolveAppOrigin(req)
-
-  console.log(
-    `${TAG} origin=${resolved.origin} source=${resolved.source}` +
-    ` allowed=${resolved.allowed}` +
-    ` canonical=${CANONICAL_HOST ?? '(none)'}` +
-    ` fwd-proto=${req.headers.get('x-forwarded-proto') ?? 'none'}` +
-    ` fwd-host=${req.headers.get('x-forwarded-host') ?? 'none'}` +
-    ` req-origin=${req.nextUrl.origin}`
-  )
-
-  // Fail closed if the resolved host is not in the allowed set.
-  // This guards against a spoofed X-Forwarded-Host or misconfigured proxy.
-  if (!resolved.allowed) {
-    console.error(
-      `${TAG} FAIL: resolved host "${resolved.host}" not in allowed set` +
-      ` (canonical="${CANONICAL_HOST ?? 'none'}")`
-    )
-    return NextResponse.redirect(new URL('/auth?error=googleFailed', resolved.origin))
-  }
+  const origin = getAppOrigin(req)
 
   if (!clientId) {
-    console.error(`${TAG} FAIL: GOOGLE_CLIENT_ID not set`)
-    return NextResponse.redirect(new URL('/auth?error=googleFailed', resolved.origin))
+    console.error('[google/init] GOOGLE_CLIENT_ID is not set')
+    const response = NextResponse.redirect(new URL('/auth?error=googleFailed', origin))
+    response.headers.set('Cache-Control', 'no-store')
+    return response
   }
 
-  // ── CSRF state + callback URL ─────────────────────────────────────────────
-  const state       = randomBytes(16).toString('hex')
-  const callbackUrl = `${resolved.origin}/api/auth/google/callback`
+  const state = randomBytes(16).toString('hex')
+  const callbackUrl = new URL('/api/auth/google/callback', origin).toString()
 
-  // ── Google consent URL ────────────────────────────────────────────────────
   const params = new URLSearchParams({
     client_id:     clientId,
     redirect_uri:  callbackUrl,
@@ -69,33 +60,17 @@ export async function GET(req: NextRequest) {
   )
   response.headers.set('Cache-Control', 'no-store')
 
-  // ── State cookie ──────────────────────────────────────────────────────────
-  //
-  // The cookie payload stores both:
-  //   t  — the CSRF token (matched against the `state` query param on callback)
-  //   cb — the exact redirect_uri used in this authorization request
-  //
-  // Storing cb here ensures the callback uses the identical URL for the token
-  // exchange, regardless of how the callback's own origin resolves. This
-  // prevents redirect_uri_mismatch under unusual routing or load-balancer
-  // configurations.
-  //
-  // Encoding: base64url(JSON) — avoids cookie-unsafe characters.
-  //
-  const cookiePayload = Buffer.from(
-    JSON.stringify({ t: state, cb: callbackUrl })
-  ).toString('base64url')
+  // Derive secure flag from the actual transport URL, not NODE_ENV.
+  // NODE_ENV can be 'development' on staging/preview deployments that still run over HTTPS.
+  const isHttps = req.nextUrl.protocol === 'https:'
 
-  response.cookies.set('gauth_state', cookiePayload, {
+  response.cookies.set('gauth_state', state, {
     httpOnly: true,
-    // Use the *resolved* protocol (not req.nextUrl.protocol) so the Secure
-    // flag is correct even when nginx terminates TLS and Next.js sees http://.
-    secure:   resolved.proto === 'https',
+    secure:   isHttps,
     sameSite: 'lax',
-    maxAge:   300,   // 5 minutes — OAuth flows should complete promptly
+    maxAge:   300, // 5 minutes
     path:     '/',
   })
 
-  console.log(`${TAG} OK — callbackUrl=${callbackUrl} proto=${resolved.proto}`)
   return response
 }
