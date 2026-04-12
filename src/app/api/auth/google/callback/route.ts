@@ -101,6 +101,29 @@ async function upsertGoogleUser(googleUser: GoogleUserInfo) {
   return { user: created, action: 'created' as const }
 }
 
+// ── Origin helper ──────────────────────────────────────────────────────────
+
+/**
+ * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
+ *
+ * Priority:
+ *   1. X-Forwarded-Proto + X-Forwarded-Host (nginx/Caddy/Cloudflare forwarded headers)
+ *   2. NEXT_PUBLIC_APP_URL (explicit env var — reliable if set correctly)
+ *   3. req.nextUrl.origin (local dev without proxy)
+ */
+function getAppOrigin(req: NextRequest): string {
+  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+                ?? req.headers.get('host')
+
+  if (proto && host) return `${proto}://${host}`
+
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (envUrl) return envUrl.replace(/\/$/, '')
+
+  return req.nextUrl.origin
+}
+
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -110,14 +133,15 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
   const jwtSecret    = process.env.JWT_SECRET ?? ''
 
-  // Derive origin from the request so redirect_uri always matches what
-  // init registered — works correctly on both localhost and production.
-  const origin       = req.nextUrl.origin
+  // Derive origin — accounts for nginx SSL termination via X-Forwarded-Proto.
+  const origin       = getAppOrigin(req)
   const callbackUrl  = new URL('/api/auth/google/callback', origin).toString()
   const authUrl      = new URL('/auth', origin)
   const dashboardUrl = new URL('/dashboard', origin)
 
-  console.log(`${tag} origin=${origin} callbackUrl=${callbackUrl}`)
+  const fwdProto = req.headers.get('x-forwarded-proto') ?? 'none'
+  const fwdHost  = req.headers.get('x-forwarded-host') ?? 'none'
+  console.log(`${tag} origin=${origin} callbackUrl=${callbackUrl} fwd-proto=${fwdProto} fwd-host=${fwdHost}`)
 
   function redirectError(reason: 'googleDenied' | 'googleFailed') {
     authUrl.searchParams.set('error', reason)

@@ -10,12 +10,30 @@ import { randomBytes } from 'node:crypto'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+/**
+ * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
+ *
+ * Priority:
+ *   1. X-Forwarded-Proto + X-Forwarded-Host (nginx/Caddy/Cloudflare forwarded headers)
+ *   2. NEXT_PUBLIC_APP_URL (explicit env var — reliable if set correctly)
+ *   3. req.nextUrl.origin (local dev without proxy)
+ */
+function getAppOrigin(req: NextRequest): string {
+  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+                ?? req.headers.get('host')
+
+  if (proto && host) return `${proto}://${host}`
+
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (envUrl) return envUrl.replace(/\/$/, '')
+
+  return req.nextUrl.origin
+}
+
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
-  // Always derive the callback URL from the actual request origin so that
-  // local dev (http://localhost:3000) and production work independently —
-  // using NEXT_PUBLIC_APP_URL here caused Google to redirect to the wrong host.
-  const origin = req.nextUrl.origin
+  const origin = getAppOrigin(req)
 
   if (!clientId) {
     console.error('[google/init] GOOGLE_CLIENT_ID is not set')
