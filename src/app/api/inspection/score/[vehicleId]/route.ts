@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { scoringService } from '@/modules/scoring'
+import { apiError, logApiError } from '@/utils/api-response'
 
 export async function GET(req: NextRequest, { params }: { params: { vehicleId: string } }) {
   const auth = await requireAuth(req)
-  if (!auth.success) return NextResponse.json({ message: auth.reason }, { status: 401 })
+  if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
 
   // Verify vehicle belongs to user
-  const vehicle = await prisma.vehicle.findFirst({
-    where: { id: params.vehicleId, userId: auth.userId },
-  })
-  if (!vehicle) return NextResponse.json({ message: 'Vehicle not found' }, { status: 404 })
+  try {
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: params.vehicleId, userId: auth.userId },
+    })
+    if (!vehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
 
-  const score = await scoringService.getLatest(params.vehicleId)
-  return NextResponse.json({ data: score })
+    const score = await scoringService.getLatest(params.vehicleId)
+    return NextResponse.json({ data: score })
+  } catch (err) {
+    logApiError('inspection/score/[vehicleId]', 'getLatest', err, { vehicleId: params.vehicleId })
+    return apiError('Failed to fetch score', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }

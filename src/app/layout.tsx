@@ -29,6 +29,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://usedcarsdoctor.com'),
   title: {
     default: 'Used Car Inspector AI',
     template: '%s · Used Car Inspector AI',

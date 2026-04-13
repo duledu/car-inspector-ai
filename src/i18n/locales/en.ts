@@ -39,6 +39,8 @@ const en = {
   'nav.messages':           'Messages',
   'nav.myInspections':      'My Inspections',
   'nav.backToLanding':      'Back to landing',
+  'nav.privacy':            'Privacy Policy',
+  'nav.terms':              'Terms of Service',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
   'auth.brand':             'Used Car Inspector AI',
@@ -75,6 +77,13 @@ const en = {
   'auth.error.googleFailed':       'Google sign-in failed. Please try again.',
   'auth.googleContinue':           'Continue with Google',
   'auth.orDivider':                'or',
+
+  // ─── Legal pages ────────────────────────────────────────────────────────────
+  'legal.backToHome':       'Back to Home',
+  'legal.lastUpdated':      'Last updated:',
+  'legal.englishOnly':      'This legal document is available in English only. Machine-translated versions are not legally binding. If you have questions, please contact us at contact@usedcarsdoctor.com.',
+  'legal.privacy.title':    'Privacy Policy',
+  'legal.terms.title':      'Terms of Service',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Active Vehicle',
@@ -442,6 +451,7 @@ const en = {
   'profile.signOutDesc':      'You will be redirected to the sign in page.',
   'profile.carverticalReport':'CarVertical History Report',
   'profile.failedToSave':     'Failed to save',
+  'profile.legal':            'Legal',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Dashboard',
@@ -632,6 +642,8 @@ const en = {
   'landing.footer.platform': 'Platform',
   'landing.footer.premiumHistory': 'Premium History',
   'landing.footer.tagline': 'Car Inspector AI, AI-guided automotive intelligence.',
+  'landing.footer.privacy': 'Privacy Policy',
+  'landing.footer.terms':   'Terms of Service',
 
   // ─── PWA update prompt ────────────────────────────────────────────────────────
   // Premium page

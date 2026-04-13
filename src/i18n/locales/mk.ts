@@ -39,6 +39,8 @@ const mk = {
   'nav.messages':           'Пораки',
   'nav.myInspections':      'Мои прегледи',
   'nav.backToLanding':      'Назад на почетна',
+  'nav.privacy':            'Политика за приватност',
+  'nav.terms':              'Услови за користење',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
   'auth.brand':             'Used Car Inspector AI',
@@ -74,6 +76,13 @@ const mk = {
   'auth.error.googleFailed':      'Google најавувањето не успеа. Обидете се повторно.',
   'auth.googleContinue':          'Продолжете со Google',
   'auth.orDivider':               'или',
+
+  // ─── Legal pages ────────────────────────────────────────────────────────────
+  'legal.backToHome':       'Назад на почетна',
+  'legal.lastUpdated':      'Последно ажурирање:',
+  'legal.englishOnly':      'Овој правен документ е достапен само на англиски јазик. Машински преведените верзии не се правно обврзувачки. За прашања контактирајте нè на contact@usedcarsdoctor.com.',
+  'legal.privacy.title':    'Политика за приватност',
+  'legal.terms.title':      'Услови за користење',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Активно возило',
@@ -420,6 +429,7 @@ const mk = {
   'profile.signOutDesc':      'Ќе бидете пренасочени кон страницата за најава.',
   'profile.carverticalReport':'CarVertical извештај за историја',
   'profile.failedToSave':     'Зачувувањето не успеа',
+  'profile.legal':            'Правно',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Контролна табла',
@@ -550,6 +560,8 @@ const mk = {
   'landing.footer.platform': 'Платформа',
   'landing.footer.premiumHistory': 'Premium историја',
   'landing.footer.tagline': 'Car Inspector AI, AI водена автомобилска анализа.',
+  'landing.footer.privacy': 'Политика за приватност',
+  'landing.footer.terms':   'Услови за користење',
 
   // ─── Inspection (new) ────────────────────────────────────────────────────────
   'inspection.noVehicleDesc':       'Додајте или изберете возило пред да започнете инспекција.',

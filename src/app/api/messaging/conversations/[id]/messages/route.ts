@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
+import { apiError, logApiError } from '@/utils/api-response'
 
 const SendSchema = z.object({
   content: z.string().min(1),
@@ -11,13 +12,14 @@ const SendSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
-  if (!auth.success) return NextResponse.json({ message: auth.reason }, { status: 401 })
+  if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
 
-  // Verify user is participant
-  const participant = await prisma.conversationParticipant.findFirst({
-    where: { conversationId: params.id, userId: auth.userId },
-  })
-  if (!participant) return NextResponse.json({ message: 'Not found' }, { status: 404 })
+  try {
+    // Verify user is participant
+    const participant = await prisma.conversationParticipant.findFirst({
+      where: { conversationId: params.id, userId: auth.userId },
+    })
+    if (!participant) return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
 
   const { searchParams } = new URL(req.url)
   const cursor = searchParams.get('cursor')
@@ -42,25 +44,35 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     createdAt: m.createdAt.toISOString(),
   }))
 
-  return NextResponse.json({ data: shaped })
+    return NextResponse.json({ data: shaped })
+  } catch (err) {
+    logApiError('messaging/conversations/[id]/messages', 'listMessages', err, { conversationId: params.id })
+    return apiError('Failed to fetch messages', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
-  if (!auth.success) return NextResponse.json({ message: auth.reason }, { status: 401 })
+  if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
 
-  const participant = await prisma.conversationParticipant.findFirst({
-    where: { conversationId: params.id, userId: auth.userId },
-  })
-  if (!participant) return NextResponse.json({ message: 'Not found' }, { status: 404 })
+  try {
+    const participant = await prisma.conversationParticipant.findFirst({
+      where: { conversationId: params.id, userId: auth.userId },
+    })
+    if (!participant) return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
 
-  const body = await req.json()
-  const parsed = SendSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ message: 'Validation failed', details: parsed.error.flatten() }, { status: 400 })
-  }
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
+    }
+    const parsed = SendSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiError('Validation failed', { status: 400, code: 'VALIDATION_ERROR', details: parsed.error.flatten() })
+    }
 
-  const message = await prisma.message.create({
+    const message = await prisma.message.create({
     data: {
       conversationId: params.id,
       senderId: auth.userId,
@@ -70,25 +82,29 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   })
 
   // Bump conversation updatedAt
-  await prisma.conversation.update({
-    where: { id: params.id },
-    data: { updatedAt: new Date() },
-  })
+    await prisma.conversation.update({
+      where: { id: params.id },
+      data: { updatedAt: new Date() },
+    })
 
-  return NextResponse.json(
-    {
-      data: {
-        id: message.id,
-        conversationId: message.conversationId,
-        senderId: message.senderId,
-        sender: message.sender,
-        content: message.content,
-        messageType: message.messageType,
-        attachmentUrl: message.attachmentUrl ?? null,
-        readAt: message.readAt?.toISOString() ?? null,
-        createdAt: message.createdAt.toISOString(),
+    return NextResponse.json(
+      {
+        data: {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          sender: message.sender,
+          content: message.content,
+          messageType: message.messageType,
+          attachmentUrl: message.attachmentUrl ?? null,
+          readAt: message.readAt?.toISOString() ?? null,
+          createdAt: message.createdAt.toISOString(),
+        },
       },
-    },
-    { status: 201 }
-  )
+      { status: 201 }
+    )
+  } catch (err) {
+    logApiError('messaging/conversations/[id]/messages', 'sendMessage', err, { conversationId: params.id })
+    return apiError('Failed to send message', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }

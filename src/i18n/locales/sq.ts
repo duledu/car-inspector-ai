@@ -39,6 +39,8 @@ const sq = {
   'nav.messages':           'Mesazhe',
   'nav.myInspections':      'Inspektimet e mia',
   'nav.backToLanding':      'Kthehu në faqen kryesore',
+  'nav.privacy':            'Politika e privatësisë',
+  'nav.terms':              'Kushtet e shërbimit',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
   'auth.brand':             'Used Car Inspector AI',
@@ -74,6 +76,13 @@ const sq = {
   'auth.error.googleFailed':      'Hyrja me Google dështoi. Provoni përsëri.',
   'auth.googleContinue':          'Vazhdo me Google',
   'auth.orDivider':               'ose',
+
+  // ─── Legal pages ────────────────────────────────────────────────────────────
+  'legal.backToHome':       'Kthehu në faqen kryesore',
+  'legal.lastUpdated':      'Përditësuar së fundmi:',
+  'legal.englishOnly':      'Ky dokument juridik është i disponueshëm vetëm në anglisht. Versionet e përkthyera me makinë nuk janë juridikisht të detyrueshme. Për pyetje na kontaktoni në contact@usedcarsdoctor.com.',
+  'legal.privacy.title':    'Politika e privatësisë',
+  'legal.terms.title':      'Kushtet e shërbimit',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Automjeti aktiv',
@@ -420,6 +429,7 @@ const sq = {
   'profile.signOutDesc':      'Do të ridrejtoheni te faqja e hyrjes.',
   'profile.carverticalReport':'Raport historiku CarVertical',
   'profile.failedToSave':     'Ruajtja dështoi',
+  'profile.legal':            'Ligjore',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Paneli kryesor',
@@ -550,6 +560,8 @@ const sq = {
   'landing.footer.platform': 'Platforma',
   'landing.footer.premiumHistory': 'Histori premium',
   'landing.footer.tagline': 'Car Inspector AI, inteligjencë automobilistike me AI.',
+  'landing.footer.privacy': 'Politika e privatësisë',
+  'landing.footer.terms':   'Kushtet e shërbimit',
 
   // ─── Inspection (new) ────────────────────────────────────────────────────────
   'inspection.noVehicleDesc':       'Shtoni ose zgjidhni një automjet para fillimit të inspektimit.',

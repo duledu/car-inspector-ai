@@ -39,6 +39,8 @@ const de = {
   'nav.messages':           'Nachrichten',
   'nav.myInspections':      'Meine Prüfungen',
   'nav.backToLanding':      'Zur Startseite',
+  'nav.privacy':            'Datenschutzerklärung',
+  'nav.terms':              'Nutzungsbedingungen',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
   'auth.brand':             'Used Car Inspector AI',
@@ -74,6 +76,13 @@ const de = {
   'auth.error.googleFailed':      'Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.',
   'auth.googleContinue':          'Mit Google fortfahren',
   'auth.orDivider':               'oder',
+
+  // ─── Legal pages ────────────────────────────────────────────────────────────
+  'legal.backToHome':       'Zur Startseite',
+  'legal.lastUpdated':      'Zuletzt aktualisiert:',
+  'legal.englishOnly':      'Dieses Rechtsdokument ist nur auf Englisch verfügbar. Maschinell übersetzte Versionen sind nicht rechtsverbindlich. Bei Fragen kontaktieren Sie uns unter contact@usedcarsdoctor.com.',
+  'legal.privacy.title':    'Datenschutzerklärung',
+  'legal.terms.title':      'Nutzungsbedingungen',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktives Fahrzeug',
@@ -420,6 +429,7 @@ const de = {
   'profile.signOutDesc':      'Sie werden zur Anmeldeseite weitergeleitet.',
   'profile.carverticalReport':'CarVertical Fahrzeughistorie',
   'profile.failedToSave':     'Speichern fehlgeschlagen',
+  'profile.legal':            'Rechtliches',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Dashboard',
@@ -550,6 +560,8 @@ const de = {
   'landing.footer.platform': 'Plattform',
   'landing.footer.premiumHistory': 'Premium-Historie',
   'landing.footer.tagline': 'Car Inspector AI, KI-geführte Fahrzeuginformation.',
+  'landing.footer.privacy': 'Datenschutzerklärung',
+  'landing.footer.terms':   'Nutzungsbedingungen',
 
   // ─── Inspection (new) ────────────────────────────────────────────────────────
   'inspection.noVehicleDesc':       'Fügen Sie ein Fahrzeug hinzu oder wählen Sie eines aus, bevor Sie eine Inspektion starten.',

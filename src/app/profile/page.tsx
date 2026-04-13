@@ -235,6 +235,21 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Legal links */}
+        <div style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+            {t('profile.legal')}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <Link href="/legal/privacy" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
+              {t('nav.privacy')}
+            </Link>
+            <Link href="/legal/terms" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
+              {t('nav.terms')}
+            </Link>
+          </div>
+        </div>
+
         {/* ── Danger zone ── */}
         <div style={{ padding: '18px 20px', background: 'rgba(239,68,68,0.03)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>

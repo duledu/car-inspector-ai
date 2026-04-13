@@ -8,6 +8,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/config/prisma'
 import { issueTokens, requireAuth } from '@/utils/auth.middleware'
+import { apiError, logApiError } from '@/utils/api-response'
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ export async function POST(
       // Stateless JWTs — client discards tokens. No server action needed.
       return NextResponse.json({ data: { success: true } })
     default:
-      return NextResponse.json({ message: 'Not found', code: 'NOT_FOUND' }, { status: 404 })
+      return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
   }
 }
 
@@ -56,7 +57,7 @@ export async function GET(
   if (params.action === 'me') {
     return handleGetMe(req)
   }
-  return NextResponse.json({ message: 'Not found', code: 'NOT_FOUND' }, { status: 404 })
+  return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
 }
 
 export async function PATCH(
@@ -66,7 +67,7 @@ export async function PATCH(
   if (params.action === 'me') {
     return handleUpdateProfile(req)
   }
-  return NextResponse.json({ message: 'Not found', code: 'NOT_FOUND' }, { status: 404 })
+  return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -75,18 +76,12 @@ async function handleLogin(body: unknown) {
   // Guard: missing JWT_SECRET is a config error, not a credential error
   if (!process.env.JWT_SECRET) {
     console.error('[login] JWT_SECRET environment variable is not set')
-    return NextResponse.json(
-      { message: 'Authentication service is not configured. Contact support.', code: 'CONFIG_ERROR' },
-      { status: 503 }
-    )
+    return apiError('Authentication service is not configured. Contact support.', { status: 503, code: 'CONFIG_ERROR' })
   }
 
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { message: 'Invalid credentials format', code: 'VALIDATION_ERROR' },
-      { status: 422 }
-    )
+    return apiError('Invalid credentials format', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   try {
@@ -99,20 +94,14 @@ async function handleLogin(body: unknown) {
     console.log('[login] user found:', user ? user.id : 'null')
 
     if (!user?.passwordHash) {
-      return NextResponse.json(
-        { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
-        { status: 401 }
-      )
+      return apiError('Invalid email or password', { status: 401, code: 'INVALID_CREDENTIALS' })
     }
 
     const passwordValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
     console.log('[login] password valid:', passwordValid)
 
     if (!passwordValid) {
-      return NextResponse.json(
-        { message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
-        { status: 401 }
-      )
+      return apiError('Invalid email or password', { status: 401, code: 'INVALID_CREDENTIALS' })
     }
 
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
@@ -133,34 +122,21 @@ async function handleLogin(body: unknown) {
       },
     })
   } catch (error) {
-    console.error('[login] ERROR:', error)
+    logApiError('auth/login', 'login', error)
     const message = error instanceof Error ? error.message : String(error)
-    return NextResponse.json(
-      { message: 'An unexpected error occurred. Please try again.', code: 'INTERNAL_ERROR', detail: message },
-      { status: 500 }
-    )
+    return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR', details: { detail: message } })
   }
 }
 
 async function handleRegister(body: unknown) {
   const parsed = registerSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details: parsed.error.flatten().fieldErrors,
-      },
-      { status: 422 }
-    )
+    return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
   }
 
   const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
   if (existing) {
-    return NextResponse.json(
-      { message: 'An account with this email already exists', code: 'EMAIL_IN_USE' },
-      { status: 409 }
-    )
+    return apiError('An account with this email already exists', { status: 409, code: 'EMAIL_IN_USE' })
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12)
@@ -199,7 +175,7 @@ async function handleRegister(body: unknown) {
 async function handleRefresh(body: unknown) {
   const parsed = refreshSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ message: 'Refresh token required', code: 'VALIDATION_ERROR' }, { status: 422 })
+    return apiError('Refresh token required', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   try {
@@ -236,22 +212,19 @@ async function handleRefresh(body: unknown) {
       },
     })
   } catch {
-    return NextResponse.json(
-      { message: 'Invalid or expired refresh token', code: 'INVALID_REFRESH_TOKEN' },
-      { status: 401 }
-    )
+    return apiError('Invalid or expired refresh token', { status: 401, code: 'INVALID_REFRESH_TOKEN' })
   }
 }
 
 async function handleGetMe(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (!authResult.success) {
-    return NextResponse.json({ message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
 
   const user = await prisma.user.findUnique({ where: { id: authResult.userId } })
   if (!user) {
-    return NextResponse.json({ message: 'User not found', code: 'NOT_FOUND' }, { status: 404 })
+    return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
   }
 
   return NextResponse.json({
@@ -269,7 +242,7 @@ async function handleGetMe(req: NextRequest) {
 async function handleUpdateProfile(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (!authResult.success) {
-    return NextResponse.json({ message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
 
   const body = await req.json().catch(() => ({}))
@@ -280,7 +253,7 @@ async function handleUpdateProfile(req: NextRequest) {
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ message: 'Validation failed', code: 'VALIDATION_ERROR' }, { status: 422 })
+    return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   const updated = await prisma.user.update({

@@ -78,7 +78,8 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     const status  = error.response?.status
-    const message = error.response?.data?.message ?? ''
+    const responseData = error.response?.data as (ApiError & { error?: string }) | undefined
+    const message = responseData?.message ?? responseData?.error ?? ''
 
     // ── Hard auth failures: token is invalid or server has no secret ──────────
     // These cannot be fixed by refreshing — clear session and redirect immediately.
@@ -130,9 +131,9 @@ apiClient.interceptors.response.use(
     // ── All other errors — normalize shape and reject ─────────────────────────
     const normalizedError: ApiError = {
       message: message || error.message || 'An error occurred',
-      code: error.response?.data?.code ?? 'UNKNOWN_ERROR',
+      code: responseData?.code ?? 'UNKNOWN_ERROR',
       statusCode: status ?? 0,
-      details: error.response?.data?.details,
+      details: responseData?.details,
     }
 
     return Promise.reject(normalizedError)

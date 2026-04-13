@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/utils/auth.middleware'
+import { apiError, logApiError } from '@/utils/api-response'
+import { clampScore } from '@/modules/scoring/scoring.logic'
 
 const schema = z.object({
   imageBase64: z.string().min(100),
@@ -106,19 +108,19 @@ If the image is blurry, dark, or not showing the expected area, set severity "wa
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) {
-    return NextResponse.json({ message: auth.reason, code: 'UNAUTHORIZED' }, { status: 401 })
+    return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
 
   let body: unknown
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ message: 'Invalid JSON', code: 'BAD_REQUEST' }, { status: 400 })
+    return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
   }
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ message: 'Validation failed', code: 'VALIDATION_ERROR' }, { status: 422 })
+    return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   const { imageBase64, mimeType, angle, angleLabel, locale } = parsed.data
@@ -126,10 +128,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     console.error('[analyze-photo] OPENAI_API_KEY is not set')
-    return NextResponse.json(
-      { message: 'AI analysis unavailable', code: 'CONFIG_ERROR' },
-      { status: 503 }
-    )
+    return apiError('AI analysis unavailable', { status: 503, code: 'CONFIG_ERROR' })
   }
 
   try {
@@ -199,11 +198,11 @@ export async function POST(req: NextRequest) {
         signal:     parsed.signal ?? 'Analysis complete',
         severity:   sev,
         detail:     parsed.detail ?? '',
-        confidence: parsed.confidence ?? 80,
+        confidence: clampScore(parsed.confidence, 0, 100, 80),
       },
     })
   } catch (error) {
-    console.error('[analyze-photo] ERROR:', error)
+    logApiError('inspection/analyze-photo', 'analyze', error, { angle })
     const fallback = fallbackAnalysis(locale)
     return NextResponse.json(
       {

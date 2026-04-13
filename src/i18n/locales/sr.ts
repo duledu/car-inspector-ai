@@ -39,6 +39,8 @@ const sr = {
   'nav.messages':           'Poruke',
   'nav.myInspections':      'Moji pregledi',
   'nav.backToLanding':      'Nazad na početnu',
+  'nav.privacy':            'Politika privatnosti',
+  'nav.terms':              'Uslovi korišćenja',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
   'auth.brand':             'Used Car Inspector AI',
@@ -75,6 +77,13 @@ const sr = {
   'auth.error.googleFailed':      'Google prijava nije uspela. Pokušajte ponovo.',
   'auth.googleContinue':          'Nastavi sa Google nalogom',
   'auth.orDivider':               'ili',
+
+  // ─── Legal pages ────────────────────────────────────────────────────────────
+  'legal.backToHome':       'Nazad na početnu',
+  'legal.lastUpdated':      'Poslednje ažuriranje:',
+  'legal.englishOnly':      'Ovaj pravni dokument dostupan je samo na engleskom jeziku. Mašinski prevedene verzije nisu pravno obavezujuće. Za pitanja kontaktirajte nas na contact@usedcarsdoctor.com.',
+  'legal.privacy.title':    'Politika privatnosti',
+  'legal.terms.title':      'Uslovi korišćenja',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktivno vozilo',
@@ -421,6 +430,7 @@ const sr = {
   'profile.signOutDesc':      'Bićete preusmereni na stranicu za prijavu.',
   'profile.carverticalReport':'CarVertical izveštaj o istoriji',
   'profile.failedToSave':     'Čuvanje nije uspelo',
+  'profile.legal':            'Pravno',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Kontrolna tabla',
@@ -634,6 +644,8 @@ const sr = {
   'landing.footer.platform': 'Platforma',
   'landing.footer.premiumHistory': 'Premium istorija',
   'landing.footer.tagline': 'Car Inspector AI, AI vođena automobilska analiza.',
+  'landing.footer.privacy': 'Politika privatnosti',
+  'landing.footer.terms':   'Uslovi korišćenja',
 
   // ─── PWA update prompt ────────────────────────────────────────────────────────
   // Premium page

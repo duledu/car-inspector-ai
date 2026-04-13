@@ -18,11 +18,19 @@ import type {
 
 /**
  * Coerce any value to a finite number.
- * NaN, Infinity, null, undefined → fallback.
+ * NaN, Infinity, null, undefined, empty string -> fallback.
  */
 export function safeNumber(value: unknown, fallback: number): number {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string' && value.trim() === '') return fallback
   const n = Number(value)
   return Number.isFinite(n) ? n : fallback
+}
+
+export function isValidFiniteNumber(value: unknown): boolean {
+  if (value === null || value === undefined) return false
+  if (typeof value === 'string' && value.trim() === '') return false
+  return Number.isFinite(Number(value))
 }
 
 /**
@@ -30,6 +38,22 @@ export function safeNumber(value: unknown, fallback: number): number {
  */
 export function clampScore(value: unknown, min: number, max: number, fallback: number): number {
   return Math.max(min, Math.min(max, Math.round(safeNumber(value, fallback))))
+}
+
+function safeArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value : []
+}
+
+function safeServiceHistoryStatus(value: unknown): ServiceHistoryStatus {
+  return value === 'FULL' || value === 'PARTIAL' || value === 'NONE' || value === 'SUSPICIOUS'
+    ? value
+    : 'PARTIAL'
+}
+
+function logInvalidNumber(context: string, value: unknown, fallback: number) {
+  if (value !== null && value !== undefined && value !== '' && !Number.isFinite(Number(value))) {
+    console.warn('[scoring] invalid numeric value', { context, value, fallback })
+  }
 }
 
 // ─── Weight Configuration ─────────────────────────────────────────────────────
@@ -57,7 +81,9 @@ const HIGH_DAMAGE_COST_EUR = 3_000
 // ─── AI Score Calculation ─────────────────────────────────────────────────────
 
 function calculateAIScore(findings: AIFinding[]): ScoreDimension {
-  if (findings.length === 0) {
+  const safeFindings = safeArray<AIFinding>(findings).filter((f) => f && typeof f === 'object')
+
+  if (safeFindings.length === 0) {
     return {
       label: 'AI Photo Analysis',
       score: 88,
@@ -66,8 +92,8 @@ function calculateAIScore(findings: AIFinding[]): ScoreDimension {
     }
   }
 
-  const criticalCount = findings.filter((f) => f.severity === 'critical').length
-  const warningCount  = findings.filter((f) => f.severity === 'warning').length
+  const criticalCount = safeFindings.filter((f) => f.severity === 'critical').length
+  const warningCount  = safeFindings.filter((f) => f.severity === 'warning').length
 
   let score = 100
   score -= criticalCount * 15
@@ -76,22 +102,25 @@ function calculateAIScore(findings: AIFinding[]): ScoreDimension {
   // Guard: confidence may be undefined/null if stored before this field was added.
   // safeNumber coerces to 80 (neutral default) when the value is missing or NaN.
   const avgConfidence =
-    findings.reduce((sum, f) => sum + safeNumber(f.confidence, 80), 0) / findings.length
+    safeFindings.reduce((sum, f) => {
+      logInvalidNumber('ai.confidence', f.confidence, 80)
+      return sum + clampScore(f.confidence, 0, 100, 80)
+    }, 0) / safeFindings.length
   const confidenceModifier = (avgConfidence - 50) / 200
   score = score + score * confidenceModifier
 
   const clampedScore = clampScore(score, 10, 100, 50)
 
-  const topIssue = [...findings].sort((a, b) => {
-    const sev = { critical: 3, warning: 2, info: 1 }
-    return sev[b.severity] - sev[a.severity]
+  const topIssue = [...safeFindings].sort((a, b) => {
+    const sev: Record<string, number> = { critical: 3, warning: 2, info: 1 }
+    return (sev[b.severity] ?? 0) - (sev[a.severity] ?? 0)
   })[0]
 
   return {
     label: 'AI Photo Analysis',
     score: clampedScore,
     weight: SCORE_WEIGHTS.ai,
-    explanation: `${findings.length} issue${findings.length > 1 ? 's' : ''} detected. Primary concern: ${topIssue?.title ?? 'N/A'} (confidence ${topIssue?.confidence ?? 0}%).`,
+    explanation: `${safeFindings.length} issue${safeFindings.length > 1 ? 's' : ''} detected. Primary concern: ${topIssue?.title ?? 'N/A'} (confidence ${clampScore(topIssue?.confidence, 0, 100, 0)}%).`,
   }
 }
 
@@ -103,7 +132,7 @@ function calculateChecklistScore(
   label: string,
   weight: number
 ): ScoreDimension {
-  const categoryItems = items.filter((i) => i.category === category)
+  const categoryItems = safeArray<ChecklistItem>(items).filter((i) => i?.category === category)
 
   if (categoryItems.length === 0) {
     return { label, score: 70, weight, explanation: 'Checklist not completed for this section.' }
@@ -126,7 +155,7 @@ function calculateChecklistScore(
 
   return {
     label,
-    score: Math.max(10, Math.round(score)),
+    score: clampScore(score, 10, 100, 70),
     weight,
     explanation: `${okCount} OK · ${warningCount} warnings · ${problemCount} problems across ${categoryItems.length} items.`,
   }
@@ -148,13 +177,18 @@ function calculateVINScore(
   }
 
   let score = 100
+  logInvalidNumber('vin.accidentCount', history.accidentCount, 0)
+  const accidentCount = Math.max(0, Math.round(safeNumber(history.accidentCount, 0)))
+  const mileageHistory = safeArray<VehicleHistoryResult['mileageHistory'][number]>(history.mileageHistory)
+  const recalls = safeArray<VehicleHistoryResult['recalls'][number]>(history.recalls)
+  const riskFlags = safeArray<string>(history.riskFlags)
 
   if (history.theftStatus === 'reported_stolen') score -= 100
   if (history.totalLoss)           score -= 50
   if (history.outstandingFinance)  score -= 30
-  score -= history.accidentCount * 12
+  score -= accidentCount * 12
 
-  const mileageConsistent = isMileageConsistent(history.mileageHistory)
+  const mileageConsistent = isMileageConsistent(mileageHistory)
   if (!mileageConsistent) score -= 25
 
   const flagPenalties: Record<string, number> = {
@@ -163,23 +197,30 @@ function calculateVINScore(
     TAXI_USE:         10,
     IMPORT:            5,
   }
-  history.riskFlags.forEach((flag) => {
+  riskFlags.forEach((flag) => {
     score -= flagPenalties[flag] ?? 5
   })
 
   return {
     label: 'VIN & History',
-    score: Math.max(0, Math.min(100, Math.round(score))),
+    score: clampScore(score, 0, 100, 65),
     weight: SCORE_WEIGHTS.vin,
-    explanation: `${history.accidentCount} accident(s). ${history.recalls.filter((r) => r.status === 'incomplete').length} open recall(s). Mileage: ${mileageConsistent ? 'consistent' : 'inconsistent'}.`,
+    explanation: `${accidentCount} accident(s). ${recalls.filter((r) => r?.status === 'incomplete').length} open recall(s). Mileage: ${mileageConsistent ? 'consistent' : 'inconsistent'}.`,
   }
 }
 
-function isMileageConsistent(records: VehicleHistoryResult['mileageHistory']): boolean {
-  if (records.length < 2) return true
-  const sorted = [...records].sort((a, b) => a.year - b.year || (a.month ?? 0) - (b.month ?? 0))
+function isMileageConsistent(records: VehicleHistoryResult['mileageHistory'] | unknown): boolean {
+  const validRecords = safeArray<VehicleHistoryResult['mileageHistory'][number]>(records)
+    .filter((r) => isValidFiniteNumber(r?.year) && isValidFiniteNumber(r?.km))
+
+  if (validRecords.length < 2) return true
+  const sorted = [...validRecords].sort((a, b) => {
+    const yearDiff = safeNumber(a.year, 0) - safeNumber(b.year, 0)
+    if (yearDiff !== 0) return yearDiff
+    return safeNumber(a.month, 0) - safeNumber(b.month, 0)
+  })
   for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i].km < sorted[i - 1].km) return false
+    if (safeNumber(sorted[i].km, 0) < safeNumber(sorted[i - 1].km, 0)) return false
   }
   return true
 }
@@ -187,7 +228,9 @@ function isMileageConsistent(records: VehicleHistoryResult['mileageHistory']): b
 // ─── Test Drive Score ─────────────────────────────────────────────────────────
 
 function calculateTestDriveScore(ratings: Record<string, number>): ScoreDimension {
-  const values = Object.values(ratings).filter((v) => v > 0)
+  const values = Object.values(ratings && typeof ratings === 'object' ? ratings : {})
+    .map((v) => clampScore(v, 0, 3, 0))
+    .filter((v) => v > 0)
 
   if (values.length === 0) {
     return { label: 'Test Drive', score: 72, weight: SCORE_WEIGHTS.testDrive, explanation: 'Test drive not yet completed.' }
@@ -204,7 +247,7 @@ function calculateTestDriveScore(ratings: Record<string, number>): ScoreDimensio
 
   return {
     label: 'Test Drive',
-    score: Math.max(0, Math.min(100, Math.round(score))),
+    score: clampScore(score, 0, 100, 72),
     weight: SCORE_WEIGHTS.testDrive,
     explanation: `${goodCount} good · ${concernCount} concerns · ${problemCount} problems observed during test drive.`,
   }
@@ -217,7 +260,7 @@ function calculateTestDriveScore(ratings: Record<string, number>): ScoreDimensio
  * OK → FULL, WARNING → PARTIAL, PROBLEM → NONE, PENDING/missing → PARTIAL (cautious default).
  */
 export function deriveServiceHistoryStatus(items: ChecklistItem[]): ServiceHistoryStatus {
-  const item = items.find((i) => i.itemKey === 'doc_service')
+  const item = safeArray<ChecklistItem>(items).find((i) => i?.itemKey === 'doc_service')
   if (!item || item.status === 'PENDING') return 'PARTIAL'
   if (item.status === 'OK')      return 'FULL'
   if (item.status === 'WARNING') return 'PARTIAL'
@@ -285,17 +328,20 @@ function damagePenalty(
   let delta = 0
 
   // Count-based penalty: 3+ accidents = serious damage pattern
-  if (vinData.accidentCount >= 3) {
+  logInvalidNumber('vin.accidentCount', vinData.accidentCount, 0)
+  const accidentCount = Math.max(0, Math.round(safeNumber(vinData.accidentCount, 0)))
+  if (accidentCount >= 3) {
     delta -= 15
     flags.push('HIGH_DAMAGE_COUNT')
-    hints.push(`${vinData.accidentCount} recorded accidents — negotiate at least €1,500 off asking price.`)
+    hints.push(`${accidentCount} recorded accidents — negotiate at least €1,500 off asking price.`)
   }
 
   // Cost-based penalty
-  const maxCostEur = vinData.damageHistory.reduce((max, d) => {
-    if (!d.repairCostEstimate) return max
+  const maxCostEur = safeArray<VehicleHistoryResult['damageHistory'][number]>(vinData.damageHistory).reduce((max, d) => {
+    if (!isValidFiniteNumber(d?.repairCostEstimate)) return max
     // Normalise: treat RSD at approx 117 RSD/EUR, everything else as-is
-    const eur = d.currency === 'RSD' ? d.repairCostEstimate / 117 : (d.repairCostEstimate ?? 0)
+    const repairCost = safeNumber(d.repairCostEstimate, 0)
+    const eur = d.currency === 'RSD' ? repairCost / 117 : repairCost
     return Math.max(max, eur)
   }, 0)
 
@@ -311,9 +357,10 @@ function damagePenalty(
 // ─── Verdict Determination ────────────────────────────────────────────────────
 
 function determineVerdict(buyScore: number): Verdict {
-  if (buyScore >= VERDICT_THRESHOLDS.STRONG_BUY)     return 'STRONG_BUY'
-  if (buyScore >= VERDICT_THRESHOLDS.BUY_WITH_CAUTION) return 'BUY_WITH_CAUTION'
-  if (buyScore >= VERDICT_THRESHOLDS.HIGH_RISK)       return 'HIGH_RISK'
+  const safeScore = clampScore(buyScore, 0, 100, 0)
+  if (safeScore >= VERDICT_THRESHOLDS.STRONG_BUY)     return 'STRONG_BUY'
+  if (safeScore >= VERDICT_THRESHOLDS.BUY_WITH_CAUTION) return 'BUY_WITH_CAUTION'
+  if (safeScore >= VERDICT_THRESHOLDS.HIGH_RISK)       return 'HIGH_RISK'
   return 'WALK_AWAY'
 }
 
@@ -337,7 +384,7 @@ function enforceVerdictCaps(
     verdict === 'STRONG_BUY' ? 'BUY_WITH_CAUTION' : verdict
 
   // No history + any recorded damage → cap at HIGH_RISK
-  const hasDamage = (vinData?.accidentCount ?? 0) > 0 || dmgFlags.length > 0
+  const hasDamage = safeNumber(vinData?.accidentCount, 0) > 0 || dmgFlags.length > 0
   if (hasDamage && afterHistoryCap === 'BUY_WITH_CAUTION') {
     return 'HIGH_RISK'
   }
@@ -355,7 +402,9 @@ function generateReasons(
   const for_: string[] = []
   const against: string[] = []
 
-  const { vinData, aiFindings, checklistItems, hasPremiumHistory } = input
+  const { vinData, hasPremiumHistory } = input
+  const aiFindings = safeArray<AIFinding>(input.aiFindings)
+  const checklistItems = safeArray<ChecklistItem>(input.checklistItems)
 
   // Positive signals
   if (serviceStatus === 'FULL') for_.push('Full service history verified')
@@ -365,7 +414,8 @@ function generateReasons(
     if (!vinData.outstandingFinance)  for_.push('No outstanding finance found')
     if (vinData.theftStatus === 'clean') for_.push('Vehicle not reported stolen')
     if (isMileageConsistent(vinData.mileageHistory)) for_.push('Mileage progression is consistent')
-    if (vinData.ownershipHistory.length <= 2) for_.push(`Only ${vinData.ownershipHistory.length} previous owner(s)`)
+    const ownerCount = safeArray(vinData.ownershipHistory).length
+    if (ownerCount <= 2) for_.push(`Only ${ownerCount} previous owner(s)`)
   }
 
   if (aiFindings.filter((f) => f.severity === 'critical').length === 0) {
@@ -383,7 +433,7 @@ function generateReasons(
     against.push('Service records appear suspicious or inconsistent')
   }
   if (riskFlags.includes('HIGH_DAMAGE_COUNT')) {
-    against.push(`${vinData?.accidentCount ?? 3}+ accidents recorded in vehicle history`)
+    against.push(`${Math.max(3, Math.round(safeNumber(vinData?.accidentCount, 3)))}+ accidents recorded in vehicle history`)
   }
   if (riskFlags.includes('HIGH_REPAIR_HISTORY')) {
     against.push('High recorded repair costs in vehicle history')
@@ -398,8 +448,9 @@ function generateReasons(
     against.push(`${warningFindings.length} AI warnings (paint, gaps, or trim)`)
   }
   if (hasPremiumHistory && vinData) {
-    if (vinData.accidentCount > 0) against.push(`${vinData.accidentCount} accident(s) recorded in history`)
-    const openRecalls = vinData.recalls.filter((r) => r.status === 'incomplete')
+    const accidentCount = Math.max(0, Math.round(safeNumber(vinData.accidentCount, 0)))
+    if (accidentCount > 0) against.push(`${accidentCount} accident(s) recorded in history`)
+    const openRecalls = safeArray<VehicleHistoryResult['recalls'][number]>(vinData.recalls).filter((r) => r?.status === 'incomplete')
     if (openRecalls.length > 0) against.push(`${openRecalls.length} outstanding safety recall(s)`)
     if (vinData.outstandingFinance) against.push('Outstanding finance found — legal risk')
     if (!isMileageConsistent(vinData.mileageHistory)) against.push('Mileage inconsistency detected')
@@ -419,13 +470,13 @@ function calculateAllDimensions(input: ScoreCalculationInput) {
   const { aiFindings, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
 
   return {
-    ai:        calculateAIScore(aiFindings),
-    exterior:  calculateChecklistScore(checklistItems, 'EXTERIOR',   'Exterior Inspection', SCORE_WEIGHTS.exterior),
-    interior:  calculateChecklistScore(checklistItems, 'INTERIOR',   'Interior Inspection', SCORE_WEIGHTS.interior),
-    mechanical:calculateChecklistScore(checklistItems, 'MECHANICAL', 'Mechanical Check',    SCORE_WEIGHTS.mechanical),
+    ai:        calculateAIScore(safeArray<AIFinding>(aiFindings)),
+    exterior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'EXTERIOR',   'Exterior Inspection', SCORE_WEIGHTS.exterior),
+    interior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'INTERIOR',   'Interior Inspection', SCORE_WEIGHTS.interior),
+    mechanical:calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'MECHANICAL', 'Mechanical Check',    SCORE_WEIGHTS.mechanical),
     vin:       calculateVINScore(vinData, hasPremiumHistory),
-    testDrive: calculateTestDriveScore(testDriveRatings),
-    documents: calculateChecklistScore(checklistItems, 'DOCUMENTS',  'Document Check',      SCORE_WEIGHTS.documents),
+    testDrive: calculateTestDriveScore(testDriveRatings ?? {}),
+    documents: calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'DOCUMENTS',  'Document Check',      SCORE_WEIGHTS.documents),
   }
 }
 
@@ -450,23 +501,24 @@ export function calculateRiskScore(
 
   // 1. Weighted average base score
   const totalWeight = Object.values(SCORE_WEIGHTS).reduce((sum, w) => sum + w, 0)
+  const safeTotalWeight = safeNumber(totalWeight, 100) > 0 ? safeNumber(totalWeight, 100) : 100
   const weightedSum = Object.entries(dimensions).reduce((sum, [key, dim]) => {
-    const s = safeNumber(dim.score, 50)
-    if (!Number.isFinite(s)) {
-      console.warn(`[scoring] NaN score in dimension "${key}" — using 50 as fallback`)
-    }
-    return sum + s * (dim.weight / totalWeight)
+    logInvalidNumber(`dimension.${key}.score`, dim.score, 50)
+    logInvalidNumber(`dimension.${key}.weight`, dim.weight, 0)
+    const s = clampScore(dim.score, 0, 100, 50)
+    const w = safeNumber(dim.weight, 0)
+    return sum + s * (w / safeTotalWeight)
   }, 0)
   let buyScore = clampScore(weightedSum, 10, 96, 50)
 
   // 2. Service history modifier
-  const serviceStatus = input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems)
+  const serviceStatus = safeServiceHistoryStatus(input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems))
   const svcEffect     = serviceHistoryEffect(serviceStatus)
-  buyScore = Math.max(10, Math.min(96, buyScore + svcEffect.delta))
+  buyScore = clampScore(buyScore + svcEffect.delta, 10, 96, 50)
 
   // 3. Damage penalty from VIN data
   const dmgEffect = damagePenalty(input.vinData, input.hasPremiumHistory)
-  buyScore = Math.max(10, Math.min(96, buyScore + dmgEffect.delta))
+  buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
 
   // 4. Determine base verdict then enforce caps
   let verdict = determineVerdict(buyScore)
@@ -480,7 +532,7 @@ export function calculateRiskScore(
   return {
     vehicleId,
     buyScore,
-    riskScore: 100 - buyScore,
+    riskScore: clampScore(100 - buyScore, 4, 90, 50),
     verdict,
     dimensions,
     hasPremiumData: input.hasPremiumHistory,
@@ -511,8 +563,9 @@ export function getVerdictLabel(verdict: Verdict): { label: string; emoji: strin
  * CSS color for a raw score value.
  */
 export function getScoreColor(score: number): string {
-  if (score >= 80) return '#00e676'
-  if (score >= 60) return '#ffaa00'
-  if (score >= 40) return '#ff7700'
+  const safeScore = clampScore(score, 0, 100, 0)
+  if (safeScore >= 80) return '#00e676'
+  if (safeScore >= 60) return '#ffaa00'
+  if (safeScore >= 40) return '#ff7700'
   return '#ff4757'
 }

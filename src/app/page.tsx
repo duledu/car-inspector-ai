@@ -1332,9 +1332,27 @@ function Footer() {
           justifyContent: 'space-between',
           gap: 16,
         }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '-0.1px' }}>
-            {t('landing.footer.tagline')}
-          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '-0.1px' }}>
+              {t('landing.footer.tagline')}
+            </span>
+            <Link
+              href="/legal/privacy"
+              style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none', letterSpacing: '-0.1px', transition: 'color 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.28)' }}
+            >
+              {t('landing.footer.privacy')}
+            </Link>
+            <Link
+              href="/legal/terms"
+              style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none', letterSpacing: '-0.1px', transition: 'color 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.28)' }}
+            >
+              {t('landing.footer.terms')}
+            </Link>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <Link
               href="/auth"

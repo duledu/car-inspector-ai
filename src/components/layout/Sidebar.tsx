@@ -173,6 +173,21 @@ export function Sidebar() {
             {t('nav.backToLanding')}
           </div>
         </Link>
+
+        <div style={{ display: 'flex', gap: 10, padding: '0 12px', flexWrap: 'wrap' }}>
+          <Link
+            href="/legal/privacy"
+            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
+          >
+            {t('nav.privacy')}
+          </Link>
+          <Link
+            href="/legal/terms"
+            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
+          >
+            {t('nav.terms')}
+          </Link>
+        </div>
       </div>
     </div>
   )

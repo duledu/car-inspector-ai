@@ -276,7 +276,22 @@ function AuthPageContent() {
 
         {/* Footer note */}
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6 }}>
-          {t('auth.termsNote')}
+          <div>{t('auth.termsNote')}</div>
+          <div style={{ marginTop: 6 }}>
+            <Link href="/legal/terms" style={{ color: 'rgba(255,255,255,0.32)', textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.32)' }}
+            >
+              {t('nav.terms')}
+            </Link>
+            <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.12)' }}>·</span>
+            <Link href="/legal/privacy" style={{ color: 'rgba(255,255,255,0.32)', textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.32)' }}
+            >
+              {t('nav.privacy')}
+            </Link>
+          </div>
         </div>
       </div>
       </div>{/* end left column */}

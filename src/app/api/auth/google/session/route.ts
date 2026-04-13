@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { apiError } from '@/utils/api-response'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -14,10 +15,7 @@ export async function GET(req: NextRequest) {
   const raw = req.cookies.get('gauth_session')?.value
 
   if (!raw) {
-    const response = NextResponse.json(
-      { message: 'No pending Google session', code: 'NO_SESSION' },
-      { status: 404 }
-    )
+    const response = apiError('No pending Google session', { status: 404, code: 'NO_SESSION' })
     response.headers.set('Cache-Control', 'no-store')
     return response
   }
@@ -30,10 +28,7 @@ export async function GET(req: NextRequest) {
     response.cookies.delete('gauth_session')
     return response
   } catch {
-    const response = NextResponse.json(
-      { message: 'Malformed session cookie', code: 'INVALID_SESSION' },
-      { status: 400 }
-    )
+    const response = apiError('Malformed session cookie', { status: 400, code: 'INVALID_SESSION' })
     response.headers.set('Cache-Control', 'no-store')
     return response
   }

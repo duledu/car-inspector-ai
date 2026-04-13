@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
+import { apiError, logApiError } from '@/utils/api-response'
 
 const CreateSchema = z.object({ recipientId: z.string() })
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
-  if (!auth.success) return NextResponse.json({ message: auth.reason }, { status: 401 })
+  if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
 
-  const conversations = await prisma.conversation.findMany({
+  try {
+    const conversations = await prisma.conversation.findMany({
     where: {
       participants: { some: { userId: auth.userId } },
     },
@@ -54,24 +56,34 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  return NextResponse.json({ data: shaped })
+    return NextResponse.json({ data: shaped })
+  } catch (err) {
+    logApiError('messaging/conversations', 'listConversations', err)
+    return apiError('Failed to fetch conversations', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
-  if (!auth.success) return NextResponse.json({ message: auth.reason }, { status: 401 })
+  if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
 
-  const body = await req.json()
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
+  }
   const parsed = CreateSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ message: 'recipientId is required' }, { status: 400 })
+  if (!parsed.success) return apiError('recipientId is required', { status: 400, code: 'VALIDATION_ERROR' })
 
   const { recipientId } = parsed.data
   if (recipientId === auth.userId) {
-    return NextResponse.json({ message: 'Cannot start conversation with yourself' }, { status: 400 })
+    return apiError('Cannot start conversation with yourself', { status: 400, code: 'VALIDATION_ERROR' })
   }
 
-  // Check for existing conversation between these two users
-  const existing = await prisma.conversation.findFirst({
+  try {
+    // Check for existing conversation between these two users
+    const existing = await prisma.conversation.findFirst({
     where: {
       participants: { every: { userId: { in: [auth.userId, recipientId] } } },
     },
@@ -81,9 +93,9 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  if (existing) return NextResponse.json({ data: existing })
+    if (existing) return NextResponse.json({ data: existing })
 
-  const conv = await prisma.conversation.create({
+    const conv = await prisma.conversation.create({
     data: {
       participants: {
         create: [{ userId: auth.userId }, { userId: recipientId }],
@@ -95,5 +107,9 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  return NextResponse.json({ data: { ...conv, lastMessage: null, unreadCount: 0 } }, { status: 201 })
+    return NextResponse.json({ data: { ...conv, lastMessage: null, unreadCount: 0 } }, { status: 201 })
+  } catch (err) {
+    logApiError('messaging/conversations', 'createConversation', err)
+    return apiError('Failed to create conversation', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }

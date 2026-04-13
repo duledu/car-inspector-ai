@@ -7,40 +7,49 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { scoringService } from '@/modules/scoring'
 import { requireAuth } from '@/utils/auth.middleware'
+import { apiError, logApiError } from '@/utils/api-response'
 
 const schema = z.object({ vehicleId: z.string().min(1) })
 
 export async function POST(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (!authResult.success) {
-    return NextResponse.json({ message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {
-    return NextResponse.json({ message: 'vehicleId is required', code: 'VALIDATION_ERROR' }, { status: 422 })
+    return apiError('vehicleId is required', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   try {
     const score = await scoringService.computeAndPersist(parsed.data.vehicleId, authResult.userId)
     return NextResponse.json({ data: score })
   } catch (err: any) {
-    console.error('[inspection/score] Error:', err)
-    return NextResponse.json({ message: 'Score calculation failed', code: 'INTERNAL_ERROR' }, { status: 500 })
+    if (err?.message === 'VEHICLE_NOT_FOUND') {
+      return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
+    }
+    logApiError('inspection', 'computeAndPersist', err, { vehicleId: parsed.data.vehicleId })
+    return apiError('Score calculation failed', { status: 500, code: 'INTERNAL_ERROR' })
   }
 }
 
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (!authResult.success) {
-    return NextResponse.json({ message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
 
   const vehicleId = req.nextUrl.searchParams.get('vehicleId')
   if (!vehicleId) {
-    return NextResponse.json({ message: 'vehicleId query param required', code: 'VALIDATION_ERROR' }, { status: 422 })
+    return apiError('vehicleId query param required', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
-  const score = await scoringService.getLatest(vehicleId)
-  return NextResponse.json({ data: score })
+  try {
+    const score = await scoringService.getLatest(vehicleId)
+    return NextResponse.json({ data: score })
+  } catch (err) {
+    logApiError('inspection', 'getLatest', err, { vehicleId })
+    return apiError('Failed to fetch score', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }
