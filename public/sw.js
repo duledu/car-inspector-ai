@@ -109,7 +109,6 @@ globalThis.addEventListener('install', (event) => {
 });
 
 globalThis.addEventListener('message', (event) => {
-  if (event.origin !== self.location.origin) return;
   if (event.data?.type === 'SKIP_WAITING') {
     globalThis.skipWaiting();
   }

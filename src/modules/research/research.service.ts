@@ -167,7 +167,7 @@ function buildPriceContext(
     summary = `Estimated Serbia market range for this vehicle: ${rangeStr} (avg €${avgPrice.toLocaleString('de-DE')}).`
   } else if (askingPrice < minPrice * 0.9) {
     evaluation      = 'low'
-    evaluationLabel = 'Below market — investigate why'
+    evaluationLabel = 'Below market, investigate why'
     summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is below the typical Serbia range of ${rangeStr}. Unusually low prices warrant extra scrutiny.`
   } else if (askingPrice > maxPrice * 1.1) {
     evaluation      = 'high'

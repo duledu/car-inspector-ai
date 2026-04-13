@@ -141,7 +141,7 @@ export default function CommunityPage() {
             <div style={{ fontSize: 13, fontWeight: 700, color: '#22d3ee', marginBottom: 16 }}>New Post</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input
-                placeholder="Title — what's it about?"
+                placeholder="Title, what's it about?"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 required

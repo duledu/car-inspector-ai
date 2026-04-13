@@ -36,7 +36,7 @@ export class PricingService {
         console.log(
           `[pricing] ${provider.providerId} → ${result.minPrice}–${result.maxPrice} EUR` +
           ` (${result.confidence})` +
-          (result.listingCount != null && result.listingCount > 0 ? ` — ${result.listingCount} listings` : '')
+          (result.listingCount != null && result.listingCount > 0 ? `, ${result.listingCount} listings` : '')
         )
         return result
       } catch (err) {

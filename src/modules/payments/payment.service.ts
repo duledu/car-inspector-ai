@@ -24,7 +24,7 @@ const PRODUCT_PRICES: Record<string, { amountCents: number; currency: string; la
   AI_DEEP_SCAN: {
     amountCents: 999,
     currency: 'EUR',
-    label: 'AI Deep Photo Analysis — Full Scan',
+    label: 'AI Deep Photo Analysis, Full Scan',
   },
   FULL_INSPECTION_BUNDLE: {
     amountCents: 2499,

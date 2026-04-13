@@ -69,7 +69,7 @@ export default function ProfilePage() {
 
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
-    : '—'
+    : 'Not available'
 
   const paidReports = purchaseHistory.filter(p => p.status === 'PAID').length
 

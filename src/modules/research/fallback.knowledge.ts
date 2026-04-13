@@ -25,11 +25,11 @@ const BMW_KNOWLEDGE = {
     item('Cooling System Failures', 'Water pump and thermostat are known weak points, especially plastic housings on 6-cylinder engines. Failure can lead to overheating rapidly.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
     item('Oil Leaks', 'Valve cover gaskets, oil filter housing gaskets, and rear crankshaft seals commonly leak on high-mileage examples. Look for oil residue around the engine block.', 'medium', ['COMMON_ISSUE']),
     item('Electronics & Comfort Features', 'Window regulators, iDrive glitches, and comfort module failures are frequently reported. These are minor but expensive to diagnose and repair at a dealership.', 'medium', ['COMMON_ISSUE']),
-    item('N47 Timing Chain (4-cyl diesel)', 'Applies to 318d, 320d, 520d. The timing chain can rattle and fail catastrophically — check for cold-start rattle. Not applicable to N57 (530d) or N55/N52 petrol.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('N47 Timing Chain (4-cyl diesel)', 'Applies to 318d, 320d, 520d. The timing chain can rattle and fail catastrophically, check for cold-start rattle. Not applicable to N57 (530d) or N55/N52 petrol.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
     item('High-Pressure Fuel Pump (diesel)', 'HPFP failure causes hard starting, misfires, and white smoke. Common on high-mileage diesel examples. Listen for rough idle and hesitation under load.', 'medium', ['COMMON_ISSUE']),
   ]),
   highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
-    item('Cold Start — Engine Sound', 'Idle the car for 2+ minutes when cold. A rattling or ticking sound at startup can indicate timing chain wear or VANOS actuator issues.', 'high', ['HIGH_ATTENTION']),
+    item('Cold Start, Engine Sound', 'Idle the car for 2+ minutes when cold. A rattling or ticking sound at startup can indicate timing chain wear or VANOS actuator issues.', 'high', ['HIGH_ATTENTION']),
     item('Coolant Level & Condition', 'Check the expansion tank. BMW coolant should be blue/green and full. Brown or murky coolant signals internal corrosion or head gasket issues.', 'high', ['HIGH_ATTENTION']),
     item('Oil Level & Quality', 'Check the oil. Excessive oil consumption (>1L per 1000km) is reported on some N-series engines. Look for mayonnaise under the cap (coolant contamination).', 'high', ['HIGH_ATTENTION']),
     item('Service History Completeness', 'BMW maintenance is expensive. A missing service record (especially timing chain service or DSC/brake fluid service) is a major red flag.', 'high', ['HIGH_ATTENTION']),
@@ -37,14 +37,14 @@ const BMW_KNOWLEDGE = {
   visualAttention: section('visualAttention', 'Visual Attention Areas', [
     item('Rear Subframe for Rust', 'F10/E60/E90-era BMWs can develop rust around the rear subframe mounting points. Inspect underneath if possible.', 'high', ['VISUAL_CHECK']),
     item('Sunroof Drains', 'Blocked sunroof drains cause water to pool in the footwells and damage electronics. Check for damp carpets.', 'medium', ['VISUAL_CHECK']),
-    item('Panel Gaps & Paint Uniformity', 'Check all body panels for inconsistent gaps or colour variations — indicators of previous accident repair.', 'medium', ['VISUAL_CHECK']),
+    item('Panel Gaps & Paint Uniformity', 'Check all body panels for inconsistent gaps or colour variations, indicators of previous accident repair.', 'medium', ['VISUAL_CHECK']),
     item('Tyre Wear Pattern', 'Uneven tyre wear points to suspension, alignment, or camber issues. BMW sport suspension components are expensive to replace.', 'medium', ['VISUAL_CHECK']),
   ]),
   mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
     item('VANOS System', 'The variable valve timing system can fail causing rough idle and poor performance. Listen for rattling at idle or irregular engine note.', 'medium', ['COMMON_ISSUE']),
     item('Automatic Transmission (ZF 8HP)', 'The ZF 8-speed is generally reliable but needs regular fluid changes. Ask for transmission service history. Hesitation or harsh shifts suggest low fluid or worn clutch packs.', 'medium', ['COMMON_ISSUE']),
     item('Rear Integral Link Bushings', 'F10 5-series has hydraulic rear bushings that deteriorate. Worn bushings cause rear-end instability and tyre wear. Listen for clunks over bumps.', 'medium', ['COMMON_ISSUE']),
-    item('Brakes — Size & Cost', 'BMW brakes are larger than average. Rear callipers seize if the parking brake is rarely used. Budget for brake pad/disc replacement ($600–$1200 at an independent).', 'low', ['EXPENSIVE_RISK']),
+    item('Brakes, Size & Cost', 'BMW brakes are larger than average. Rear callipers seize if the parking brake is rarely used. Budget for brake pad/disc replacement ($600–$1200 at an independent).', 'low', ['EXPENSIVE_RISK']),
   ]),
   testDriveFocus: section('testDriveFocus', 'Test Drive Focus', [
     item('Transmission Smoothness', 'Automatic should shift seamlessly in all modes. Any shudder, hunting between gears, or hard downshift requires immediate investigation.', 'high', ['TEST_DRIVE']),
@@ -99,12 +99,12 @@ const AUDI_VW_KNOWLEDGE = {
     item('MMI/Electronics Failures', 'MMI infotainment units fail (black screen, no sound). Fan control units on Audi also commonly fail causing overheating.', 'medium', ['COMMON_ISSUE']),
   ]),
   highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
-    item('Timing Belt/Chain Service Date', 'For timing belt engines, confirm exact date and mileage of last replacement. This is a critical safety item — do not guess.', 'high', ['HIGH_ATTENTION']),
+    item('Timing Belt/Chain Service Date', 'For timing belt engines, confirm exact date and mileage of last replacement. This is a critical safety item, do not guess.', 'high', ['HIGH_ATTENTION']),
     item('DSG Shudder Test', 'At low speed (5–15 mph) in a car park, maintain light throttle. Any judder, vibration, or hesitation indicates DSG clutch pack or mechatronic wear.', 'high', ['HIGH_ATTENTION']),
     item('VCDS Fault Code Scan', 'Audi/VW-specific diagnostics reveal faults invisible to generic tools. VCDS or ODIS scan should be performed before purchase.', 'high', ['HIGH_ATTENTION']),
   ]),
   visualAttention: section('visualAttention', 'Visual Attention Areas', [
-    item('Oil Filler Cap — Mayonnaise', 'Remove the oil filler cap and check for creamy residue. This indicates coolant contamination and potential head gasket failure (common on 2.0 TFSI).', 'high', ['VISUAL_CHECK']),
+    item('Oil Filler Cap, Mayonnaise', 'Remove the oil filler cap and check for creamy residue. This indicates coolant contamination and potential head gasket failure (common on 2.0 TFSI).', 'high', ['VISUAL_CHECK']),
     item('Rear Torsion Beam Rust (VW)', 'On Golf/Jetta/Passat, inspect the rear torsion beam for rust. Surface rust is normal; penetrating rust is structural.', 'medium', ['VISUAL_CHECK']),
     item('Sunroof Seal & Water Ingress', 'Check the A-pillar trim and footwell carpets for water staining. Blocked sunroof drains flood the cabin and damage ECUs.', 'medium', ['VISUAL_CHECK']),
   ]),
@@ -152,7 +152,7 @@ const TOYOTA_KNOWLEDGE = {
 
 const FORD_KNOWLEDGE = {
   commonProblems: section('commonProblems', 'Common Problems', [
-    item('EcoBoost Turbo & Coolant Issues', '1.0 EcoBoost can overheat if coolant level drops. Coolant mixing with oil is reported. Check for head gasket issues — common on early EcoBoost.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+    item('EcoBoost Turbo & Coolant Issues', '1.0 EcoBoost can overheat if coolant level drops. Coolant mixing with oil is reported. Check for head gasket issues, common on early EcoBoost.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
     item('PowerShift Dual-Clutch Gearbox', 'The Powershift DCT fitted to Focus and Fiesta (2010–2016) is notorious for shudder and hesitation at low speeds. Avoid examples with this symptom.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
     item('Rust on Wheel Arches & Sills', 'Older Fiestas, Focuses and Mondeos can suffer significant rust on sills, rear arches, and rear bumper mounting areas.', 'medium', ['COMMON_ISSUE']),
     item('Front Suspension Wear', 'Front lower wishbone ball joints and anti-roll bar links wear quickly, causing knocking over bumps. Repair is inexpensive but check carefully.', 'medium', ['COMMON_ISSUE']),
@@ -163,7 +163,7 @@ const FORD_KNOWLEDGE = {
     item('Rust Under Body', 'Get underneath or use an inspection mirror to check sills, floor pan junctions, and rear subframe mounts.', 'medium', ['HIGH_ATTENTION']),
   ]),
   visualAttention: section('visualAttention', 'Visual Attention Areas', [
-    item('Sills at the Front Jack Point', 'Fords commonly rust through the sill at the front jacking point. Poke the metal gently with a key — soft or flaking metal is structural failure.', 'high', ['VISUAL_CHECK']),
+    item('Sills at the Front Jack Point', 'Fords commonly rust through the sill at the front jacking point. Poke the metal gently with a key, soft or flaking metal is structural failure.', 'high', ['VISUAL_CHECK']),
     item('Rear Arch Inner Surface', 'The inner surface of rear arches traps mud and can rot from the inside out. Look with a torch into the wheel arch cavity.', 'medium', ['VISUAL_CHECK']),
   ]),
   mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
@@ -176,7 +176,7 @@ const FORD_KNOWLEDGE = {
   ]),
   costAwareness: section('costAwareness', 'Cost Awareness', [
     item('PowerShift Clutch Pack Replacement', 'Dual-clutch replacement: £1,200–£2,500 at an independent. A full gearbox remanufacture is £3,000+. This is a major negotiating point.', 'high', ['EXPENSIVE_RISK']),
-    item('EcoBoost Head Gasket', 'Head gasket replacement on 1.0 EcoBoost: £700–£1,500. Catch it early — overheating destroys the head.', 'high', ['EXPENSIVE_RISK']),
+    item('EcoBoost Head Gasket', 'Head gasket replacement on 1.0 EcoBoost: £700–£1,500. Catch it early, overheating destroys the head.', 'high', ['EXPENSIVE_RISK']),
   ]),
 }
 
@@ -192,22 +192,22 @@ function buildGenericResult(make: string, model: string, year: number): VehicleR
     summary: `Detailed AI research for the ${vehicleKey} is temporarily unavailable. The guide below covers universal inspection priorities that apply to all used vehicles. Always verify findings with a qualified mechanic.`,
     sections: {
       commonProblems: section('commonProblems', 'Common Problems', [
-        item('Engine Oil Consumption', 'Many engines consume oil between service intervals. Check the dipstick — if it is below the minimum mark, this indicates an issue that should be investigated.', 'medium', ['COMMON_ISSUE']),
+        item('Engine Oil Consumption', 'Many engines consume oil between service intervals. Check the dipstick; if it is below the minimum mark, this indicates an issue that should be investigated.', 'medium', ['COMMON_ISSUE']),
         item('Automatic Transmission Wear', 'Automatic gearboxes deteriorate without regular fluid changes. Hesitation, rough shifts, or slipping are warning signs requiring specialist inspection.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
-        item('Rust on Structural Areas', 'Rust on sills, subframes, and floor pans affects structural integrity. Cosmetic rust is different — learn to distinguish surface from penetrating rust.', 'medium', ['COMMON_ISSUE']),
+        item('Rust on Structural Areas', 'Rust on sills, subframes, and floor pans affects structural integrity. Cosmetic rust is different, learn to distinguish surface from penetrating rust.', 'medium', ['COMMON_ISSUE']),
       ]),
       highPriorityChecks: section('highPriorityChecks', 'High-Priority Checks', [
-        item('Service History — Verify Every Entry', 'Cross-reference stamps with receipts where possible. A gap in service history on a complex vehicle is a negotiation point.', 'high', ['HIGH_ATTENTION']),
+        item('Service History, Verify Every Entry', 'Cross-reference stamps with receipts where possible. A gap in service history on a complex vehicle is a negotiation point.', 'high', ['HIGH_ATTENTION']),
         item('OBD Diagnostic Scan', 'A basic OBD reader reveals stored and pending fault codes. Do this before the test drive. Clear codes can mask recurring problems.', 'high', ['HIGH_ATTENTION']),
         item('Independent Pre-Purchase Inspection', 'A mechanic inspection (£100–£200) is the single best investment before any used car purchase over £3,000.', 'high', ['HIGH_ATTENTION']),
       ]),
       visualAttention: section('visualAttention', 'Visual Attention Areas', [
         item('Paint Thickness & Panel Colour Match', 'Stand back and look along the panels in good light. Any colour variation or orange peel differences indicate body repair. A paint depth meter is ideal.', 'medium', ['VISUAL_CHECK']),
-        item('Underneath — Fluid Leaks & Rust', 'Inspect the underside with a torch. Look for fresh oil spots, coolant staining, and any rust on the subframe or floor pan.', 'high', ['VISUAL_CHECK']),
-        item('Tyre Condition & Wear Pattern', 'Uneven wear across the tread indicates alignment or suspension problems. Check age stamps on the sidewall — tyres over 6 years old should be replaced regardless of tread.', 'medium', ['VISUAL_CHECK']),
+        item('Underneath, Fluid Leaks & Rust', 'Inspect the underside with a torch. Look for fresh oil spots, coolant staining, and any rust on the subframe or floor pan.', 'high', ['VISUAL_CHECK']),
+        item('Tyre Condition & Wear Pattern', 'Uneven wear across the tread indicates alignment or suspension problems. Check age stamps on the sidewall, tyres over 6 years old should be replaced regardless of tread.', 'medium', ['VISUAL_CHECK']),
       ]),
       mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanical Watchouts', [
-        item('Timing Belt / Chain Service', 'Confirm whether the engine uses a belt or chain, and if it is a belt — when it was last changed. Missed interval = catastrophic engine failure risk.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Timing Belt / Chain Service', 'Confirm whether the engine uses a belt or chain, and if it is a belt, when it was last changed. Missed interval = catastrophic engine failure risk.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
         item('Cooling System Condition', 'Check that the coolant is the correct colour and the level is stable. A cold engine should never require topping up between services.', 'high', ['COMMON_ISSUE']),
         item('Clutch Feel (manual gearbox)', 'For manual cars, the clutch should engage smoothly in the lower third of pedal travel. Engagement very high up indicates a worn clutch near the end of its life.', 'medium', ['COMMON_ISSUE']),
       ]),
@@ -222,7 +222,7 @@ function buildGenericResult(make: string, model: string, year: number): VehicleR
         item('Pre-Purchase Inspection', 'An independent inspection by a marque specialist is £100–£250. This fee saves thousands by catching hidden faults before you sign.', 'medium', ['HIGH_ATTENTION']),
       ]),
     },
-    disclaimer: 'This guide is based on general vehicle inspection principles due to limited vehicle-specific data. Use as a starting checklist only — always verify with a qualified mechanic before purchase.',
+    disclaimer: 'This guide is based on general vehicle inspection principles due to limited vehicle-specific data. Use as a starting checklist only, always verify with a qualified mechanic before purchase.',
   }
 }
 
@@ -306,7 +306,7 @@ function buildBrandResult(make: string, model: string, year: number): VehicleRes
     generatedAt: new Date().toISOString(),
     confidence: 'medium',
     overallRiskLevel: 'moderate',
-    summary: `The ${vehicleKey} is covered by our model knowledge base. The guide below reflects commonly reported issues for this brand generation. AI live data is temporarily unavailable — findings are based on known patterns.`,
+    summary: `The ${vehicleKey} is covered by our model knowledge base. The guide below reflects commonly reported issues for this brand generation. AI live data is temporarily unavailable, findings are based on known patterns.`,
     sections: knowledge,
     disclaimer: 'This guide is based on our built-in knowledge base for this vehicle brand. Findings reflect commonly reported issues and may not reflect all individual variants. AI live analysis was unavailable at the time of generation. Always verify with a qualified mechanic.',
   }

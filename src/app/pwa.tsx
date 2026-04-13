@@ -16,6 +16,13 @@ export function PWAProvider() {
   const [updateReady, setUpdateReady] = useState(false)
   const waitingSWRef = useRef<ServiceWorker | null>(null)
   const reloadingRef = useRef(false)
+  const reloadTriggeredRef = useRef(false)
+
+  const reloadOnce = useCallback(() => {
+    if (reloadTriggeredRef.current) return
+    reloadTriggeredRef.current = true
+    globalThis.location.reload()
+  }, [])
 
   // Migrate old localStorage language preferences into the cookie source of
   // truth. The next SSR request can then render with the same language.
@@ -63,7 +70,7 @@ export function PWAProvider() {
     }
 
     const onControllerChange = () => {
-      if (reloadingRef.current) globalThis.location.reload()
+      if (reloadingRef.current) reloadOnce()
     }
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
 
@@ -98,17 +105,37 @@ export function PWAProvider() {
       removeUpdateFound?.()
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
     }
-  }, [])
+  }, [reloadOnce])
 
-  const handleUpdate = useCallback(() => {
+  const handleUpdate = useCallback(async () => {
+    if (reloadingRef.current) return
     reloadingRef.current = true
-    const sw = waitingSWRef.current
+
+    let sw: ServiceWorker | null = null
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration('/')
+      sw = registration?.waiting ?? null
+
+      if (!sw && registration) {
+        try {
+          const updatedRegistration = await registration.update()
+          sw = updatedRegistration.waiting ?? null
+        } catch {
+          // Fall back to a normal reload below.
+        }
+      }
+    }
+
+    if (!sw && waitingSWRef.current?.state === 'installed') {
+      sw = waitingSWRef.current
+    }
+
     if (sw) {
       sw.postMessage({ type: 'SKIP_WAITING' })
     } else {
-      globalThis.location.reload()
+      reloadOnce()
     }
-  }, [])
+  }, [reloadOnce])
 
   const handleDismiss = useCallback(() => {
     setUpdateReady(false)

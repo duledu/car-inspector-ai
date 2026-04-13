@@ -252,7 +252,7 @@ export default function DashboardPage() {
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
             },
             {
-              value: progress > 0 ? `${progress}%` : '—', labelKey: 'dashboard.progress', href: '/inspection', color: '#818cf8',
+              value: progress > 0 ? `${progress}%` : '0%', labelKey: 'dashboard.progress', href: '/inspection', color: '#818cf8',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
             },
             {

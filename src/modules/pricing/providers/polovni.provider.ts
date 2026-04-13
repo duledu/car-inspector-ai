@@ -286,8 +286,8 @@ export class PalovniProvider implements VehiclePriceProviderInterface {
       : 'broad market'
 
     const sourceLabel = relaxed
-      ? `Polovni Automobili — ${stats.count} listings (filters partially matched)`
-      : `Polovni Automobili — ${stats.count} listings (${filterLabel})`
+      ? `Polovni Automobili, ${stats.count} listings (filters partially matched)`
+      : `Polovni Automobili, ${stats.count} listings (${filterLabel})`
 
     return {
       minPrice: stats.min,
@@ -297,7 +297,7 @@ export class PalovniProvider implements VehiclePriceProviderInterface {
       confidence,
       source: sourceLabel,
       note: relaxed
-        ? 'Based on broader market data — exact filters reduced results too much'
+        ? 'Based on broader market data, exact filters reduced results too much'
         : `Based on ${stats.count} listings (${filterLabel})`,
       listingCount: stats.count,
       filtersUsed: filtersApplied,

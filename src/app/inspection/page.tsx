@@ -351,6 +351,7 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
           const s         = STATUS_CFG[item.status]
           const hasNote   = !!(noteDraft[item.id])
           const expanded  = noteExpanded[item.id] ?? false
+          const helperText = t(`checklistHelper.${item.itemKey}`, { defaultValue: '' })
           return (
             <div key={item.id} style={{
               padding: '13px 14px', borderRadius: 12,
@@ -360,6 +361,60 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
               <div style={{ fontSize: 13, fontWeight: 500, color: item.status === 'PENDING' ? 'rgba(255,255,255,0.82)' : '#fff', marginBottom: 10, lineHeight: 1.4 }}>
                 {t(`checklist.${item.itemKey}`, { defaultValue: item.itemLabel })}
               </div>
+              {helperText && (
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.46)', lineHeight: 1.55, margin: '-3px 0 10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {helperText}
+                </div>
+              )}
+
+              {/* Note toggle + textarea */}
+              <div style={{ marginBottom: 9 }}>
+                <button
+                  onClick={() => setNoteExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 8px',
+                    background: 'transparent',
+                    border: `1px solid ${hasNote ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.06)'}`,
+                    borderRadius: 6,
+                    fontSize: 11, fontWeight: 500,
+                    color: hasNote ? 'rgba(34,211,238,0.7)' : 'rgba(255,255,255,0.28)',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                >
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  {t('inspection.note')}
+                  {hasNote && (
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#22d3ee', flexShrink: 0 }} />
+                  )}
+                </button>
+
+                {expanded && (
+                  <textarea
+                    value={noteDraft[item.id] ?? ''}
+                    onChange={e => handleNoteChange(item.id, e.target.value)}
+                    placeholder={t(`checklistPlaceholder.${item.itemKey}`, { defaultValue: t('inspection.notePlaceholder') })}
+                    rows={2}
+                    style={{
+                      display: 'block', marginTop: 7, width: '100%',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 9,
+                      padding: '9px 11px',
+                      color: 'rgba(255,255,255,0.75)',
+                      fontSize: 12, lineHeight: 1.6,
+                      fontFamily: 'var(--font-sans)',
+                      resize: 'none', outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                )}
+              </div>
+
               {/* Status buttons */}
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['OK', 'WARNING', 'PROBLEM'] as ItemStatus[]).map(st => {
@@ -390,54 +445,6 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
                     </button>
                   )
                 })}
-              </div>
-
-              {/* Note toggle + textarea */}
-              <div style={{ marginTop: 9 }}>
-                <button
-                  onClick={() => setNoteExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '3px 8px',
-                    background: 'transparent',
-                    border: `1px solid ${hasNote ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.06)'}`,
-                    borderRadius: 6,
-                    fontSize: 11, fontWeight: 500,
-                    color: hasNote ? 'rgba(34,211,238,0.7)' : 'rgba(255,255,255,0.28)',
-                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                    transition: 'border-color 0.15s, color 0.15s',
-                  }}
-                >
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                  {t('inspection.note')}
-                  {hasNote && (
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#22d3ee', flexShrink: 0 }} />
-                  )}
-                </button>
-
-                {expanded && (
-                  <textarea
-                    value={noteDraft[item.id] ?? ''}
-                    onChange={e => handleNoteChange(item.id, e.target.value)}
-                    placeholder={t('inspection.notePlaceholder')}
-                    rows={2}
-                    style={{
-                      display: 'block', marginTop: 7, width: '100%',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 9,
-                      padding: '9px 11px',
-                      color: 'rgba(255,255,255,0.75)',
-                      fontSize: 12, lineHeight: 1.6,
-                      fontFamily: 'var(--font-sans)',
-                      resize: 'none', outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                )}
               </div>
             </div>
           )
