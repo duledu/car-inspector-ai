@@ -14,7 +14,7 @@
 // stream has already been handed to the browser.
 // =============================================================================
 
-const CACHE_NAME = 'car-inspector-v6';
+const CACHE_NAME = 'car-inspector-v7';
 
 function toUrl(input) {
   return new URL(typeof input === 'string' ? input : input.url);
@@ -98,14 +98,9 @@ async function putInCache(request, response) {
   await cache.put(request, response);
 }
 
-// Critical auth-routing fix: activate this worker immediately so older workers
-// with broad page caching cannot keep intercepting OAuth completion pages.
+// Updates wait until the app sends SKIP_WAITING from the visible update prompt.
 globalThis.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then(() => globalThis.skipWaiting())
-  );
+  event.waitUntil(caches.open(CACHE_NAME));
 });
 
 globalThis.addEventListener('message', (event) => {

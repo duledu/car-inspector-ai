@@ -26,6 +26,20 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // Digital Asset Links — must be served with correct Content-Type for TWA verification
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600',
+          },
+        ],
+      },
     ]
   },
 }
