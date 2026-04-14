@@ -12,8 +12,9 @@ import { usePaymentStore } from '@/store'
 import type { Vehicle, PremiumProduct } from '@/types'
 
 interface Props {
-  vehicle: Vehicle
+  vehicle?: Vehicle
   productType: PremiumProduct
+  comingSoon?: boolean
 }
 
 const PRODUCT_FEATURES: Record<PremiumProduct, string[]> = {
@@ -46,12 +47,13 @@ const PRODUCT_PRICES: Record<PremiumProduct, string> = {
   FULL_INSPECTION_BUNDLE: '€24.99',
 }
 
-export function PremiumLockedState({ vehicle, productType }: Props) {
+export function PremiumLockedState({ vehicle, productType, comingSoon = false }: Props) {
   const { t } = useTranslation()
   const { startCheckout, isCreatingCheckout, error } = usePaymentStore()
   const [clicked, setClicked] = useState(false)
 
   const handlePurchase = async () => {
+    if (!vehicle) return
     setClicked(true)
     try {
       const checkout = await startCheckout(vehicle.id, productType)
@@ -108,23 +110,25 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
           <strong style={{ color: '#a855f7' }}>{t('premiumPage.locked.noticeAddOn')}</strong>{' '}
           {t('premiumPage.locked.noticeSuffix')}
         </div>
-        <div
-          style={{
-            padding: '10px 14px',
-            background: 'rgba(255,170,0,0.08)',
-            border: '1px solid rgba(255,170,0,0.2)',
-            borderRadius: 8,
-            fontSize: 12,
-            color: '#ffaa00',
-            lineHeight: 1.7,
-          }}
-        >
-          {t('premiumPage.locked.accessPrefix')}{' '}
-          <strong>
-            {vehicle.year} {vehicle.make} {vehicle.model}
-          </strong>{' '}
-          {t('premiumPage.locked.accessSuffix')}
-        </div>
+        {vehicle && (
+          <div
+            style={{
+              padding: '10px 14px',
+              background: 'rgba(255,170,0,0.08)',
+              border: '1px solid rgba(255,170,0,0.2)',
+              borderRadius: 8,
+              fontSize: 12,
+              color: '#ffaa00',
+              lineHeight: 1.7,
+            }}
+          >
+            {t('premiumPage.locked.accessPrefix')}{' '}
+            <strong>
+              {vehicle.year} {vehicle.make} {vehicle.model}
+            </strong>{' '}
+            {t('premiumPage.locked.accessSuffix')}
+          </div>
+        )}
       </div>
 
       {/* Pricing Card */}
@@ -206,8 +210,8 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
 
         {/* CTA Button */}
         <button
-          onClick={handlePurchase}
-          disabled={isCreatingCheckout || clicked}
+          onClick={comingSoon ? undefined : handlePurchase}
+          disabled={comingSoon || isCreatingCheckout || clicked}
           style={{
             width: '100%',
             padding: '16px',
@@ -218,13 +222,17 @@ export function PremiumLockedState({ vehicle, productType }: Props) {
             fontSize: 15,
             fontWeight: 700,
             fontFamily: 'var(--font-sans)',
-            cursor: isCreatingCheckout ? 'not-allowed' : 'pointer',
+            cursor: comingSoon || isCreatingCheckout ? 'not-allowed' : 'pointer',
             boxShadow: '0 0 24px rgba(168,85,247,0.3)',
-            opacity: isCreatingCheckout ? 0.7 : 1,
+            opacity: comingSoon ? 0.45 : isCreatingCheckout ? 0.7 : 1,
             transition: 'all 0.2s ease',
           }}
         >
-          {isCreatingCheckout ? t('premiumPage.locked.preparingCheckout') : t('premiumPage.locked.purchaseReport', { price })}
+          {comingSoon
+            ? t('premiumPage.comingSoon')
+            : isCreatingCheckout
+              ? t('premiumPage.locked.preparingCheckout')
+              : t('premiumPage.locked.purchaseReport', { price })}
         </button>
 
         {error && (
