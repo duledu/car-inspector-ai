@@ -8,6 +8,10 @@ import type { VehicleResearchResult, PriceContext } from '@/types'
 import { generateFallbackResult }                   from './fallback.knowledge'
 import { pricingService }                           from '@/modules/pricing/pricing.service'
 import type { MarketPriceResult }                   from '@/modules/pricing/provider.interface'
+import { normalizeVehicle }                         from '@/lib/vehicle/normalize'
+import { matchIssues }                              from '@/lib/vehicle/matcher'
+import { allIssues }                                from '../../../data/vehicle-issues'
+import type { MatchedIssue }                        from '@/lib/vehicle/types'
 
 export interface ResearchParams {
   make: string
@@ -27,7 +31,9 @@ export interface ResearchParams {
 }
 
 export interface ResearchOutput extends VehicleResearchResult {
-  limitedMode: boolean
+  limitedMode:   boolean
+  kbIssues:      MatchedIssue[]
+  kbMatchCount:  number
 }
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
@@ -51,7 +57,16 @@ function languageInstruction(locale?: string): string {
   }
 }
 
-function buildPrompt(params: ResearchParams): string {
+function buildKbContext(kbIssues: MatchedIssue[]): string {
+  if (kbIssues.length === 0) return ''
+  const lines = kbIssues
+    .slice(0, 8)
+    .map(i => `- [${i.severity.toUpperCase()}] ${i.title}: ${i.inspectionAdvice}`)
+    .join('\n')
+  return `\n\nKNOWN ISSUES ALREADY IDENTIFIED (do NOT repeat these — focus your output on gaps and additional context):\n${lines}`
+}
+
+function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): string {
   const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType } = params
 
   const litres     = engineCc ? (engineCc / 1000).toFixed(1) : null
@@ -89,9 +104,11 @@ function buildPrompt(params: ResearchParams): string {
     ? `The buyer is paying ${askingPrice.toLocaleString()} ${curr}. Evaluate against the Serbia used-car market range.`
     : `No asking price provided. Provide a realistic Serbia market price range in EUR.`
 
+  const kbContext = buildKbContext(kbIssues)
+
   return `You are an expert automotive advisor helping a buyer in Serbia inspect a used car.
 
-Vehicle: **${vehicleDesc}**${variantNote}${filterNote}${priceNote}
+Vehicle: **${vehicleDesc}**${variantNote}${filterNote}${priceNote}${kbContext}
 
 ${priceInstruction}
 
@@ -254,6 +271,7 @@ async function callAnthropic(
   apiKey: string,
   params: ResearchParams,
   timeoutMs: number,
+  kbIssues: MatchedIssue[] = [],
 ): Promise<VehicleResearchResult> {
   const controller = new AbortController()
   const timer      = setTimeout(() => controller.abort(), timeoutMs)
@@ -270,7 +288,7 @@ async function callAnthropic(
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
-        messages: [{ role: 'user', content: buildPrompt(params) }],
+        messages: [{ role: 'user', content: buildPrompt(params, kbIssues) }],
       }),
     })
 
@@ -294,10 +312,15 @@ export class VehicleResearchService {
   constructor(private readonly anthropicApiKey: string) {}
 
   async research(params: ResearchParams): Promise<ResearchOutput> {
+    // ── KB matching (synchronous, fast) ──────────────────────────────────────
+    const identity = normalizeVehicle(params)
+    const kbIssues = matchIssues(identity, allIssues, 12)
+    console.log(`[research] KB matched ${kbIssues.length} issues for ${identity.make} ${identity.model} ${identity.generation ?? identity.yearFrom}`)
+
     // ── Run research + pricing in parallel ──────────────────────────────────
     const [researchOutcome, pricingOutcome] = await Promise.allSettled([
       this.anthropicApiKey
-        ? this.callWithRetry(params)
+        ? this.callWithRetry(params, kbIssues)
         : Promise.reject(new Error('No API key')),
       pricingService.getMarketPrice({
         make:         params.make,
@@ -341,18 +364,18 @@ export class VehicleResearchService {
       console.warn('[pricing] No price context available')
     }
 
-    return { ...base, limitedMode }
+    return { ...base, limitedMode, kbIssues, kbMatchCount: kbIssues.length }
   }
 
-  private async callWithRetry(params: ResearchParams): Promise<VehicleResearchResult> {
+  private async callWithRetry(params: ResearchParams, kbIssues: MatchedIssue[] = []): Promise<VehicleResearchResult> {
     try {
-      return await callAnthropic(this.anthropicApiKey, params, 12000)
+      return await callAnthropic(this.anthropicApiKey, params, 12000, kbIssues)
     } catch (err) {
       const isTimeout = err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'))
       console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying`)
     }
     // Second attempt with longer timeout
-    return await callAnthropic(this.anthropicApiKey, params, 12000)
+    return await callAnthropic(this.anthropicApiKey, params, 12000, kbIssues)
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useCamera } from '@/hooks/useCamera'
 
 interface CameraCaptureProps {
   readonly onCapture: (file: File, previewUrl: string) => void
@@ -10,41 +11,33 @@ interface CameraCaptureProps {
 }
 
 export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps) {
-  const { t }       = useTranslation()
-  const videoRef    = useRef<HTMLVideoElement>(null)
+  const { t } = useTranslation()
+
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const streamRef   = useRef<MediaStream | null>(null)
 
-  const [mode, setMode]       = useState<'choose' | 'camera' | 'preview'>('choose')
-  const [preview, setPreview] = useState<string | null>(null)
+  const [mode,         setMode]         = useState<'choose' | 'camera' | 'preview'>('choose')
+  const [preview,      setPreview]      = useState<string | null>(null)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
-  const [cameraError, setCameraError]   = useState<string | null>(null)
-  const [facingMode, setFacingMode]     = useState<'environment' | 'user'>('environment')
+  const [facingMode,   setFacingMode]   = useState<'environment' | 'user'>('environment')
 
-  const startCamera = useCallback(async (facing: 'environment' | 'user') => {
-    setCameraError(null)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      setMode('camera')
-    } catch {
-      setCameraError(t('camera.cameraUnavailable'))
-    }
-  }, [])
+  // ── Camera hook ────────────────────────────────────────────────────────────
+  // onError: permission denied or device unavailable → fall back to choose mode
+  const { videoRef, status, startCamera, stopCamera } = useCamera({
+    onError: () => setMode('choose'),
+  })
 
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-  }, [])
+  // ── Open camera ────────────────────────────────────────────────────────────
+  // setMode('camera') FIRST so the <video> element is rendered in the DOM
+  // by the time getUserMedia resolves. startCamera() bumps `attachTick` which
+  // fires a useEffect that safely sets srcObject after the render.
+  const handleOpenCamera = useCallback(async (facing: 'environment' | 'user') => {
+    setFacingMode(facing)
+    setMode('camera')
+    await startCamera(facing)
+  }, [startCamera])
 
+  // ── Capture ────────────────────────────────────────────────────────────────
   const handleCapture = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
     const video  = videoRef.current
@@ -54,22 +47,24 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
     canvas.getContext('2d')?.drawImage(video, 0, 0)
     canvas.toBlob(blob => {
       if (!blob) return
-      const file = new File([blob], `${label.replace(/\s+/g, '_')}_${Date.now()}.jpg`, { type: 'image/jpeg' })
+      const file = new File([blob], `${label.replaceAll(/\s+/g, '_')}_${Date.now()}.jpg`, { type: 'image/jpeg' })
       const url  = URL.createObjectURL(blob)
       stopCamera()
       setCapturedFile(file)
       setPreview(url)
       setMode('preview')
     }, 'image/jpeg', 0.88)
-  }, [label, stopCamera])
+  }, [label, stopCamera, videoRef])
 
+  // ── Flip camera ────────────────────────────────────────────────────────────
   const handleFlip = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment'
     setFacingMode(next)
-    stopCamera()
+    // startCamera() handles stopping the previous stream before requesting new one
     startCamera(next)
-  }, [facingMode, stopCamera, startCamera])
+  }, [facingMode, startCamera])
 
+  // ── Gallery upload ─────────────────────────────────────────────────────────
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -79,6 +74,15 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
     setMode('preview')
   }, [])
 
+  // ── Gallery shortcut from camera mode ─────────────────────────────────────
+  const handleGalleryFromCamera = useCallback(() => {
+    stopCamera()
+    setMode('choose')
+    // Small delay so the file input is in the DOM after mode switch
+    setTimeout(() => fileInputRef.current?.click(), 50)
+  }, [stopCamera])
+
+  // ── Confirm / retake ───────────────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
     if (!capturedFile || !preview) return
     onCapture(capturedFile, preview)
@@ -90,6 +94,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
     setMode('choose')
   }, [])
 
+  // ── Close ──────────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
     stopCamera()
     onClose()
@@ -101,7 +106,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
       background: '#080c14',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 16px',
@@ -124,26 +129,27 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
         <div style={{ width: 60 }} />
       </div>
 
-      {/* Body */}
+      {/* ── Body ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
 
-        {/* CHOOSE MODE */}
+        {/* ── CHOOSE MODE ── */}
         {mode === 'choose' && (
           <div style={{ padding: '32px 24px', width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ textAlign: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}
+              <div
+                style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}
                 dangerouslySetInnerHTML={{ __html: t('camera.instruction', { label: `<strong style="color:#22d3ee">${label}</strong>` }) }}
               />
             </div>
 
-            {cameraError && (
+            {status === 'error' && (
               <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 10, fontSize: 13, color: '#f87171' }}>
-                {cameraError}
+                {t('camera.cameraUnavailable')}
               </div>
             )}
 
             <button
-              onClick={() => startCamera('environment')}
+              onClick={() => handleOpenCamera('environment')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 padding: '18px 24px',
@@ -179,29 +185,39 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
               </svg>
               {t('camera.chooseFromGallery')}
             </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
           </div>
         )}
 
-        {/* CAMERA MODE */}
+        {/* ── CAMERA MODE ── */}
         {mode === 'camera' && (
           <>
+            {/* autoPlay is needed alongside muted+playsInline on mobile */}
             <video
               ref={videoRef}
+              autoPlay
               playsInline
               muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {/* Camera overlay */}
+            {/* Loading spinner — shown while stream is initialising */}
+            {status === 'starting' && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(8,12,20,0.75)',
+              }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  border: '3px solid rgba(34,211,238,0.15)',
+                  borderTopColor: '#22d3ee',
+                  animation: 'spin 0.9s linear infinite',
+                }} />
+              </div>
+            )}
+
+            {/* Gradient overlay */}
             <div style={{
               position: 'absolute', inset: 0, pointerEvents: 'none',
               background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.5) 100%)',
@@ -209,20 +225,20 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
 
             {/* Corner guides */}
             <div style={{ position: 'absolute', inset: '15%', pointerEvents: 'none' }}>
-              {[
-                { top: 0, left: 0, borderTop: '2px solid #22d3ee', borderLeft: '2px solid #22d3ee', borderRadius: '4px 0 0 0' },
-                { top: 0, right: 0, borderTop: '2px solid #22d3ee', borderRight: '2px solid #22d3ee', borderRadius: '0 4px 0 0' },
-                { bottom: 0, left: 0, borderBottom: '2px solid #22d3ee', borderLeft: '2px solid #22d3ee', borderRadius: '0 0 0 4px' },
-                { bottom: 0, right: 0, borderBottom: '2px solid #22d3ee', borderRight: '2px solid #22d3ee', borderRadius: '0 0 4px 0' },
-              ].map((s, i) => (
-                <div key={i} style={{ position: 'absolute', width: 20, height: 20, ...s }} />
+              {([
+                { id: 'tl', top: 0,    left:  0, borderTop:    '2px solid #22d3ee', borderLeft:  '2px solid #22d3ee', borderRadius: '4px 0 0 0' },
+                { id: 'tr', top: 0,    right: 0, borderTop:    '2px solid #22d3ee', borderRight: '2px solid #22d3ee', borderRadius: '0 4px 0 0' },
+                { id: 'bl', bottom: 0, left:  0, borderBottom: '2px solid #22d3ee', borderLeft:  '2px solid #22d3ee', borderRadius: '0 0 0 4px' },
+                { id: 'br', bottom: 0, right: 0, borderBottom: '2px solid #22d3ee', borderRight: '2px solid #22d3ee', borderRadius: '0 0 4px 0' },
+              ] as (React.CSSProperties & { id: string })[]).map(({ id, ...s }) => (
+                <div key={id} style={{ position: 'absolute', width: 20, height: 20, ...s }} />
               ))}
             </div>
 
             {/* Label overlay */}
             <div style={{
-              position: 'absolute', top: 16, left: 0, right: 0, textAlign: 'center',
-              pointerEvents: 'none',
+              position: 'absolute', top: 16, left: 0, right: 0,
+              textAlign: 'center', pointerEvents: 'none',
             }}>
               <span style={{
                 display: 'inline-block', padding: '4px 14px',
@@ -242,7 +258,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
             }}>
               {/* Gallery shortcut */}
               <button
-                onClick={() => { stopCamera(); fileInputRef.current?.click() }}
+                onClick={handleGalleryFromCamera}
                 style={{
                   width: 44, height: 44, borderRadius: 10,
                   background: 'rgba(255,255,255,0.1)',
@@ -256,20 +272,26 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 </svg>
               </button>
 
-              {/* Shutter */}
+              {/* Shutter — disabled until stream is active */}
               <button
                 onClick={handleCapture}
+                disabled={status !== 'active'}
                 className="camera-btn"
                 style={{
                   width: 72, height: 72, borderRadius: '50%',
-                  background: '#fff',
+                  background: status === 'active' ? '#fff' : 'rgba(255,255,255,0.25)',
                   border: '4px solid rgba(255,255,255,0.3)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 0 0 2px rgba(34,211,238,0.6)',
+                  cursor: status === 'active' ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: status === 'active' ? '0 0 0 2px rgba(34,211,238,0.6)' : 'none',
                   flexShrink: 0,
+                  transition: 'background 0.2s, box-shadow 0.2s',
                 }}
               >
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fff' }} />
+                <div style={{
+                  width: 52, height: 52, borderRadius: '50%',
+                  background: status === 'active' ? '#fff' : 'rgba(255,255,255,0.25)',
+                }} />
               </button>
 
               {/* Flip camera */}
@@ -288,15 +310,12 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 </svg>
               </button>
             </div>
-
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
           </>
         )}
 
-        {/* PREVIEW MODE */}
+        {/* ── PREVIEW MODE ── */}
         {mode === 'preview' && preview && (
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Preview image */}
             <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -304,22 +323,21 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 alt={label}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
               />
-              <div style={{
-                position: 'absolute', top: 16, left: 0, right: 0, textAlign: 'center',
-              }}>
+              <div style={{ position: 'absolute', top: 16, left: 0, right: 0, textAlign: 'center' }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '5px 14px',
                   background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
                   borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#22c55e',
                 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
                   {t('camera.photoCaptured')}
                 </span>
               </div>
             </div>
 
-            {/* Preview controls */}
             <div style={{
               padding: '20px 24px',
               paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
@@ -356,6 +374,15 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
           </div>
         )}
       </div>
+
+      {/* Single file input — always rendered so the ref is always valid */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
     </div>
   )
 }

@@ -14,19 +14,23 @@ export const revalidate = 0
  * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
  *
  * Priority:
- *   1. X-Forwarded-Proto + X-Forwarded-Host (nginx/Caddy/Cloudflare forwarded headers)
- *   2. NEXT_PUBLIC_APP_URL (explicit env var — reliable if set correctly)
- *   3. req.nextUrl.origin (local dev without proxy)
+ *   1. NEXT_PUBLIC_APP_URL (explicit env var — always canonical in production)
+ *   2. X-Forwarded-Proto + X-Forwarded-Host (fallback for proxy setups without the env var)
+ *   3. req.nextUrl.origin (local dev fallback)
+ *
+ * NEXT_PUBLIC_APP_URL is checked first because on platforms like Vercel,
+ * x-forwarded-host can return a deployment-specific hostname instead of the
+ * canonical domain, which would cause redirect_uri_mismatch with Google OAuth.
  */
 function getAppOrigin(req: NextRequest): string {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (envUrl) return envUrl.replace(/\/$/, '')
+
   const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
   const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
                 ?? req.headers.get('host')
 
   if (proto && host) return `${proto}://${host}`
-
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (envUrl) return envUrl.replace(/\/$/, '')
 
   return req.nextUrl.origin
 }
