@@ -736,6 +736,7 @@ const mk = {
   'premiumPage.reports.status.failed': 'Неуспешно',
   'premiumPage.reports.status.refunded': 'Рефундирано',
   'premiumPage.reports.status.expired': 'Истечено',
+  'premiumPage.reports.status.notPurchased': 'Не е купено',
 
   'update.title':     'Достапна е нова верзија',
   'update.subtitle':  'Освежете за да ги добиете најновите функции и поправки.',

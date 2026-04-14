@@ -736,6 +736,7 @@ const sq = {
   'premiumPage.reports.status.failed': 'Dështoi',
   'premiumPage.reports.status.refunded': 'Rimbursuar',
   'premiumPage.reports.status.expired': 'Skaduar',
+  'premiumPage.reports.status.notPurchased': 'Nuk është blerë',
 
   'update.title':     'Version i ri i disponueshëm',
   'update.subtitle':  'Rifresko për të marrë funksionet dhe korrigjimet më të fundit.',

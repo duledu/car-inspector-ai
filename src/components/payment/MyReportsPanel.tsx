@@ -27,7 +27,7 @@ export function MyReportsPanel() {
     FAILED: t('premiumPage.reports.status.failed'),
     REFUNDED: t('premiumPage.reports.status.refunded'),
     EXPIRED: t('premiumPage.reports.status.expired'),
-    NOT_PURCHASED: 'Not purchased',
+    NOT_PURCHASED: t('premiumPage.reports.status.notPurchased'),
   }
 
   return (

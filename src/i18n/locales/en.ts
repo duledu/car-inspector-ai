@@ -735,6 +735,7 @@ const en = {
   'premiumPage.reports.status.failed': 'Failed',
   'premiumPage.reports.status.refunded': 'Refunded',
   'premiumPage.reports.status.expired': 'Expired',
+  'premiumPage.reports.status.notPurchased': 'Not purchased',
 
   'update.title':     'New version available',
   'update.subtitle':  'Refresh to get the latest features and fixes.',

@@ -737,6 +737,7 @@ const sr = {
   'premiumPage.reports.status.failed': 'Neuspešno',
   'premiumPage.reports.status.refunded': 'Refundirano',
   'premiumPage.reports.status.expired': 'Isteklo',
+  'premiumPage.reports.status.notPurchased': 'Nije kupljeno',
 
   'update.title':     'Nova verzija dostupna',
   'update.subtitle':  'Osvežite da biste dobili najnovije funkcije i ispravke.',

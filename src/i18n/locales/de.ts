@@ -736,6 +736,7 @@ const de = {
   'premiumPage.reports.status.failed': 'Fehlgeschlagen',
   'premiumPage.reports.status.refunded': 'Erstattet',
   'premiumPage.reports.status.expired': 'Abgelaufen',
+  'premiumPage.reports.status.notPurchased': 'Nicht gekauft',
 
   'update.title':     'Neue Version verfügbar',
   'update.subtitle':  'Aktualisieren Sie, um die neuesten Funktionen und Korrekturen zu erhalten.',
