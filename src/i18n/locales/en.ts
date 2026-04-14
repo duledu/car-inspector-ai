@@ -649,6 +649,8 @@ const en = {
   // Premium page
   'premiumPage.title': 'Premium Reports',
   'premiumPage.subtitle': 'CarVertical full vehicle history - separately paid premium add-on',
+  'premiumPage.comingSoon': 'Coming Soon',
+  'premiumPage.comingSoonDesc': 'CarVertical vehicle history reports are currently in development. Purchases are not yet available — we\'ll let you know when the feature launches.',
   'premiumPage.noVehicleTitle': 'No vehicle selected',
   'premiumPage.noVehicleDesc': 'Add a vehicle first to purchase its history report.',
   'premiumPage.locked.badge': 'Premium add-on required',

@@ -650,6 +650,8 @@ const de = {
   // Premium page
   'premiumPage.title': 'Premium-Berichte',
   'premiumPage.subtitle': 'Vollständige CarVertical-Fahrzeughistorie - separat bezahltes Premium-Add-on',
+  'premiumPage.comingSoon': 'Demnächst',
+  'premiumPage.comingSoonDesc': 'Fahrzeughistorienberichte über CarVertical befinden sich derzeit in der Entwicklung. Käufe sind noch nicht möglich — wir informieren Sie, sobald die Funktion verfügbar ist.',
   'premiumPage.noVehicleTitle': 'Kein Fahrzeug ausgewählt',
   'premiumPage.noVehicleDesc': 'Fügen Sie zuerst ein Fahrzeug hinzu, um dessen Historienbericht zu kaufen.',
   'premiumPage.locked.badge': 'Premium-Add-on erforderlich',

@@ -650,6 +650,8 @@ const sq = {
   // Premium page
   'premiumPage.title': 'Raporte Premium',
   'premiumPage.subtitle': 'Histori e plotë CarVertical - shtesë premium me pagesë të veçantë',
+  'premiumPage.comingSoon': 'Së shpejti',
+  'premiumPage.comingSoonDesc': 'Raportet e historisë së mjetit nëpërmjet CarVertical janë aktualisht në zhvillim. Blerjet nuk janë ende të disponueshme — do t\'ju njoftojmë kur funksioni të lansohet.',
   'premiumPage.noVehicleTitle': 'Nuk është zgjedhur automjet',
   'premiumPage.noVehicleDesc': 'Shtoni fillimisht një automjet për të blerë raportin e historisë.',
   'premiumPage.locked.badge': 'Kërkohet shtesë premium',

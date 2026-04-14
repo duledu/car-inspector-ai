@@ -650,6 +650,8 @@ const mk = {
   // Premium page
   'premiumPage.title': 'Premium извештаи',
   'premiumPage.subtitle': 'Целосна CarVertical историја на возилото - посебно платен premium додаток',
+  'premiumPage.comingSoon': 'Наскоро',
+  'premiumPage.comingSoonDesc': 'Извештаите за историјата на возилото преку CarVertical се моментално во развој. Купувањето сè уште не е достапно — ќе ве известиме кога функцијата ќе биде достапна.',
   'premiumPage.noVehicleTitle': 'Не е избрано возило',
   'premiumPage.noVehicleDesc': 'Прво додајте возило за да купите извештај за историја.',
   'premiumPage.locked.badge': 'Потребен е premium додаток',

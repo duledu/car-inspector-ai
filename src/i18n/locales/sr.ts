@@ -651,6 +651,8 @@ const sr = {
   // Premium page
   'premiumPage.title': 'Premium izveštaji',
   'premiumPage.subtitle': 'Kompletna CarVertical istorija vozila - posebno plaćen premium dodatak',
+  'premiumPage.comingSoon': 'Uskoro',
+  'premiumPage.comingSoonDesc': 'Izveštaji o istoriji vozila putem CarVertical-a su trenutno u razvoju. Kupovina još nije dostupna — obavestićemo vas čim funkcija bude pokrenuta.',
   'premiumPage.noVehicleTitle': 'Nije izabrano vozilo',
   'premiumPage.noVehicleDesc': 'Prvo dodajte vozilo da biste kupili izveštaj o istoriji.',
   'premiumPage.locked.badge': 'Potreban je premium dodatak',
