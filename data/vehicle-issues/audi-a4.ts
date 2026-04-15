@@ -77,7 +77,7 @@ export const audiA4Issues: VehicleIssue[] = [
   // ── B9 (2015–2023) ────────────────────────────────────────────────────────
 
   {
-    id:           'audi-a4-b9-ea288-oil-consumption',
+    id:           'audi-a4-b9-ea888-oil-consumption',
     make:         'audi',
     model:        'a4',
     generation:   'b9',

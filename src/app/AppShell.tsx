@@ -15,6 +15,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { AmbientBackground } from '@/components/layout/AmbientBackground'
 
 // Maps pathnames to topbar translation key slugs (used for mobile header title)
 const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
@@ -63,22 +64,26 @@ export default function AppShell({ children }: AppShellProps) {
       {/* ── Desktop layout (768px+) ── */}
       <div
         className="desktop-only"
-        style={{ height: '100vh', overflow: 'hidden', background: '#080c14' }}
+        style={{ height: '100vh', overflow: 'hidden', background: '#080c14', position: 'relative', isolation: 'isolate' }}
       >
-        <Sidebar />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Topbar />
-          <main style={{ flex: 1, overflowY: 'auto', padding: '24px', scrollbarWidth: 'thin', background: '#080c14' }}>
-            {children}
-          </main>
+        <AmbientBackground variant="desktop" />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', width: '100%', height: '100%' }}>
+          <Sidebar />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Topbar />
+            <main style={{ flex: 1, overflowY: 'auto', padding: '24px', scrollbarWidth: 'thin', background: 'transparent' }}>
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
       {/* ── Mobile layout (<768px) ── */}
       <div
         className="mobile-only"
-        style={{ flexDirection: 'column', minHeight: '100svh', background: '#080c14' }}
+        style={{ flexDirection: 'column', height: '100svh', minHeight: '100svh', background: '#080c14', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}
       >
+        <AmbientBackground variant="mobile" />
         {/* ── Premium glass top bar ── */}
         <header style={{
           height: 56,
@@ -166,7 +171,9 @@ export default function AppShell({ children }: AppShellProps) {
             overflowY: 'auto',
             /* Bottom padding clears the fixed 64px nav + safe area (iOS/Android) */
             padding: '16px 16px calc(80px + env(safe-area-inset-bottom, 0px))',
-            background: '#080c14',
+            background: 'transparent',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           {children}

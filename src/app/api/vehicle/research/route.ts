@@ -21,7 +21,8 @@ const schema = z.object({
   askingPrice:  z.number().finite().positive().optional(),
   currency:     z.string().max(10).optional(),
   fuelType:     z.enum(['diesel', 'petrol', 'hybrid', 'electric', 'lpg']).optional(),
-  transmission: z.enum(['manual', 'automatic']).optional(),
+  transmission: z.string().trim().min(1).max(40).optional(),
+  drivetrain:   z.string().trim().min(1).max(40).optional(),
   bodyType:     z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
   mileage:      z.number().finite().int().positive().optional(),
   locale:       z.string().min(2).max(10).optional().default('en'),
@@ -45,13 +46,13 @@ export async function POST(req: NextRequest) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
   }
 
-  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, bodyType, mileage, locale } = parsed.data
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, locale } = parsed.data
 
   // research() never throws — it always returns useful content
   try {
     const result = await vehicleResearchService.research({
       make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency,
-      fuelType, transmission, bodyType, mileage, locale,
+      fuelType, transmission, drivetrain, bodyType, mileage, locale,
     })
 
     return NextResponse.json({

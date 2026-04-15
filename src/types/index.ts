@@ -39,7 +39,7 @@ export interface RegisterPayload {
 export type SellerType = 'PRIVATE' | 'DEALER' | 'INDEPENDENT_DEALER'
 export type VehicleStatus = 'ACTIVE' | 'PURCHASED' | 'PASSED' | 'ARCHIVED'
 export type FuelType = 'diesel' | 'petrol' | 'hybrid' | 'electric' | 'lpg'
-export type Transmission = 'manual' | 'automatic'
+export type Transmission = 'manual' | 'automatic' | 'dct' | 'cvt'
 export type BodyType = 'sedan' | 'wagon' | 'hatchback' | 'suv' | 'coupe' | 'van'
 
 export interface Vehicle {

@@ -17,6 +17,7 @@ export interface ResearchRequestPayload {
   currency?: string
   fuelType?: string
   transmission?: string
+  drivetrain?: string
   bodyType?: string
   mileage?: number
   locale?: string

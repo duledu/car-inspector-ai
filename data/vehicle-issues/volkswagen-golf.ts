@@ -247,7 +247,7 @@ export const volkswagenGolfIssues: VehicleIssue[] = [
     make:         'volkswagen',
     model:        'golf',
     generation:   'mk8',
-    yearRange:    [2019, 2025],
+    yearRange:    [2020, 2099],
     fuelType:     null,
     engineFamily: null,
     transmission: null,

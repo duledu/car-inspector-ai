@@ -803,13 +803,14 @@ interface ModelResearchGuideProps {
   currency?: string | null
   fuelType?: string | null
   transmission?: string | null
+  drivetrain?: string | null
   bodyType?: string | null
   mileage?: number | null
 }
 
 export function ModelResearchGuide({
   make, model, year, engineCc, powerKw, engine, trim,
-  askingPrice, currency, fuelType, transmission, bodyType, mileage,
+  askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage,
 }: Readonly<ModelResearchGuideProps>) {
   const { i18n, t } = useTranslation()
   // Build a human-readable vehicle identity for display (e.g. "2013 BMW 530 2.0L 135kW")
@@ -833,6 +834,7 @@ export function ModelResearchGuide({
         currency:     currency     ?? undefined,
         fuelType:     fuelType     ?? undefined,
         transmission: transmission ?? undefined,
+        drivetrain:   drivetrain   ?? undefined,
         bodyType:     bodyType     ?? undefined,
         mileage:      mileage      ?? undefined,
         locale:       (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0],
@@ -846,7 +848,7 @@ export function ModelResearchGuide({
       setErrorMsg(msg)
       setState('error')
     }
-  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, bodyType, mileage, i18n.resolvedLanguage, i18n.language, engine, trim, t])
+  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, i18n.resolvedLanguage, i18n.language, engine, trim, t])
 
   const reset = useCallback(() => {
     setState('idle')

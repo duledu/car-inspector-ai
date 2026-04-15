@@ -258,7 +258,7 @@ function fuelMultiplier(fuelType?: string): number {
 }
 
 function transmissionMultiplier(transmission?: string): number {
-  return transmission === 'automatic' ? 1.08 : 1
+  return transmission === 'automatic' || transmission === 'dct' || transmission === 'cvt' ? 1.08 : 1
 }
 
 function bodyMultiplier(bodyType?: string): number {

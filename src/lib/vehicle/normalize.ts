@@ -5,7 +5,7 @@
 // =============================================================================
 
 import type { ResearchParams } from '@/modules/research/research.service'
-import type { BodyType, FuelType, Transmission, Drivetrain, VehicleIdentity } from './types'
+import type { BodyType, Drivetrain, FuelType, Transmission, VehicleIdentity } from './types'
 
 // ── Make aliases ──────────────────────────────────────────────────────────────
 
@@ -76,19 +76,28 @@ const MODEL_GENERATION_PATTERNS: [RegExp, string, string][] = [
   [/astra\s*(h)/i,                     'astra',     'h'],
 ]
 
-// Year → generation fallback when model string has no generation hint
+// Year → generation fallback when model string has no generation hint.
+// Ranges are checked in order — first match wins — so newer generations must come first.
+// IMPORTANT: Ranges are intentionally non-overlapping. When a new generation starts
+// mid-year, err on the side of the older generation (buyers are more likely to have
+// the outgoing model). Update these cutoffs as production data becomes clearer.
 const YEAR_GENERATION_MAP: Record<string, [number, number, string][]> = {
-  // [yearFrom, yearTo, generation]
-  'volkswagen|golf':      [[2019, 2099, 'mk8'], [2012, 2020, 'mk7'], [2008, 2013, 'mk6'], [2003, 2009, 'mk5']],
-  'volkswagen|passat':    [[2014, 2099, 'b8'],  [2010, 2015, 'b7'],  [2005, 2011, 'b6']],
-  'audi|a4':              [[2015, 2099, 'b9'],  [2007, 2016, 'b8'],  [2004, 2008, 'b7']],
-  'audi|a6':              [[2018, 2099, 'c8'],  [2011, 2018, 'c7'],  [2004, 2011, 'c6']],
-  'bmw|3-series':         [[2018, 2099, 'g20'], [2011, 2019, 'f30'], [2004, 2012, 'e90']],
-  'bmw|5-series':         [[2016, 2099, 'g30'], [2009, 2017, 'f10'], [2003, 2010, 'e60']],
-  'mercedes-benz|c-class':[[2021, 2099, 'w206'],[2014, 2021, 'w205'],[2007, 2014, 'w204']],
-  'mercedes-benz|e-class':[[2023, 2099, 'w214'],[2016, 2024, 'w213'],[2009, 2016, 'w212']],
-  'ford|focus':           [[2011, 2099, 'mk3'], [2004, 2011, 'mk2']],
-  'opel|astra':           [[2015, 2099, 'k'],   [2009, 2016, 'j'],   [2004, 2010, 'h']],
+  // [yearFrom, yearTo, generation]  (inclusive both ends, checked newest-first)
+  'volkswagen|golf':       [[2020, 2099, 'mk8'], [2012, 2019, 'mk7'], [2008, 2013, 'mk6'], [2003, 2009, 'mk5']],
+  'volkswagen|passat':     [[2015, 2099, 'b8'],  [2010, 2014, 'b7'],  [2005, 2011, 'b6']],
+  'audi|a4':               [[2015, 2099, 'b9'],  [2007, 2016, 'b8'],  [2004, 2008, 'b7']],
+  'audi|a6':               [[2019, 2099, 'c8'],  [2011, 2018, 'c7'],  [2004, 2011, 'c6']],
+  // BMW G20 launched production early 2019 (2019 model year).
+  // A 2018 3-series is almost always an F30 — keep 2019 as the G20 floor.
+  'bmw|3-series':          [[2019, 2099, 'g20'], [2011, 2018, 'f30'], [2004, 2012, 'e90']],
+  // BMW G30 5-series: full production from 2017. A 2016 5-series is still F10.
+  'bmw|5-series':          [[2017, 2099, 'g30'], [2009, 2016, 'f10'], [2003, 2010, 'e60']],
+  // Mercedes W206 C-Class: launched mid-2021 as a 2022 model year in most markets.
+  'mercedes-benz|c-class': [[2022, 2099, 'w206'],[2014, 2021, 'w205'],[2007, 2014, 'w204']],
+  // Mercedes W214 E-Class: launched 2023/2024 — 2024+ in most markets.
+  'mercedes-benz|e-class': [[2024, 2099, 'w214'],[2016, 2023, 'w213'],[2009, 2016, 'w212']],
+  'ford|focus':            [[2011, 2099, 'mk3'], [2004, 2011, 'mk2']],
+  'opel|astra':            [[2015, 2099, 'k'],   [2009, 2016, 'j'],   [2004, 2010, 'h']],
 }
 
 interface ModelParsed {
@@ -149,6 +158,8 @@ const ENGINE_FAMILY_PATTERNS: [RegExp, string][] = [
   // BMW petrol
   [/n20/i,                      'n20'],
   [/n52/i,                      'n52'],
+  [/n53/i,                      'n53'],
+  [/n54/i,                      'n54'],
   [/n55/i,                      'n55'],
   [/b48/i,                      'b48'],
   [/b58/i,                      'b58'],
@@ -163,33 +174,43 @@ const ENGINE_FAMILY_PATTERNS: [RegExp, string][] = [
 ]
 
 // CC + make/fuel → engine family heuristic
+// Each entry: [makes[], fuel, ccMin, ccMax, yearFrom, family]
+// yearFrom = 0 means "any year (no year split)"; checked in order — first match wins.
+// When the same cc range maps to two families split by year, list the newer entry first.
+type CcRule = [string[], FuelType, number, number, number, string]
+
+const CC_FAMILY_RULES: CcRule[] = [
+  // ── VAG (VW / Audi / Skoda / Seat) ──────────────────────────────────────
+  [['volkswagen','audi','skoda','seat'], 'diesel', 1900, 2100, 2015, 'ea288'],    // 2.0 TDI post-2015
+  [['volkswagen','audi','skoda','seat'], 'diesel', 1900, 2100,    0, 'ea189'],    // 2.0 TDI pre-2015
+  [['volkswagen','audi','skoda','seat'], 'diesel', 1550, 1700,    0, 'ea288-16'], // 1.6 TDI
+  [['volkswagen','audi','skoda','seat'], 'petrol', 1750, 2000,    0, 'ea888'],    // 1.8/2.0 TSI
+  [['volkswagen','audi','skoda','seat'], 'petrol', 1100, 1400,    0, 'ea211'],    // 1.0/1.2/1.4 TSI
+  // ── BMW ──────────────────────────────────────────────────────────────────
+  [['bmw'], 'diesel', 1950, 2100, 2013, 'b47'],   // 2.0d post-2013
+  [['bmw'], 'diesel', 1950, 2100,    0, 'n47'],   // 2.0d pre-2013
+  [['bmw'], 'diesel', 2990, 3100, 2013, 'b57'],   // 3.0d post-2013
+  [['bmw'], 'diesel', 2990, 3100,    0, 'n57'],   // 3.0d pre-2013
+  [['bmw'], 'petrol', 1990, 2100, 2013, 'b48'],   // 2.0i post-2013
+  [['bmw'], 'petrol', 1990, 2100,    0, 'n20'],   // 2.0i pre-2013
+  [['bmw'], 'petrol', 2990, 3100, 2015, 'b58'],   // 3.0i post-2015
+  [['bmw'], 'petrol', 2990, 3100,    0, 'n55'],   // 3.0i pre-2015
+  // ── Mercedes-Benz ────────────────────────────────────────────────────────
+  [['mercedes-benz'], 'diesel', 2990, 3100,    0, 'om642'],  // 3.0d
+  [['mercedes-benz'], 'diesel', 2140, 2200, 2011, 'om651'],  // 2.2d post-2011
+  [['mercedes-benz'], 'diesel', 2140, 2200,    0, 'om646'],  // 2.2d pre-2011
+  [['mercedes-benz'], 'diesel', 1950, 2100, 2019, 'om654'],  // 2.0d post-2019
+  [['mercedes-benz'], 'diesel', 1950, 2100,    0, 'om651'],  // 2.0d pre-2019
+]
+
 function engineFamilyFromCc(make: string, fuel: FuelType | null, cc: number, year: number): string | null {
-  if (make === 'volkswagen' || make === 'audi' || make === 'skoda' || make === 'seat') {
-    if (fuel === 'diesel') {
-      if (cc >= 1900 && cc <= 2100) return year >= 2015 ? 'ea288' : 'ea189'  // 2.0 TDI
-      if (cc >= 1550 && cc <= 1700) return 'ea288-16'  // 1.6 TDI — separate family to avoid SCR/AdBlue over-match
-    }
-    if (fuel === 'petrol') {
-      if (cc >= 1750 && cc <= 2000) return 'ea888'
-      if (cc >= 1100 && cc <= 1400) return 'ea211'
-    }
-  }
-  if (make === 'bmw') {
-    if (fuel === 'diesel') {
-      if (cc >= 1950 && cc <= 2100) return year >= 2013 ? 'b47' : 'n47'
-      if (cc >= 2990 && cc <= 3100) return year >= 2013 ? 'b57' : 'n57'
-    }
-    if (fuel === 'petrol') {
-      if (cc >= 1990 && cc <= 2100) return year >= 2013 ? 'b48' : 'n20'
-      if (cc >= 2990 && cc <= 3100) return year >= 2015 ? 'b58' : 'n55'
-    }
-  }
-  if (make === 'mercedes-benz') {
-    if (fuel === 'diesel') {
-      if (cc >= 2990 && cc <= 3100) return 'om642'
-      if (cc >= 2140 && cc <= 2200) return year >= 2011 ? 'om651' : 'om646'
-      if (cc >= 1950 && cc <= 2100) return year >= 2019 ? 'om654' : 'om651'
-    }
+  if (!fuel) return null
+  for (const [makes, ruleFuel, ccMin, ccMax, yearFrom, family] of CC_FAMILY_RULES) {
+    if (ruleFuel !== fuel) continue
+    if (!makes.includes(make)) continue
+    if (cc < ccMin || cc > ccMax) continue
+    if (yearFrom > 0 && year < yearFrom) continue
+    return family
   }
   return null
 }
@@ -225,10 +246,27 @@ function normalizeFuelType(raw: string | undefined): FuelType | null {
 function normalizeTransmission(raw: string | undefined): Transmission | null {
   if (!raw) return null
   const lower = raw.trim().toLowerCase()
+  const compact = lower.replace(/[^a-z0-9]/g, '')
   if (lower.includes('manual') || lower === 'mt' || lower === 'm') return 'manual'
-  if (lower.includes('dct') || lower.includes('dsg') || lower.includes('pdk') || lower.includes('s-tronic') || lower.includes('dualclutch') || lower.includes('dual-clutch')) return 'dct'
+  if (lower.includes('dct') || lower.includes('dsg') || lower.includes('pdk') || lower.includes('s-tronic') || compact.includes('stronic') || compact.includes('dualclutch')) return 'dct'
   if (lower.includes('cvt') || lower.includes('multitronic')) return 'cvt'
   if (lower.includes('auto') || lower === 'at' || lower === 'a') return 'automatic'
+  return null
+}
+
+// ── Drivetrain normalization ──────────────────────────────────────────────────
+
+function normalizeDrivetrain(raw: string | undefined): Drivetrain | null {
+  if (!raw) return null
+  const lower = raw.trim().toLowerCase()
+  const compact = lower.replace(/[^a-z0-9]/g, '')
+  if (lower === 'fwd' || lower.includes('front-wheel') || lower.includes('front wheel') || compact.includes('frontwheeldrive')) return 'fwd'
+  if (lower === 'rwd' || lower.includes('rear-wheel')  || lower.includes('rear wheel')  || compact.includes('rearwheeldrive'))  return 'rwd'
+  if (lower === '4wd' || lower.includes('four-wheel') || lower.includes('four wheel') || lower.includes('4x4'))                 return '4wd'
+  // awd last — some brand names (quattro, xDrive, 4Matic, Haldex) all mean AWD
+  if (lower === 'awd' || lower.includes('all-wheel') || lower.includes('all wheel') || lower.includes('allwheel') ||
+      lower.includes('quattro') || lower.includes('xdrive') || lower.includes('4matic') ||
+      lower.includes('haldex') || compact.includes('4matic') || compact.includes('4motion')) return 'awd'
   return null
 }
 
@@ -275,7 +313,7 @@ export function normalizeVehicle(params: ResearchParams): VehicleIdentity {
     bodyType:     body,
     fuelType:     fuel,
     transmission: trans,
-    drivetrain:   null,   // not in ResearchParams — future
+    drivetrain:   normalizeDrivetrain(params.drivetrain),
     engineFamily,
     engineCc:     cc,
     powerKw:      kw,

@@ -15,7 +15,7 @@ const CreateSchema = z.object({
   engineCc: z.number().finite().int().positive().max(10000).optional(),
   powerKw: z.number().finite().int().positive().max(2000).optional(),
   fuelType: z.enum(['diesel', 'petrol', 'hybrid', 'electric', 'lpg']).optional(),
-  transmission: z.enum(['manual', 'automatic']).optional(),
+  transmission: z.enum(['manual', 'automatic', 'dct', 'cvt']).optional(),
   bodyType: z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
   vin: z.string().optional(),
   notes: z.string().optional(),

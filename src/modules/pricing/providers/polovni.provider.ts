@@ -27,6 +27,8 @@ const FUEL_CODES: Record<string, string> = {
 const GEARBOX_CODES: Record<string, string> = {
   manual:    '1',
   automatic: '2',
+  dct:       '2',
+  cvt:       '2',
 }
 
 // Body style codes used in Polovni Automobili search

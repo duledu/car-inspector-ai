@@ -91,6 +91,8 @@ export default function VehiclePage() {
   const TRANSMISSION_OPTIONS: ReadonlyArray<{ label: string; value: Transmission }> = [
     { label: t('vehicle.manual'),    value: 'manual'    },
     { label: t('vehicle.automatic'), value: 'automatic' },
+    { label: 'DCT / DSG',            value: 'dct'       },
+    { label: 'CVT',                  value: 'cvt'       },
   ]
 
   const BODY_OPTIONS: ReadonlyArray<{ label: string; value: BodyType }> = [

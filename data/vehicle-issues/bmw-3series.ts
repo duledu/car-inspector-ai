@@ -102,7 +102,7 @@ export const bmw3SeriesIssues: VehicleIssue[] = [
     make:         'bmw',
     model:        '3-series',
     generation:   'f30',
-    yearRange:    [2011, 2017],
+    yearRange:    [2011, 2019],
     fuelType:     ['petrol'],
     engineFamily: ['n20'],
     transmission: null,

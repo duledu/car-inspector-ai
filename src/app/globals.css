@@ -141,6 +141,102 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
 .glow-indigo { box-shadow: 0 0 24px rgba(129,140,248,0.18), 0 4px 16px rgba(0,0,0,0.4); }
 .glow-sm     { box-shadow: 0 0 14px rgba(34,211,238,0.16); }
 
+/* Automotive ambient background */
+.ambient-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 58% at 50% 106%, rgba(34,211,238,0.13), transparent 58%),
+    radial-gradient(78% 46% at 50% 0%, rgba(56,189,248,0.075), transparent 64%),
+    linear-gradient(180deg, #060a12 0%, #080c14 48%, #05070c 100%);
+}
+.ambient-background::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: min(125vw, 760px);
+  aspect-ratio: 2 / 1;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  border-top: 1px solid rgba(34,211,238,0.16);
+  box-shadow: 0 -18px 46px rgba(34,211,238,0.08);
+  opacity: 0.9;
+}
+.ambient-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(70% 62% at 50% 78%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(70% 62% at 50% 78%, #000 0%, transparent 72%);
+  opacity: 0.26;
+}
+.ambient-background__horizon {
+  position: absolute;
+  left: 50%;
+  bottom: max(92px, calc(74px + env(safe-area-inset-bottom)));
+  width: min(92vw, 620px);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(34,211,238,0.42), rgba(125,211,252,0.34), transparent);
+  box-shadow: 0 0 18px rgba(34,211,238,0.2);
+  animation: ambient-horizon 8s ease-in-out infinite;
+}
+.ambient-background__arc {
+  position: absolute;
+  left: 50%;
+  bottom: max(38px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  border-top: 1px solid rgba(125,211,252,0.14);
+}
+.ambient-background__arc--outer {
+  width: min(118vw, 720px);
+  height: min(56vw, 340px);
+  animation: ambient-arc 12s ease-in-out infinite;
+}
+.ambient-background__arc--inner {
+  width: min(78vw, 470px);
+  height: min(37vw, 220px);
+  opacity: 0.72;
+  animation: ambient-arc 10s ease-in-out infinite reverse;
+}
+.ambient-background__scan {
+  position: absolute;
+  left: 50%;
+  bottom: max(48px, env(safe-area-inset-bottom));
+  width: min(110vw, 660px);
+  height: min(52vw, 315px);
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: conic-gradient(from 236deg at 50% 100%, transparent 0deg, rgba(34,211,238,0.09) 16deg, transparent 34deg, transparent 360deg);
+  opacity: 0.52;
+  animation: ambient-scan 9s ease-in-out infinite;
+}
+.ambient-background--desktop .ambient-background__horizon {
+  bottom: 18%;
+  width: min(72vw, 980px);
+}
+.ambient-background--desktop::before {
+  width: min(92vw, 1180px);
+  bottom: 6%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-background__horizon,
+  .ambient-background__arc,
+  .ambient-background__scan {
+    animation: none !important;
+  }
+}
+
 /* ─── Gradient text ──────────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #22d3ee 0%, #818cf8 100%);
@@ -272,6 +368,18 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   33%  { transform: translate(24px,-16px) scale(1.04); }
   66%  { transform: translate(-16px,12px) scale(0.97); }
   100% { transform: translate(0,0) scale(1); }
+}
+@keyframes ambient-horizon {
+  0%, 100% { opacity: 0.52; transform: translateX(-50%) scaleX(0.94); }
+  50%      { opacity: 0.82; transform: translateX(-50%) scaleX(1); }
+}
+@keyframes ambient-arc {
+  0%, 100% { opacity: 0.48; transform: translateX(-50%) translateY(0); }
+  50%      { opacity: 0.78; transform: translateX(-50%) translateY(-4px); }
+}
+@keyframes ambient-scan {
+  0%, 100% { opacity: 0.22; transform: translateX(-50%) rotate(-2deg); }
+  50%      { opacity: 0.48; transform: translateX(-50%) rotate(2deg); }
 }
 
 /* ─── Animation utilities ────────────────────────────────────── */

@@ -4,7 +4,7 @@
 // Pricing: pricing.service runs in parallel, result merged into priceContext
 // =============================================================================
 
-import type { VehicleResearchResult, PriceContext } from '@/types'
+import type { VehicleResearchResult, PriceContext, ResearchSection } from '@/types'
 import { generateFallbackResult }                   from './fallback.knowledge'
 import { pricingService }                           from '@/modules/pricing/pricing.service'
 import type { MarketPriceResult }                   from '@/modules/pricing/provider.interface'
@@ -25,6 +25,7 @@ export interface ResearchParams {
   currency?: string
   fuelType?: string
   transmission?: string
+  drivetrain?: string
   bodyType?: string
   mileage?: number
   locale?: string
@@ -59,11 +60,12 @@ function languageInstruction(locale?: string): string {
 
 function buildKbContext(kbIssues: MatchedIssue[]): string {
   if (kbIssues.length === 0) return ''
+  // Emit all KB issues (not just 8) so AI cannot "accidentally" add any of them back.
+  // Format is compact (title + category) to save tokens while giving AI a clear exclusion list.
   const lines = kbIssues
-    .slice(0, 8)
-    .map(i => `- [${i.severity.toUpperCase()}] ${i.title}: ${i.inspectionAdvice}`)
+    .map(i => `- [${i.severity.toUpperCase()}/${i.category}] ${i.title}`)
     .join('\n')
-  return `\n\nKNOWN ISSUES ALREADY IDENTIFIED (do NOT repeat these — focus your output on gaps and additional context):\n${lines}`
+  return `\n\nKNOWN ISSUES (already covered — NEVER include these titles or their substance in your output sections):\n${lines}`
 }
 
 function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): string {
@@ -265,6 +267,46 @@ function buildPriceContext(
   }
 }
 
+// ─── KB vs AI deduplication ──────────────────────────────────────────────────
+
+/**
+ * Normalise a title string for loose comparison:
+ * lowercase, strip punctuation, collapse whitespace.
+ */
+function normTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Remove AI section items whose title closely matches a KB issue title.
+ * Uses substring containment both ways so "N47 timing chain failure" matches
+ * "N47 Timing Chain Failure — CRITICAL" and vice versa.
+ */
+export function deduplicateAiSections(
+  sections: VehicleResearchResult['sections'],
+  kbIssues: MatchedIssue[],
+): VehicleResearchResult['sections'] {
+  if (kbIssues.length === 0) return sections
+  const kbTitles = kbIssues.map(i => normTitle(i.title))
+
+  function filterSection(section: ResearchSection): ResearchSection {
+    const filtered = section.items.filter(item => {
+      const t = normTitle(item.title)
+      return !kbTitles.some(kb => kb.includes(t) || t.includes(kb))
+    })
+    return { ...section, items: filtered }
+  }
+
+  return {
+    commonProblems:      filterSection(sections.commonProblems),
+    highPriorityChecks:  filterSection(sections.highPriorityChecks),
+    visualAttention:     filterSection(sections.visualAttention),
+    mechanicalWatchouts: filterSection(sections.mechanicalWatchouts),
+    testDriveFocus:      filterSection(sections.testDriveFocus),
+    costAwareness:       filterSection(sections.costAwareness),
+  }
+}
+
 // ─── Anthropic API caller ─────────────────────────────────────────────────────
 
 async function callAnthropic(
@@ -300,7 +342,12 @@ async function callAnthropic(
     const json    = await response.json()
     const raw: string = json.content?.[0]?.text ?? ''
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-    return JSON.parse(cleaned) as VehicleResearchResult
+    const parsed  = JSON.parse(cleaned) as VehicleResearchResult
+    // Guard: sections must exist and have at least one expected key
+    if (!parsed.sections || typeof parsed.sections !== 'object' || !parsed.sections.commonProblems) {
+      throw new Error('Anthropic response missing required sections')
+    }
+    return parsed
   } finally {
     clearTimeout(timer)
   }
@@ -313,9 +360,14 @@ export class VehicleResearchService {
 
   async research(params: ResearchParams): Promise<ResearchOutput> {
     // ── KB matching (synchronous, fast) ──────────────────────────────────────
-    const identity = normalizeVehicle(params)
-    const kbIssues = matchIssues(identity, allIssues, 12)
-    console.log(`[research] KB matched ${kbIssues.length} issues for ${identity.make} ${identity.model} ${identity.generation ?? identity.yearFrom}`)
+    let kbIssues: MatchedIssue[] = []
+    try {
+      const identity = normalizeVehicle(params)
+      kbIssues = matchIssues(identity, allIssues, 12)
+      console.log(`[research] KB matched ${kbIssues.length} issues for ${identity.make} ${identity.model} ${identity.generation ?? identity.yearFrom}`)
+    } catch (err) {
+      console.warn('[research] KB matching failed — continuing without KB context:', err)
+    }
 
     // ── Run research + pricing in parallel ──────────────────────────────────
     const [researchOutcome, pricingOutcome] = await Promise.allSettled([
@@ -344,6 +396,10 @@ export class VehicleResearchService {
 
     if (researchOutcome.status === 'fulfilled') {
       base = researchOutcome.value
+      // Remove AI items that duplicate KB issues (belt-and-suspenders — prompt already instructs AI not to repeat them)
+      if (kbIssues.length > 0 && base.sections) {
+        base = { ...base, sections: deduplicateAiSections(base.sections, kbIssues) }
+      }
       console.log('[research] Anthropic OK')
     } else {
       console.warn('[research] AI failed — using knowledge base:', researchOutcome.reason)
@@ -372,10 +428,10 @@ export class VehicleResearchService {
       return await callAnthropic(this.anthropicApiKey, params, 12000, kbIssues)
     } catch (err) {
       const isTimeout = err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'))
-      console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying`)
+      console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying with extended timeout`)
     }
-    // Second attempt with longer timeout
-    return await callAnthropic(this.anthropicApiKey, params, 12000, kbIssues)
+    // Second attempt: longer timeout to handle slow model responses
+    return await callAnthropic(this.anthropicApiKey, params, 18000, kbIssues)
   }
 }
 
