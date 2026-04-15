@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
   }
 
   const state = randomBytes(16).toString('hex')
-  const callbackUrl = new URL('/api/auth/google/callback', origin).toString()
+  // Must match the redirect URI registered in Google Cloud Console
+  const callbackUrl = new URL('/api/auth/callback/google', origin).toString()
 
   const params = new URLSearchParams({
     client_id:     clientId,

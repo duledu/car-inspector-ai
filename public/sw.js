@@ -40,7 +40,7 @@ function isAuthPath(pathname) {
 function isGoogleAuthPath(pathname) {
   return (
     pathname === '/api/auth/google/init' ||
-    pathname === '/api/auth/google/callback' ||
+    pathname === '/api/auth/callback/google' ||   // canonical OAuth callback
     pathname === '/api/auth/google/session' ||
     pathname === '/auth/google/complete'
   );

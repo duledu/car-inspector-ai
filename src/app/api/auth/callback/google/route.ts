@@ -1,6 +1,9 @@
 // =============================================================================
-// Google OAuth Callback
-// GET /api/auth/google/callback
+// Google OAuth Callback — canonical path
+// GET /api/auth/callback/google
+//
+// This is the redirect URI registered in Google Cloud Console.
+// The init route (/api/auth/google/init) sends users here after consent.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -110,10 +113,6 @@ async function upsertGoogleUser(googleUser: GoogleUserInfo) {
  *   1. NEXT_PUBLIC_APP_URL (explicit env var — always canonical in production)
  *   2. X-Forwarded-Proto + X-Forwarded-Host (fallback for proxy setups without the env var)
  *   3. req.nextUrl.origin (local dev fallback)
- *
- * NEXT_PUBLIC_APP_URL is checked first because on platforms like Vercel,
- * x-forwarded-host can return a deployment-specific hostname instead of the
- * canonical domain, which would cause redirect_uri_mismatch with Google OAuth.
  */
 function getAppOrigin(req: NextRequest): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -131,16 +130,17 @@ function getAppOrigin(req: NextRequest): string {
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const tag = '[google/callback]'
+  const tag = '[auth/callback/google]'
 
   const clientId     = process.env.GOOGLE_CLIENT_ID ?? ''
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
   const jwtSecret    = process.env.JWT_SECRET ?? ''
 
-  // Derive origin — accounts for nginx SSL termination via X-Forwarded-Proto.
-  const origin       = getAppOrigin(req)
-  const callbackUrl  = new URL('/api/auth/google/callback', origin).toString()
-  const authUrl      = new URL('/auth', origin)
+  const origin      = getAppOrigin(req)
+  // This must exactly match the redirect URI registered in Google Cloud Console
+  // and sent by /api/auth/google/init
+  const callbackUrl = new URL('/api/auth/callback/google', origin).toString()
+  const authUrl     = new URL('/auth', origin)
   const dashboardUrl = new URL('/dashboard', origin)
 
   const fwdProto = req.headers.get('x-forwarded-proto') ?? 'none'
