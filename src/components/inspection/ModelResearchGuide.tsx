@@ -35,6 +35,37 @@ const RISK_CONFIG = {
 
 // ─── SVG Icon library (no emojis) ────────────────────────────────────────────
 
+const ISSUE_TITLE_KEYS: Record<string, string> = {
+  'Engine Oil Consumption':                 'research.issue.engineOilConsumption',
+  'Automatic Transmission Wear':            'research.issue.automaticTransmissionWear',
+  'Rust on Structural Areas':               'research.issue.rustStructuralAreas',
+  'Service History, Verify Every Entry':    'research.issue.serviceHistoryVerify',
+  'OBD Diagnostic Scan':                    'research.issue.obdDiagnosticScan',
+  'Independent Pre-Purchase Inspection':    'research.issue.independentPrePurchaseInspection',
+  'Paint Thickness & Panel Colour Match':   'research.issue.paintThicknessPanelMatch',
+  'Underneath, Fluid Leaks & Rust':         'research.issue.underneathFluidLeaksRust',
+  'Tyre Condition & Wear Pattern':          'research.issue.tyreConditionWearPattern',
+  'Timing Belt / Chain Service':            'research.issue.timingBeltChainService',
+  'Cooling System Condition':               'research.issue.coolingSystemCondition',
+  'Clutch Feel (manual gearbox)':           'research.issue.clutchFeelManual',
+  'Cold Start Behaviour':                   'research.issue.coldStartBehaviour',
+  'Emergency Braking Test':                 'research.issue.emergencyBrakingTest',
+  'Acceleration & Gear Changes':            'research.issue.accelerationGearChanges',
+  'Timing Belt Replacement':                'research.issue.timingBeltReplacement',
+  'Full Service at Purchase':               'research.issue.fullServiceAtPurchase',
+  'Pre-Purchase Inspection':                'research.issue.prePurchaseInspection',
+}
+
+function translatedIssueTitle(
+  t: ReturnType<typeof useTranslation>['t'],
+  i18n: ReturnType<typeof useTranslation>['i18n'],
+  title: string,
+): string {
+  const key = ISSUE_TITLE_KEYS[title]
+  const lang = i18n.resolvedLanguage ?? i18n.language
+  return key && i18n.exists(key, { lng: lang }) ? t(key) : title
+}
+
 const Icons = {
   warning: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -142,6 +173,7 @@ function Tag({ type }: Readonly<{ type: ResearchTagType }>) {
 // ─── Issue card ───────────────────────────────────────────────────────────────
 
 function IssueCard({ issue }: Readonly<{ issue: ResearchIssue }>) {
+  const { i18n, t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const dot = SEVERITY_DOT[issue.severity] ?? SEVERITY_DOT.low
 
@@ -174,7 +206,7 @@ function IssueCard({ issue }: Readonly<{ issue: ResearchIssue }>) {
             color: 'rgba(255,255,255,0.92)',
             lineHeight: 1.3, marginBottom: 6,
           }}>
-            {issue.title}
+            {translatedIssueTitle(t, i18n, issue.title)}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {issue.tags.map(tag => <Tag key={tag} type={tag} />)}
@@ -209,8 +241,14 @@ function IssueCard({ issue }: Readonly<{ issue: ResearchIssue }>) {
 // ─── Section block ────────────────────────────────────────────────────────────
 
 function SectionBlock({ section }: Readonly<{ section: ResearchSection }>) {
+  const { i18n, t } = useTranslation()
   const [open, setOpen] = useState(true)
   const icon = SECTION_ICONS[section.id] ?? null
+  const sectionTitleKey = `research.section.${section.id}`
+  const lang = i18n.resolvedLanguage ?? i18n.language
+  const sectionTitle = i18n.exists(sectionTitleKey, { lng: lang })
+    ? t(sectionTitleKey)
+    : section.title
 
   return (
     <div style={{
@@ -232,7 +270,7 @@ function SectionBlock({ section }: Readonly<{ section: ResearchSection }>) {
       >
         <span style={{ color: '#22d3ee', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>
         <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.88)', letterSpacing: '-0.1px' }}>
-          {section.title}
+          {sectionTitle}
         </span>
         <span style={{
           fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)',

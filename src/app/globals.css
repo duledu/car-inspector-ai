@@ -220,6 +220,28 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   opacity: 0.52;
   animation: ambient-scan 9s ease-in-out infinite;
 }
+.ambient-background__scan-dot {
+  position: absolute;
+  left: 50%;
+  bottom: max(48px, env(safe-area-inset-bottom));
+  width: min(110vw, 660px);
+  height: min(52vw, 315px);
+  transform: translateX(-50%) rotate(-72deg);
+  transform-origin: 50% 100%;
+  animation: ambient-scan-dot 11s ease-in-out infinite;
+}
+.ambient-background__scan-dot::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: rgba(125,211,252,0.88);
+  box-shadow: 0 0 10px rgba(34,211,238,0.42);
+}
 .ambient-background--desktop .ambient-background__horizon {
   bottom: 18%;
   width: min(72vw, 980px);
@@ -232,7 +254,8 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
 @media (prefers-reduced-motion: reduce) {
   .ambient-background__horizon,
   .ambient-background__arc,
-  .ambient-background__scan {
+  .ambient-background__scan,
+  .ambient-background__scan-dot {
     animation: none !important;
   }
 }
@@ -380,6 +403,10 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
 @keyframes ambient-scan {
   0%, 100% { opacity: 0.22; transform: translateX(-50%) rotate(-2deg); }
   50%      { opacity: 0.48; transform: translateX(-50%) rotate(2deg); }
+}
+@keyframes ambient-scan-dot {
+  0%, 100% { opacity: 0.28; transform: translateX(-50%) rotate(-72deg); }
+  50%      { opacity: 0.78; transform: translateX(-50%) rotate(72deg); }
 }
 
 /* ─── Animation utilities ────────────────────────────────────── */

@@ -12,6 +12,7 @@ export function AmbientBackground({ variant = 'mobile' }: AmbientBackgroundProps
       <div className="ambient-background__arc ambient-background__arc--outer" />
       <div className="ambient-background__arc ambient-background__arc--inner" />
       <div className="ambient-background__scan" />
+      <div className="ambient-background__scan-dot" />
     </div>
   )
 }

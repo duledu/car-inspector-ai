@@ -58,6 +58,56 @@ function languageInstruction(locale?: string): string {
   }
 }
 
+/**
+ * Locale-specific section titles injected into the JSON schema template.
+ * Without these, the AI tends to copy the English placeholder titles verbatim
+ * even when instructed to respond in another language.
+ */
+function sectionTitles(locale?: string): Record<string, string> {
+  switch (normalizeLocale(locale)) {
+    case 'de': return {
+      commonProblems:      'Häufige Probleme',
+      highPriorityChecks:  'Prioritätschecks',
+      visualAttention:     'Visuelle Prüfpunkte',
+      mechanicalWatchouts: 'Mechanische Warnzeichen',
+      testDriveFocus:      'Probefahrt-Fokus',
+      costAwareness:       'Kostenbewusstsein',
+    }
+    case 'sr': return {
+      commonProblems:      'Česti problemi',
+      highPriorityChecks:  'Prioritetne provere',
+      visualAttention:     'Vizuelne tačke pažnje',
+      mechanicalWatchouts: 'Mehaničke provere',
+      testDriveFocus:      'Fokus na test vožnji',
+      costAwareness:       'Troškovi i pregovori',
+    }
+    case 'mk': return {
+      commonProblems:      'Чести проблеми',
+      highPriorityChecks:  'Приоритетни проверки',
+      visualAttention:     'Визуелни точки за внимание',
+      mechanicalWatchouts: 'Механички проверки',
+      testDriveFocus:      'Фокус на тест возење',
+      costAwareness:       'Трошоци и преговори',
+    }
+    case 'sq': return {
+      commonProblems:      'Problemet e Zakonshme',
+      highPriorityChecks:  'Kontrollet Prioritare',
+      visualAttention:     'Pikat e Vëmendjes Vizuale',
+      mechanicalWatchouts: 'Sinjalet Mekanike',
+      testDriveFocus:      'Fokusi i Vozitjes Provë',
+      costAwareness:       'Ndërgjegjësimi i Kostove',
+    }
+    default: return {
+      commonProblems:      'Common Problems',
+      highPriorityChecks:  'High-Priority Checks',
+      visualAttention:     'Visual Attention Areas',
+      mechanicalWatchouts: 'Mechanical Watchouts',
+      testDriveFocus:      'Test Drive Focus',
+      costAwareness:       'Cost Awareness',
+    }
+  }
+}
+
 function buildKbContext(kbIssues: MatchedIssue[]): string {
   if (kbIssues.length === 0) return ''
   // Emit all KB issues (not just 8) so AI cannot "accidentally" add any of them back.
@@ -107,6 +157,7 @@ function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): str
     : `No asking price provided. Provide a realistic Serbia market price range in EUR.`
 
   const kbContext = buildKbContext(kbIssues)
+  const st = sectionTitles(params.locale)
 
   return `You are an expert automotive advisor helping a buyer in Serbia inspect a used car.
 
@@ -150,12 +201,12 @@ Respond ONLY with valid JSON. No markdown, no code fences.
     "summary": "...", "isEstimated": true, "source": "AI estimate", "confidence": "medium"
   },
   "sections": {
-    "commonProblems":      { "id": "commonProblems",      "title": "Common Problems",        "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
-    "highPriorityChecks":  { "id": "highPriorityChecks",  "title": "High-Priority Checks",   "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["HIGH_ATTENTION"] }] },
-    "visualAttention":     { "id": "visualAttention",     "title": "Visual Attention Areas", "items": [{ "title": "...", "description": "...", "severity": "medium", "tags": ["VISUAL_CHECK"]   }] },
-    "mechanicalWatchouts": { "id": "mechanicalWatchouts", "title": "Mechanical Watchouts",   "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
-    "testDriveFocus":      { "id": "testDriveFocus",      "title": "Test Drive Focus",       "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["TEST_DRIVE"]     }] },
-    "costAwareness":       { "id": "costAwareness",       "title": "Cost Awareness",         "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["EXPENSIVE_RISK"] }] }
+    "commonProblems":      { "id": "commonProblems",      "title": "${st.commonProblems}",      "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
+    "highPriorityChecks":  { "id": "highPriorityChecks",  "title": "${st.highPriorityChecks}",  "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["HIGH_ATTENTION"] }] },
+    "visualAttention":     { "id": "visualAttention",     "title": "${st.visualAttention}",     "items": [{ "title": "...", "description": "...", "severity": "medium", "tags": ["VISUAL_CHECK"]   }] },
+    "mechanicalWatchouts": { "id": "mechanicalWatchouts", "title": "${st.mechanicalWatchouts}", "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["COMMON_ISSUE"]   }] },
+    "testDriveFocus":      { "id": "testDriveFocus",      "title": "${st.testDriveFocus}",      "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["TEST_DRIVE"]     }] },
+    "costAwareness":       { "id": "costAwareness",       "title": "${st.costAwareness}",       "items": [{ "title": "...", "description": "...", "severity": "high",   "tags": ["EXPENSIVE_RISK"] }] }
   },
   "disclaimer": "AI-generated guide. Price range is an estimated market reference, not live data. Verify with a qualified mechanic before purchase."
 }
@@ -343,9 +394,13 @@ async function callAnthropic(
     const raw: string = json.content?.[0]?.text ?? ''
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
     const parsed  = JSON.parse(cleaned) as VehicleResearchResult
-    // Guard: sections must exist and have at least one expected key
-    if (!parsed.sections || typeof parsed.sections !== 'object' || !parsed.sections.commonProblems) {
-      throw new Error('Anthropic response missing required sections')
+    // Warn if sections are incomplete but do not throw — a partial AI result is
+    // better than falling back to the English-only static knowledge base.
+    if (!parsed.sections || typeof parsed.sections !== 'object') {
+      throw new Error('Anthropic response missing sections object entirely')
+    }
+    if (!parsed.sections.commonProblems) {
+      console.warn('[research] Anthropic response missing commonProblems section — using partial result')
     }
     return parsed
   } finally {

@@ -226,8 +226,98 @@ function buildGenericResult(make: string, model: string, year: number): VehicleR
   }
 }
 
+function buildGermanGenericResult(make: string, model: string, year: number): VehicleResearchResult {
+  const vehicleKey = `${year} ${make} ${model}`
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: 'low',
+    overallRiskLevel: 'moderate',
+    summary: `Detaillierte KI-Analyse für den ${vehicleKey} ist vorübergehend nicht verfügbar. Der folgende Leitfaden behandelt universelle Prüfprioritäten für Gebrauchtwagen.`,
+    sections: {
+      commonProblems: section('commonProblems', 'Häufige Probleme', [
+        item('Motorölverbrauch', 'Viele Motoren verbrauchen zwischen den Ölwechseln Öl. Ölstand prüfen; liegt er unter dem Minimalstand, sollte dies untersucht werden.', 'medium', ['COMMON_ISSUE']),
+        item('Automatikgetriebe-Verschleiß', 'Automatikgetriebe verschleißen ohne regelmäßige Ölwechsel. Zögern, ruckartige Schaltvorgänge oder Schlupf sind Warnsignale, die ein Fachmann prüfen sollte.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Rost an tragenden Teilen', 'Rost an Schwellern, Hilfsrahmen und Bodenblech beeinträchtigt die Fahrzeugsicherheit. Oberflächenrost ist anders zu bewerten als durchfressende Korrosion.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      highPriorityChecks: section('highPriorityChecks', 'Prioritätschecks', [
+        item('Scheckheft lückenlos prüfen', 'Stempel mit Belegen vergleichen, soweit vorhanden. Servicelücken bei komplexen Fahrzeugen sind ein Verhandlungsargument.', 'high', ['HIGH_ATTENTION']),
+        item('OBD-Diagnosescan', 'Ein einfaches OBD-Lesegerät zeigt gespeicherte und anstehende Fehlercodes. Vor der Probefahrt durchführen. Gelöschte Codes können auf wiederkehrende Probleme hinweisen.', 'high', ['HIGH_ATTENTION']),
+        item('Unabhängige Vorführungsinspektion', 'Eine Inspektion durch einen unabhängigen Mechaniker (100–200 €) ist die beste Investition vor jedem Gebrauchtwagenkauf über 3.000 €.', 'high', ['HIGH_ATTENTION']),
+      ]),
+      visualAttention: section('visualAttention', 'Visuelle Prüfpunkte', [
+        item('Lackschichtdicke und Farbübereinstimmung', 'Aus der Distanz entlang der Karosserie blicken. Farbabweichungen oder Orangenhaut deuten auf Karosseriereparaturen hin. Ein Lackschichtdickenmessgerät ist ideal.', 'medium', ['VISUAL_CHECK']),
+        item('Unterboden – Ölspuren und Rost', 'Unterboden mit einer Taschenlampe inspizieren. Auf frische Ölflecken, Kühlmittelspuren und Rost am Hilfsrahmen oder Bodenblech achten.', 'high', ['VISUAL_CHECK']),
+        item('Reifenzustand und Abnutzungsmuster', 'Ungleichmäßige Abnutzung weist auf Spur-, Fahrwerks- oder Dämpferprobleme hin. Auf das DOT-Datum achten – Reifen über 6 Jahre sollten ersetzt werden.', 'medium', ['VISUAL_CHECK']),
+      ]),
+      mechanicalWatchouts: section('mechanicalWatchouts', 'Mechanische Warnzeichen', [
+        item('Zahnriemen / Steuerkette', 'Klären, ob Riemen oder Kette verbaut ist, und beim Riemen das letzte Wechseldatum bestätigen. Versäumter Wechseltermin bedeutet hohes Motorschadenrisiko.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Kühlsystem', 'Kühlmittel muss die richtige Farbe und einen stabilen Stand haben. Ein kalter Motor sollte nie zwischen den Services nachgefüllt werden müssen.', 'high', ['COMMON_ISSUE']),
+        item('Kupplungsgefühl (Schaltgetriebe)', 'Die Kupplung sollte im unteren Pedaldrittel gleichmäßig greifen. Sehr hohes Einrasten oder Schlupf deutet auf eine abgenutzte Kupplung hin.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      testDriveFocus: section('testDriveFocus', 'Probefahrt-Fokus', [
+        item('Kaltstart-Verhalten', 'Fahrzeug kalt starten. Übermäßiger Rauch, unruhiger Leerlauf oder Warnleuchten beim Start sind sofortige Warnsignale. Verkäufer nicht das Fahrzeug vorwärmen lassen.', 'high', ['TEST_DRIVE']),
+        item('Vollbremsungstest', 'Auf freier Strecke aus Tempo 50 fest bremsen. Das Fahrzeug sollte gerade zum Stehen kommen, ohne Ziehen, Vibrationen oder ungewöhnliches ABS-Pulsieren.', 'high', ['TEST_DRIVE']),
+        item('Beschleunigung und Schaltvorgänge', 'Im unteren Gang durch den Drehzahlbereich beschleunigen. Zögern, Rauch oder ungewöhnliche Geräusche unter Last weisen auf Motor- oder Antriebsprobleme hin.', 'medium', ['TEST_DRIVE']),
+      ]),
+      costAwareness: section('costAwareness', 'Kostenbewusstsein', [
+        item('Zahnriemenwechsel', 'Falls überfällig oder unbekannt: 400–800 € bei einem unabhängigen Betrieb einplanen. Vor dem Kauf nicht verhandelbar.', 'high', ['EXPENSIVE_RISK']),
+        item('Großinspektion bei Kauf', 'Unabhängig vom angegebenen Servicestand eine Inspektion (Öl, Filter, Bremsflüssigkeit, Zündkerzen) einplanen: ca. 200–400 € in einer freien Werkstatt.', 'medium', ['EXPENSIVE_RISK']),
+        item('Vorführungsinspektion', 'Eine Inspektion durch einen Markenfachbetrieb kostet 100–250 € und kann teure versteckte Mängel aufdecken.', 'medium', ['HIGH_ATTENTION']),
+      ]),
+    },
+    disclaimer: 'Dieser Leitfaden basiert auf allgemeinen Fahrzeuginspektionsgrundsätzen, da fahrzeugspezifische Daten begrenzt verfügbar sind. Nur als Ausgangscheckliste verwenden – vor dem Kauf stets von einem qualifizierten Mechaniker prüfen lassen.',
+  }
+}
+
+function buildAlbanianGenericResult(make: string, model: string, year: number): VehicleResearchResult {
+  const vehicleKey = `${year} ${make} ${model}`
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: 'low',
+    overallRiskLevel: 'moderate',
+    summary: `Analiza e detajuar e AI për ${vehicleKey} është përkohësisht e padisponueshme. Udhëzuesi më poshtë mbulon prioritetet universale të inspektimit për makinat e përdorura.`,
+    sections: {
+      commonProblems: section('commonProblems', 'Problemet e Zakonshme', [
+        item('Konsumimi i vajit të motorit', 'Shumë motorë konsumojnë vaj ndërmjet ndërrimit. Kontrolloni shufërën; nëse është nën minimum, ky problem duhet hetuar.', 'medium', ['COMMON_ISSUE']),
+        item('Konsumimi i transmisionit automatik', 'Kutitë e marsheve automatike prishen pa ndërrime të rregullta të vajit. Vonesa, ndërrime të forta ose rrëshqitja janë shenja paralajmëruese.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Ndryshku në zonat strukturore', 'Ndryshku në pragje, kornizat dhe dyshemenë ndikon në sigurinë strukturore. Mësoni të dalloni ndryshkun sipërfaqësor nga ai depërtues.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      highPriorityChecks: section('highPriorityChecks', 'Kontrollet Prioritare', [
+        item('Libri i shërbimit – verifikoni çdo hyrje', 'Krahasoni stampat me faturat kur është e mundur. Boshllëqet në historikun e shërbimit janë pikë negocimi.', 'high', ['HIGH_ATTENTION']),
+        item('Skanim diagnostik OBD', 'Një lexues bazë OBD zbulon kodet e gabimeve të ruajtura dhe në pritje. Bëjeni para provës. Kodet e fshira mund të fshehin probleme të përsëritura.', 'high', ['HIGH_ATTENTION']),
+        item('Inspektim i pavarur para blerjes', 'Një inspektim nga mekanik i pavarur (100–200 €) është investimi më i mirë para blerjes së çdo makine mbi 3.000 €.', 'high', ['HIGH_ATTENTION']),
+      ]),
+      visualAttention: section('visualAttention', 'Pikat e Vëmendjes Vizuale', [
+        item('Trashësia e bojës dhe përputhshmëria e ngjyrës', 'Shikoni nga larg sipas paneleve. Çdo ndryshim ngjyre ose lëkurë portokalli tregon riparim karoserish.', 'medium', ['VISUAL_CHECK']),
+        item('Nëntoka – rrjedhje dhe ndryshk', 'Inspektoni nëntokën me një dritë. Kërkoni pika të reja vaji, njolla ftohësi dhe ndryshk në kornizë ose dysheme.', 'high', ['VISUAL_CHECK']),
+        item('Gjendja e gomave dhe modeli i konsumit', 'Konsumi i pabarabartë tregon probleme me drejtimin ose pezullimin. Kontrolloni datën e prodhimit – gomat mbi 6 vjet duhen zëvendësuar.', 'medium', ['VISUAL_CHECK']),
+      ]),
+      mechanicalWatchouts: section('mechanicalWatchouts', 'Sinjalet Mekanike', [
+        item('Rripi / zinxhiri i shpërndarjes', 'Konfirmoni nëse motori përdor rripin ose zinxhirin dhe kur është ndërruar rripi herën e fundit. Intervali i humbur = rrezik i lartë i dëmtimit të motorit.', 'high', ['COMMON_ISSUE', 'EXPENSIVE_RISK']),
+        item('Gjendja e sistemit të ftohjes', 'Lëngu i ftohjes duhet të ketë ngjyrën e duhur dhe nivel të qëndrueshëm. Motori i ftohtë kurrë nuk duhet të kërkojë mbushje ndërmjet shërbimeve.', 'high', ['COMMON_ISSUE']),
+        item('Ndijimi i friksionit (transmision manual)', 'Friksioni duhet të angazhohet butësisht në të tretat e poshtme të lëvizjes. Angazhimi shumë lart ose rrëshqitja tregon friksion të konsumuar.', 'medium', ['COMMON_ISSUE']),
+      ]),
+      testDriveFocus: section('testDriveFocus', 'Fokusi i Vozitjes Provë', [
+        item('Sjellja e startimit të ftohtë', 'Startoni makinën të ftohtë. Tymi i tepruar, ralanti i parregullt ose dritat e paralajmërimit janë sinjale të menjëhershme. Mos lejoni shitësin ta ngrohë.', 'high', ['TEST_DRIVE']),
+        item('Testi i frenimit emergjent', 'Gjeni një zonë të sigurt dhe frenoni fort nga 50 km/h. Makina duhet të ndalojë drejt pa tërhequr, dridhje ose pulsim të ABS.', 'high', ['TEST_DRIVE']),
+        item('Nxitimi dhe ndërrimi i marsheleve', 'Nxitoni nëpër rangun e rrotullimeve në marsheve të ulëta. Çdo hezitim, tym ose zhurmë e pazakontë nën ngarkesë tregon probleme me motorin ose transmisionin.', 'medium', ['TEST_DRIVE']),
+      ]),
+      costAwareness: section('costAwareness', 'Ndërgjegjësimi i Kostove', [
+        item('Ndërrimi i rripit të shpërndarjes', 'Nëse i vonuar ose i panjohur: buxhetoni 400–800 € për motor me rrip. Jo i negociueshëm para blerjes.', 'high', ['EXPENSIVE_RISK']),
+        item('Shërbim i plotë në blerje', 'Buxhetoni për shërbim të plotë (vaj, filtra, lëng frenash, kandelat) pavarësisht datës së shërbimit të deklaruar. Kosto: 200–400 € në garazh të pavarur.', 'medium', ['EXPENSIVE_RISK']),
+        item('Inspektim para blerjes', 'Inspektimi nga specialist i markës kushton 100–250 € dhe mund të zbulojë defekte të fshehura të shtrenjta.', 'medium', ['HIGH_ATTENTION']),
+      ]),
+    },
+    disclaimer: 'Ky udhëzues bazohet në parimet e përgjithshme të inspektimit të automjeteve për shkak të të dhënave të kufizuara specifike për modelin. Përdoreni vetëm si listë fillestare – gjithmonë verifikoni me një mekanik të kualifikuar para blerjes.',
+  }
+}
+
 function buildLocalizedGenericResult(make: string, model: string, year: number, locale?: string): VehicleResearchResult {
   const lang = normalizeLocale(locale)
+  if (lang === 'de') return buildGermanGenericResult(make, model, year)
+  if (lang === 'sq') return buildAlbanianGenericResult(make, model, year)
   if (lang !== 'sr' && lang !== 'mk') return buildGenericResult(make, model, year)
 
   const vehicleKey = `${year} ${make} ${model}`
@@ -323,7 +413,9 @@ export function generateFallbackResult(params: {
   locale?: string
 }): VehicleResearchResult {
   const lang = normalizeLocale(params.locale)
-  if (lang === 'sr' || lang === 'mk') {
+  // Non-English locales: always use localized generic content so users don't
+  // see English-only fallback text when the AI is unavailable.
+  if (lang === 'sr' || lang === 'mk' || lang === 'de' || lang === 'sq') {
     return buildLocalizedGenericResult(params.make, params.model, params.year, params.locale)
   }
 
