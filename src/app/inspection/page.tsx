@@ -68,9 +68,40 @@ type PreparedAIImage = { imageBase64: string; mimeType: string; width: number; h
 
 const AI_IMAGE_MAX_DIMENSION = 1600
 const AI_IMAGE_QUALITY = 0.82
+const AI_REQUEST_TIMEOUT_MS = 35_000
+const AI_MAX_ATTEMPTS = 3
+
+let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
 
 function logPhotoFlow(step: string, details?: Record<string, unknown>) {
   console.info(`[inspection/photo] ${step}`, details ?? {})
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function isRetriableAIStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
+}
+
+function friendlyAIDetail(fallbackDetail: string, reason: string): string {
+  if (reason === 'IMAGE_VALIDATION') {
+    return fallbackDetail
+  }
+  if (reason === 'TIMEOUT') {
+    return fallbackDetail
+  }
+  if (reason === 'RATE_LIMIT') {
+    return fallbackDetail
+  }
+  return fallbackDetail
+}
+
+async function enqueueAIAnalysis<T>(task: () => Promise<T>): Promise<T> {
+  const run = aiAnalysisQueue.then(task, task)
+  aiAnalysisQueue = run.catch(() => undefined)
+  return run
 }
 
 // ─── Photo draft persistence (survives refresh / navigation) ──────────────────
@@ -243,36 +274,59 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     })
 
     const authHeader = getAuthHeader()
-    const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 45000)
-    let res: Response
-    try {
-      logPhotoFlow('ai_request_sent', { key, label })
-      res = await fetch('/api/inspection/analyze-photo', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authHeader ? { Authorization: authHeader } : {}),
-        },
-        body: JSON.stringify({
-          imageBase64: prepared.imageBase64,
-          mimeType: prepared.mimeType,
-          angle: key,
-          angleLabel: label,
-          locale,
-          imageMeta: {
-            width: prepared.width,
-            height: prepared.height,
-            size: prepared.size,
-            originalType: file.type,
-            originalSize: file.size,
-          },
-        }),
-      })
-    } finally {
-      window.clearTimeout(timeout)
+    const requestBody = {
+      imageBase64: prepared.imageBase64,
+      mimeType: prepared.mimeType,
+      angle: key,
+      angleLabel: label,
+      locale,
+      imageMeta: {
+        width: prepared.width,
+        height: prepared.height,
+        size: prepared.size,
+        originalType: file.type,
+        originalSize: file.size,
+      },
     }
+
+    const res = await enqueueAIAnalysis(async () => {
+      let lastStatus = 0
+      for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt += 1) {
+        const controller = new AbortController()
+        const timeout = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS)
+        try {
+          logPhotoFlow('ai_request_sent', { key, label, attempt })
+          const response = await fetch('/api/inspection/analyze-photo', {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authHeader ? { Authorization: authHeader } : {}),
+            },
+            body: JSON.stringify(requestBody),
+          })
+          lastStatus = response.status
+          if (response.ok || !isRetriableAIStatus(response.status) || attempt === AI_MAX_ATTEMPTS) {
+            return response
+          }
+          logPhotoFlow('ai_request_retry_scheduled', { key, attempt, status: response.status })
+        } catch (err) {
+          const timedOut = err instanceof DOMException && err.name === 'AbortError'
+          if (attempt === AI_MAX_ATTEMPTS) {
+            throw new Error(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR')
+          }
+          logPhotoFlow('ai_request_retry_scheduled', {
+            key,
+            attempt,
+            reason: timedOut ? 'timeout' : err instanceof Error ? err.message : String(err),
+          })
+        } finally {
+          window.clearTimeout(timeout)
+        }
+        await sleep(700 * attempt)
+      }
+      throw new Error(lastStatus === 429 ? 'RATE_LIMIT' : 'NETWORK_ERROR')
+    })
 
     const raw = await res.text()
     let json: { data?: MockAIResult; message?: string; error?: string } | null = null
@@ -294,17 +348,16 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       })
       return json.data
     }
-    throw new Error(json?.message ?? json?.error ?? `AI request failed with HTTP ${res.status}`)
+    if (res.status === 429) throw new Error('RATE_LIMIT')
+    throw new Error(json?.message ?? json?.error ?? `HTTP_${res.status}`)
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
     logPhotoFlow('ai_failure', { key, reason, elapsedMs: Date.now() - startedAt })
-    const detail = reason.includes('decode') || reason.includes('Unsupported')
-      ? `This image could not be prepared for AI analysis (${reason}). Try a JPEG, PNG, or a fresh camera capture.`
-      : `${fallbackDetail} (${reason})`
+    const friendlyReason = reason.includes('decode') || reason.includes('Unsupported') || reason.includes('dimensions') ? 'IMAGE_VALIDATION' : reason
     return {
       signal: fallbackSignal,
       severity: 'warn',
-      detail,
+      detail: friendlyAIDetail(fallbackDetail, friendlyReason),
       imageQuality: 'unusable',
       visibleAreas: [],
       detectedIssues: [],
@@ -312,7 +365,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       uncertainAreas: ['AI analysis did not complete'],
       confidenceScore: 0,
       recommendation: 'Retake the photo or try again with a stable network connection.',
-      failureReason: reason,
+      failureReason: friendlyReason,
     }
   }
 }
@@ -563,7 +616,7 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
                 {t(`checklist.${item.itemKey}`, { defaultValue: item.itemLabel })}
               </div>
               {helperText && (
-                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.46)', lineHeight: 1.55, margin: '-3px 0 10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.46)', lineHeight: 1.6, margin: '-3px 0 12px', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                   {helperText}
                 </div>
               )}

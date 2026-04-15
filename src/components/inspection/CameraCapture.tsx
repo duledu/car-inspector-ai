@@ -117,19 +117,25 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
   }, [label, mode, stopCamera, onClose])
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100,
-      background: '#080c14',
-      display: 'flex', flexDirection: 'column',
-      overflowY: 'auto',
-      overscrollBehavior: 'contain',
-      touchAction: 'pan-y',
-      WebkitOverflowScrolling: 'touch',
-    }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: '#080c14',
+        display: 'flex', flexDirection: 'column',
+        width: '100vw',
+        height: '100dvh',
+        minHeight: '100svh',
+        overflow: 'hidden',
+        overscrollBehavior: 'contain',
+        touchAction: mode === 'camera' ? 'none' : 'pan-y',
+        WebkitOverflowScrolling: 'touch',
+      }}>
       {/* ── Header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px',
+        padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px',
         background: 'rgba(8,12,20,0.95)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         flexShrink: 0,
@@ -150,7 +156,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: mode === 'preview' ? 'flex-start' : 'center', position: 'relative', overflow: mode === 'preview' ? 'visible' : 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: mode === 'preview' ? 'flex-start' : 'center', position: 'relative', overflow: mode === 'preview' ? 'auto' : 'hidden' }}>
 
         {/* ── CHOOSE MODE ── */}
         {mode === 'choose' && (
@@ -244,7 +250,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
             }} />
 
             {/* Corner guides */}
-            <div style={{ position: 'absolute', inset: '15%', pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: '12%', right: '10%', bottom: 'calc(128px + env(safe-area-inset-bottom, 0px))', left: '10%', pointerEvents: 'none' }}>
               {([
                 { id: 'tl', top: 0,    left:  0, borderTop:    '2px solid #22d3ee', borderLeft:  '2px solid #22d3ee', borderRadius: '4px 0 0 0' },
                 { id: 'tr', top: 0,    right: 0, borderTop:    '2px solid #22d3ee', borderRight: '2px solid #22d3ee', borderRadius: '0 4px 0 0' },
@@ -272,9 +278,11 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
             {/* Camera controls */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
-              padding: '24px 32px',
-              paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
+              padding: '18px 28px',
+              paddingBottom: 'calc(22px + env(safe-area-inset-bottom, 0px))',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              zIndex: 5,
+              background: 'linear-gradient(to top, rgba(5,8,14,0.88) 0%, rgba(5,8,14,0.56) 58%, transparent 100%)',
             }}>
               {/* Gallery shortcut */}
               <button
@@ -298,7 +306,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
                 disabled={status !== 'active'}
                 className="camera-btn"
                 style={{
-                  width: 72, height: 72, borderRadius: '50%',
+                  width: 78, height: 78, borderRadius: '50%',
                   background: status === 'active' ? '#fff' : 'rgba(255,255,255,0.25)',
                   border: '4px solid rgba(255,255,255,0.3)',
                   cursor: status === 'active' ? 'pointer' : 'default',
@@ -335,7 +343,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
 
         {/* ── PREVIEW MODE ── */}
         {mode === 'preview' && preview && (
-          <div style={{ width: '100%', minHeight: 'calc(100svh - 57px)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: '100%', minHeight: 'calc(100dvh - 57px)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: '1 1 auto', minHeight: 320, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -360,7 +368,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
 
             <div style={{
               padding: '20px 24px',
-              paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
+              paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
               background: 'rgba(8,12,20,0.97)',
               borderTop: '1px solid rgba(255,255,255,0.07)',
               display: 'flex', gap: 12,

@@ -12,6 +12,15 @@ import { clampScore } from '@/modules/scoring/scoring.logic'
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
 type LegacySeverity = 'ok' | 'warn' | 'flag'
+type AIProviderFailure =
+  | 'CONFIG_ERROR'
+  | 'RATE_LIMIT'
+  | 'TIMEOUT'
+  | 'BAD_REQUEST'
+  | 'IMAGE_VALIDATION'
+  | 'PROVIDER_OUTAGE'
+  | 'PROVIDER_RESPONSE'
+  | 'UNKNOWN'
 
 interface PhotoIssue {
   area: string
@@ -164,12 +173,114 @@ function fallbackAnalysis(locale: string): { signal: string; detail: string } {
   return messages[lang] ?? messages.en
 }
 
-function fallbackForFailure(locale: string, reason: string): { signal: string; detail: string } {
+function fallbackForFailure(locale: string, failure: AIProviderFailure): { signal: string; detail: string; recommendation: string } {
   const fallback = fallbackAnalysis(locale)
+  const lang = locale.split('-')[0]
+  const details: Record<string, Partial<Record<AIProviderFailure, string>>> = {
+    en: {
+      CONFIG_ERROR: 'AI photo analysis is temporarily unavailable. The rest of the report can still be completed.',
+      RATE_LIMIT: 'AI photo analysis is temporarily busy. Please retry this photo in a moment.',
+      TIMEOUT: 'AI photo analysis took too long. Please retry this photo when the connection is stable.',
+      BAD_REQUEST: 'This photo could not be submitted for AI analysis. Retake it or choose another image.',
+      IMAGE_VALIDATION: 'This image could not be processed. Retake it as a JPEG, PNG, or WebP image.',
+      PROVIDER_OUTAGE: 'AI photo analysis is temporarily unavailable. Please retry shortly.',
+      PROVIDER_RESPONSE: 'AI photo analysis returned an incomplete result. Please retry this photo.',
+      UNKNOWN: fallback.detail,
+    },
+    sr: {
+      RATE_LIMIT: 'AI analiza fotografija je trenutno zauzeta. Pokušajte ponovo za trenutak.',
+      TIMEOUT: 'AI analiza fotografije je predugo trajala. Pokušajte ponovo kada je veza stabilna.',
+      CONFIG_ERROR: 'AI analiza fotografija je trenutno nedostupna. Ostatak izveštaja i dalje možete završiti.',
+    },
+    de: {
+      RATE_LIMIT: 'Die KI-Fotoanalyse ist momentan ausgelastet. Bitte versuchen Sie es gleich erneut.',
+      TIMEOUT: 'Die KI-Fotoanalyse hat zu lange gedauert. Bitte versuchen Sie es bei stabiler Verbindung erneut.',
+      CONFIG_ERROR: 'Die KI-Fotoanalyse ist vorübergehend nicht verfügbar. Der restliche Bericht kann weiter erstellt werden.',
+    },
+    mk: {
+      RATE_LIMIT: 'AI анализата на фотографии е моментално зафатена. Обидете се повторно за кратко.',
+      TIMEOUT: 'AI анализата траеше предолго. Обидете се повторно кога врската е стабилна.',
+      CONFIG_ERROR: 'AI анализата на фотографии е привремено недостапна. Остатокот од извештајот може да продолжи.',
+    },
+    sq: {
+      RATE_LIMIT: 'Analiza AI e fotografive është përkohësisht e ngarkuar. Provoni përsëri pas pak.',
+      TIMEOUT: 'Analiza AI e fotografisë zgjati shumë. Provoni përsëri kur lidhja të jetë e qëndrueshme.',
+      CONFIG_ERROR: 'Analiza AI e fotografive është përkohësisht e padisponueshme. Raporti mund të vazhdojë.',
+    },
+  }
+  const localizedDetail = details[lang]?.[failure] ?? (lang === 'en' ? details.en[failure] : undefined) ?? fallback.detail
   return {
     signal: fallback.signal,
-    detail: `${fallback.detail} Reason: ${reason}`,
+    detail: localizedDetail,
+    recommendation: localizedDetail,
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function isRetriableStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
+}
+
+function failureFromStatus(status: number): AIProviderFailure {
+  if (status === 429) return 'RATE_LIMIT'
+  if (status === 400 || status === 413 || status === 415 || status === 422) return 'BAD_REQUEST'
+  if (status >= 500) return 'PROVIDER_OUTAGE'
+  return 'UNKNOWN'
+}
+
+function failureFromError(error: unknown): AIProviderFailure {
+  if (error instanceof DOMException && error.name === 'AbortError') return 'TIMEOUT'
+  const message = error instanceof Error ? error.message : String(error)
+  if (message === 'RATE_LIMIT') return 'RATE_LIMIT'
+  if (message === 'TIMEOUT') return 'TIMEOUT'
+  if (message.startsWith('HTTP_')) {
+    const status = Number(message.slice(5))
+    return Number.isFinite(status) ? failureFromStatus(status) : 'UNKNOWN'
+  }
+  if (message.includes('parse') || message.includes('JSON')) return 'PROVIDER_RESPONSE'
+  return 'UNKNOWN'
+}
+
+async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: string): Promise<Response> {
+  let lastStatus = 0
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      lastStatus = response.status
+      if (response.ok || !isRetriableStatus(response.status) || attempt === 3) {
+        return response
+      }
+      console.warn('[analyze-photo] OpenAI retry scheduled', {
+        angle,
+        attempt,
+        status: response.status,
+        failureType: failureFromStatus(response.status),
+      })
+    } catch (error) {
+      const failureType = failureFromError(error)
+      if (attempt === 3 || failureType !== 'TIMEOUT') {
+        throw error
+      }
+      console.warn('[analyze-photo] OpenAI retry scheduled', { angle, attempt, failureType })
+    } finally {
+      clearTimeout(timeout)
+    }
+    await sleep(800 * attempt)
+  }
+  throw new Error(`HTTP_${lastStatus || 503}`)
 }
 
 function extractJsonObject(text: string): string {
@@ -339,7 +450,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     console.error('[analyze-photo] OPENAI_API_KEY is not set')
-    const fallback = fallbackForFailure(locale, 'AI service is not configured on the server')
+    const fallback = fallbackForFailure(locale, 'CONFIG_ERROR')
     return NextResponse.json({
       data: {
         signal: fallback.signal,
@@ -352,7 +463,7 @@ export async function POST(req: NextRequest) {
         possibleIssues: [],
         uncertainAreas: ['AI service is not configured'],
         confidenceScore: 0,
-        recommendation: 'Try again later after AI analysis is available.',
+        recommendation: fallback.recommendation,
         failureReason: 'CONFIG_ERROR',
       },
     })
@@ -367,61 +478,47 @@ export async function POST(req: NextRequest) {
       imageMeta,
     })
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 45000)
-    let response: Response
-    try {
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+    const response = await callOpenAIWithRetry(apiKey, {
+      model: 'gpt-4o',
+      max_tokens: 300,
+      temperature: 0.2,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'car_photo_inspection',
+          strict: true,
+          schema: responseSchema,
         },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 300,
-          temperature: 0.2,
-          response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: 'car_photo_inspection',
-              strict: true,
-              schema: responseSchema,
-            },
-          },
-          messages: [
+      },
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a professional car inspector. Respond only with valid JSON.',
+        },
+        {
+          role: 'user',
+          content: [
             {
-              role: 'system',
-              content: 'You are a professional car inspector. Respond only with valid JSON.',
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${imageBase64}`,
+                detail: 'high',
+              },
             },
             {
-              role: 'user',
-              content: [
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:${mimeType};base64,${imageBase64}`,
-                    detail: 'high',
-                  },
-                },
-                {
-                  type: 'text',
-                  text: buildPrompt(angle, angleLabel, locale),
-                },
-              ],
+              type: 'text',
+              text: buildPrompt(angle, angleLabel, locale),
             },
           ],
-        }),
-      })
-    } finally {
-      clearTimeout(timeout)
-    }
+        },
+      ],
+    }, angle)
 
     if (!response.ok) {
       const err = await response.text()
-      console.error('[analyze-photo] OpenAI error:', response.status, err)
-      throw new Error(`OpenAI ${response.status}`)
+      const failureType = failureFromStatus(response.status)
+      console.error('[analyze-photo] OpenAI error', { angle, status: response.status, failureType, body: err.slice(0, 500) })
+      throw new Error(`HTTP_${response.status}`)
     }
 
     const result = await response.json()
@@ -473,9 +570,11 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
+    const failureType = failureFromError(error)
     const reason = error instanceof Error ? error.message : String(error)
-    logApiError('inspection/analyze-photo', 'analyze', error, { angle })
-    const fallback = fallbackForFailure(locale, reason)
+    logApiError('inspection/analyze-photo', 'analyze', error, { angle, failureType })
+    console.warn('[analyze-photo] returning fallback', { angle, failureType, reason })
+    const fallback = fallbackForFailure(locale, failureType)
     return NextResponse.json(
       {
         data: {
@@ -489,8 +588,8 @@ export async function POST(req: NextRequest) {
           possibleIssues: [],
           uncertainAreas: ['AI analysis did not complete'],
           confidenceScore: 0,
-          recommendation: 'Retake the photo or try again with a stable network connection.',
-          failureReason: reason,
+          recommendation: fallback.recommendation,
+          failureReason: failureType,
         },
       },
       { status: 200 } // Return 200 so UI still renders — just shows the fallback

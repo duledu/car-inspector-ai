@@ -81,7 +81,7 @@ export default function AppShell({ children }: AppShellProps) {
       {/* ── Mobile layout (<768px) ── */}
       <div
         className="mobile-only"
-        style={{ flexDirection: 'column', height: '100svh', minHeight: '100svh', background: '#080c14', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}
+        style={{ flexDirection: 'column', height: '100dvh', minHeight: '100svh', background: '#080c14', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}
       >
         <AmbientBackground variant="mobile" />
         {/* ── Premium glass top bar ── */}
@@ -170,7 +170,7 @@ export default function AppShell({ children }: AppShellProps) {
             flex: 1,
             overflowY: 'auto',
             /* Bottom padding clears the fixed 64px nav + safe area (iOS/Android) */
-            padding: '16px 16px calc(80px + env(safe-area-inset-bottom, 0px))',
+            padding: '16px 16px calc(92px + env(safe-area-inset-bottom, 0px))',
             background: 'transparent',
             position: 'relative',
             zIndex: 1,

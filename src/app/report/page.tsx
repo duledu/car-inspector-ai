@@ -510,32 +510,41 @@ export default function ReportPage() {
             {/* ══════════════════════════════════════════════════════════
                 6. AI PHOTO FINDINGS
                ══════════════════════════════════════════════════════════ */}
-            {latestAI && latestAI.findings.length > 0 && (
+            <div className="report-lower-stack">
               <div>
-                <SectionLabel>{t('report.aiFindings')} ({latestAI.findings.length})</SectionLabel>
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, overflow: 'hidden' }}>
-                  {latestAI.findings.map((f, i) => (
+                <SectionLabel>{t('report.aiFindings')} ({latestAI?.findings.length ?? 0})</SectionLabel>
+                <div style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.035) 0%, rgba(255,255,255,0.018) 100%)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+                  {latestAI && latestAI.findings.length > 0 ? latestAI.findings.map((f, i) => (
                     // eslint-disable-next-line react/no-array-index-key
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: i < latestAI.findings.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: SEV_COLOR[f.severity] ?? '#fff', marginTop: 5, flexShrink: 0 }} />
+                    <div key={i} className="report-ai-finding-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: i < latestAI.findings.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: SEV_COLOR[f.severity] ?? '#fff', marginTop: 5, flexShrink: 0, boxShadow: `0 0 10px ${SEV_COLOR[f.severity] ?? '#fff'}55` }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.82)' }}>{f.title}</div>
-                        {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2, lineHeight: 1.5 }}>{f.description}</div>}
+                        <div style={{ fontSize: 13, fontWeight: 650, color: 'rgba(255,255,255,0.86)', lineHeight: 1.35 }}>{f.title}</div>
+                        {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.44)', marginTop: 4, lineHeight: 1.55 }}>{f.description}</div>}
                       </div>
-                      <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 2 }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 1, padding: '3px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
                         {t(`report.severity.${f.severity}`)}
                       </span>
                     </div>
-                  ))}
+                  )) : (
+                    <div style={{ padding: '18px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>{t('inspection.noFlagsRaised')}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>{t('report.dimExplanation.ai.clean')}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
 
             {/* ══════════════════════════════════════════════════════════
                 7. PREMIUM UPSELL / UNLOCKED
                ══════════════════════════════════════════════════════════ */}
-            <div style={{ padding: '18px 22px', background: hasPremium ? 'rgba(34,211,238,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasPremium ? 'rgba(34,211,238,0.16)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div>
+              <div className="report-premium-card" style={{ padding: '18px 20px', background: hasPremium ? 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(34,211,238,0.025))' : 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))', border: `1px solid ${hasPremium ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, boxShadow: hasPremium ? '0 0 28px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: hasPremium ? '#22d3ee' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                   {t('report.premiumUnlock')}
                 </div>
@@ -543,10 +552,11 @@ export default function ReportPage() {
                   {hasPremium ? t('profile.carverticalReport') : t('dashboard.unlockHistorySub')}
                 </div>
               </div>
-              <Link href="/premium" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, padding: '9px 18px', background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)', borderRadius: 9, fontSize: 12, fontWeight: 600, color: '#22d3ee', textDecoration: 'none' }}>
+              <Link href="/premium" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0, padding: '10px 18px', minHeight: 42, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)', borderRadius: 9, fontSize: 12, fontWeight: 700, color: '#22d3ee', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 {hasPremium ? t('report.title') : t('report.premiumUnlock')}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
+              </div>
             </div>
           </>
         )}
