@@ -228,6 +228,7 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   height: min(52vw, 315px);
   transform: translateX(-50%) rotate(-72deg);
   transform-origin: 50% 100%;
+  opacity: 0.34;
   animation: ambient-scan-dot 11s ease-in-out infinite;
 }
 .ambient-background__scan-dot::before {
@@ -239,8 +240,8 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   height: 6px;
   border-radius: 50%;
   transform: translateX(-50%);
-  background: rgba(125,211,252,0.88);
-  box-shadow: 0 0 10px rgba(34,211,238,0.42);
+  background: rgba(125,211,252,0.34);
+  box-shadow: 0 0 8px rgba(34,211,238,0.16);
 }
 .ambient-background--desktop .ambient-background__horizon {
   bottom: 18%;
@@ -405,8 +406,8 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   50%      { opacity: 0.48; transform: translateX(-50%) rotate(2deg); }
 }
 @keyframes ambient-scan-dot {
-  0%, 100% { opacity: 0.28; transform: translateX(-50%) rotate(-72deg); }
-  50%      { opacity: 0.78; transform: translateX(-50%) rotate(72deg); }
+  0%, 100% { opacity: 0.08; transform: translateX(-50%) rotate(-72deg); }
+  50%      { opacity: 0.22; transform: translateX(-50%) rotate(72deg); }
 }
 
 /* ─── Animation utilities ────────────────────────────────────── */

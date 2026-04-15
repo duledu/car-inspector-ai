@@ -10,6 +10,10 @@ interface CameraCaptureProps {
   readonly label: string
 }
 
+function logPhotoFlow(step: string, details?: Record<string, unknown>) {
+  console.info(`[inspection/photo-ui] ${step}`, details ?? {})
+}
+
 export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps) {
   const { t } = useTranslation()
 
@@ -32,10 +36,11 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
   // by the time getUserMedia resolves. startCamera() bumps `attachTick` which
   // fires a useEffect that safely sets srcObject after the render.
   const handleOpenCamera = useCallback(async (facing: 'environment' | 'user') => {
+    logPhotoFlow('camera_open_requested', { label, facing })
     setFacingMode(facing)
     setMode('camera')
     await startCamera(facing)
-  }, [startCamera])
+  }, [label, startCamera])
 
   // ── Capture ────────────────────────────────────────────────────────────────
   const handleCapture = useCallback(() => {
@@ -44,15 +49,20 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
     const canvas = canvasRef.current
     canvas.width  = video.videoWidth
     canvas.height = video.videoHeight
+    logPhotoFlow('capture_pressed', { label, width: canvas.width, height: canvas.height })
     canvas.getContext('2d')?.drawImage(video, 0, 0)
     canvas.toBlob(blob => {
-      if (!blob) return
+      if (!blob) {
+        logPhotoFlow('capture_blob_failed', { label })
+        return
+      }
       const file = new File([blob], `${label.replaceAll(/\s+/g, '_')}_${Date.now()}.jpg`, { type: 'image/jpeg' })
       const url  = URL.createObjectURL(blob)
       stopCamera()
       setCapturedFile(file)
       setPreview(url)
       setMode('preview')
+      logPhotoFlow('preview_opened_from_camera', { label, size: file.size, type: file.type })
     }, 'image/jpeg', 0.88)
   }, [label, stopCamera, videoRef])
 
@@ -68,11 +78,14 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    logPhotoFlow('image_selected', { label, name: file.name, size: file.size, type: file.type })
     const url = URL.createObjectURL(file)
     setCapturedFile(file)
     setPreview(url)
     setMode('preview')
-  }, [])
+    logPhotoFlow('preview_opened_from_upload', { label })
+    e.target.value = ''
+  }, [label])
 
   // ── Gallery shortcut from camera mode ─────────────────────────────────────
   const handleGalleryFromCamera = useCallback(() => {
@@ -85,26 +98,33 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
   // ── Confirm / retake ───────────────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
     if (!capturedFile || !preview) return
+    logPhotoFlow('confirm_pressed', { label, size: capturedFile.size, type: capturedFile.type })
     onCapture(capturedFile, preview)
-  }, [capturedFile, preview, onCapture])
+  }, [capturedFile, label, preview, onCapture])
 
   const handleRetake = useCallback(() => {
+    logPhotoFlow('retake_pressed', { label })
     setPreview(null)
     setCapturedFile(null)
     setMode('choose')
-  }, [])
+  }, [label])
 
   // ── Close ──────────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
+    logPhotoFlow('preview_or_camera_closed', { label, mode })
     stopCamera()
     onClose()
-  }, [stopCamera, onClose])
+  }, [label, mode, stopCamera, onClose])
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
       background: '#080c14',
       display: 'flex', flexDirection: 'column',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+      touchAction: 'pan-y',
+      WebkitOverflowScrolling: 'touch',
     }}>
       {/* ── Header ── */}
       <div style={{
@@ -114,7 +134,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         flexShrink: 0,
       }}>
-        <button onClick={handleClose} style={{
+        <button type="button" onClick={handleClose} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           background: 'none', border: 'none', cursor: 'pointer',
           color: 'rgba(255,255,255,0.55)', fontSize: 14, fontFamily: 'var(--font-sans)',
@@ -130,7 +150,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: mode === 'preview' ? 'flex-start' : 'center', position: 'relative', overflow: mode === 'preview' ? 'visible' : 'hidden' }}>
 
         {/* ── CHOOSE MODE ── */}
         {mode === 'choose' && (
@@ -315,13 +335,13 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
 
         {/* ── PREVIEW MODE ── */}
         {mode === 'preview' && preview && (
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <div style={{ width: '100%', minHeight: 'calc(100svh - 57px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: '1 1 auto', minHeight: 320, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={preview}
                 alt={label}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                style={{ width: '100%', maxHeight: 'calc(100svh - 210px)', objectFit: 'contain', background: '#000' }}
               />
               <div style={{ position: 'absolute', top: 16, left: 0, right: 0, textAlign: 'center' }}>
                 <span style={{
@@ -344,6 +364,9 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
               background: 'rgba(8,12,20,0.97)',
               borderTop: '1px solid rgba(255,255,255,0.07)',
               display: 'flex', gap: 12,
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 2,
             }}>
               <button
                 onClick={handleRetake}

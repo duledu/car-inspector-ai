@@ -49,8 +49,29 @@ const STATUS_CFG = {
 } as const
 
 type PhotoEntry   = { key: string; label: string; file: File; previewUrl: string; aiPending: boolean; aiResult?: MockAIResult }
-type MockAIResult = { signal: string; severity: 'ok' | 'warn' | 'flag'; detail: string }
+type PhotoIssue = { area: string; issue: string; severity: 'minor' | 'moderate' | 'serious'; confidence: number }
+type MockAIResult = {
+  signal: string
+  severity: 'ok' | 'warn' | 'flag'
+  detail: string
+  imageQuality?: 'good' | 'medium' | 'poor' | 'unusable'
+  visibleAreas?: string[]
+  detectedIssues?: PhotoIssue[]
+  possibleIssues?: PhotoIssue[]
+  uncertainAreas?: string[]
+  confidenceScore?: number
+  recommendation?: string
+  failureReason?: string
+}
 type ChecklistRow = { id: string; itemKey: string; itemLabel: string; status: ItemStatus; notes?: string | null }
+type PreparedAIImage = { imageBase64: string; mimeType: string; width: number; height: number; size: number }
+
+const AI_IMAGE_MAX_DIMENSION = 1600
+const AI_IMAGE_QUALITY = 0.82
+
+function logPhotoFlow(step: string, details?: Record<string, unknown>) {
+  console.info(`[inspection/photo] ${step}`, details ?? {})
+}
 
 // ─── Photo draft persistence (survives refresh / navigation) ──────────────────
 const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
@@ -106,13 +127,93 @@ async function toThumbnailDataUrl(file: File, maxWidth = 360): Promise<string> {
 
 // ─── Real AI analysis via OpenAI Vision ───────────────────────────────────────
 
-async function fileToBase64(file: File): Promise<string> {
+async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload  = () => resolve((reader.result as string).split(',')[1])
     reader.onerror = reject
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(blob)
   })
+}
+
+async function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error(`Browser could not decode image type "${file.type || 'unknown'}"`))
+    }
+    img.src = url
+  })
+}
+
+async function loadBitmapWithOrientation(file: File): Promise<ImageBitmap | null> {
+  if (!('createImageBitmap' in window)) return null
+
+  try {
+    return await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch (err) {
+    logPhotoFlow('image_bitmap_orientation_failed', {
+      reason: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+async function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) resolve(blob)
+      else reject(new Error('Failed to encode image for AI analysis'))
+    }, 'image/jpeg', AI_IMAGE_QUALITY)
+  })
+}
+
+async function prepareImageForAI(file: File): Promise<PreparedAIImage> {
+  if (file.type && !file.type.startsWith('image/')) {
+    throw new Error(`Unsupported file type "${file.type || 'unknown'}"`)
+  }
+
+  const bitmap = await loadBitmapWithOrientation(file)
+  const img = bitmap ? null : await loadImage(file)
+  const sourceWidth = bitmap?.width ?? img?.naturalWidth ?? 0
+  const sourceHeight = bitmap?.height ?? img?.naturalHeight ?? 0
+  if (!sourceWidth || !sourceHeight) {
+    bitmap?.close()
+    throw new Error('Image decoded with empty dimensions')
+  }
+
+  const scale = Math.min(1, AI_IMAGE_MAX_DIMENSION / Math.max(sourceWidth, sourceHeight))
+  const width = Math.max(1, Math.round(sourceWidth * scale))
+  const height = Math.max(1, Math.round(sourceHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    bitmap?.close()
+    throw new Error('Canvas is unavailable for image preprocessing')
+  }
+  if (bitmap) {
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+  } else if (img) {
+    ctx.drawImage(img, 0, 0, width, height)
+  }
+  const blob = await canvasToJpegBlob(canvas)
+
+  return {
+    imageBase64: await blobToBase64(blob),
+    mimeType: 'image/jpeg',
+    width,
+    height,
+    size: blob.size,
+  }
 }
 
 function getAuthHeader(): string {
@@ -129,22 +230,90 @@ function getAuthHeader(): string {
 }
 
 async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string): Promise<MockAIResult> {
+  const startedAt = Date.now()
   try {
-    const imageBase64 = await fileToBase64(file)
-    const authHeader = getAuthHeader()
-    const res = await fetch('/api/inspection/analyze-photo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-      body: JSON.stringify({ imageBase64, mimeType: file.type || 'image/jpeg', angle: key, angleLabel: label, locale }),
+    logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type })
+    const prepared = await prepareImageForAI(file)
+    logPhotoFlow('ai_prepare_finished', {
+      key,
+      preparedSize: prepared.size,
+      width: prepared.width,
+      height: prepared.height,
+      mimeType: prepared.mimeType,
     })
-    const json = await res.json()
-    if (json?.data) return json.data as MockAIResult
-    throw new Error('No data in response')
-  } catch {
-    return { signal: fallbackSignal, severity: 'warn', detail: fallbackDetail }
+
+    const authHeader = getAuthHeader()
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 45000)
+    let res: Response
+    try {
+      logPhotoFlow('ai_request_sent', { key, label })
+      res = await fetch('/api/inspection/analyze-photo', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader ? { Authorization: authHeader } : {}),
+        },
+        body: JSON.stringify({
+          imageBase64: prepared.imageBase64,
+          mimeType: prepared.mimeType,
+          angle: key,
+          angleLabel: label,
+          locale,
+          imageMeta: {
+            width: prepared.width,
+            height: prepared.height,
+            size: prepared.size,
+            originalType: file.type,
+            originalSize: file.size,
+          },
+        }),
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    const raw = await res.text()
+    let json: { data?: MockAIResult; message?: string; error?: string } | null = null
+    try {
+      json = raw ? JSON.parse(raw) : null
+    } catch {
+      throw new Error(`AI response was not JSON (${res.status})`)
+    }
+
+    logPhotoFlow('ai_response_received', { key, status: res.status, elapsedMs: Date.now() - startedAt, hasData: !!json?.data })
+    if (json?.data) {
+      logPhotoFlow('ai_parse_result', {
+        key,
+        severity: json.data.severity,
+        imageQuality: json.data.imageQuality,
+        confidenceScore: json.data.confidenceScore,
+        detectedIssues: json.data.detectedIssues?.length ?? 0,
+        possibleIssues: json.data.possibleIssues?.length ?? 0,
+      })
+      return json.data
+    }
+    throw new Error(json?.message ?? json?.error ?? `AI request failed with HTTP ${res.status}`)
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err)
+    logPhotoFlow('ai_failure', { key, reason, elapsedMs: Date.now() - startedAt })
+    const detail = reason.includes('decode') || reason.includes('Unsupported')
+      ? `This image could not be prepared for AI analysis (${reason}). Try a JPEG, PNG, or a fresh camera capture.`
+      : `${fallbackDetail} (${reason})`
+    return {
+      signal: fallbackSignal,
+      severity: 'warn',
+      detail,
+      imageQuality: 'unusable',
+      visibleAreas: [],
+      detectedIssues: [],
+      possibleIssues: [],
+      uncertainAreas: ['AI analysis did not complete'],
+      confidenceScore: 0,
+      recommendation: 'Retake the photo or try again with a stable network connection.',
+      failureReason: reason,
+    }
   }
 }
 
@@ -156,12 +325,44 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
     flag: { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.22)',  text: '#ef4444', dot: '#ef4444' },
   }
   const c = colors[result.severity]
+  const visibleAreas = result.visibleAreas?.slice(0, 3) ?? []
+  const issues = [
+    ...(result.detectedIssues ?? []).slice(0, 2),
+    ...(result.possibleIssues ?? []).slice(0, 1),
+  ].slice(0, 3)
   return (
     <div style={{ padding: '8px 10px', background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, marginTop: 8, display: 'flex', gap: 8 }}>
       <div style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, flexShrink: 0, marginTop: 3 }} />
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: c.text, marginBottom: 2 }}>{result.signal}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{result.signal}</div>
+          {result.imageQuality && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.42)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 4,
+              padding: '1px 5px',
+            }}>
+              {result.imageQuality}
+            </span>
+          )}
+        </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{result.detail}</div>
+        {visibleAreas.length > 0 && (
+          <div style={{ marginTop: 6, fontSize: 10.5, color: 'rgba(255,255,255,0.34)', lineHeight: 1.45 }}>
+            Visible: {visibleAreas.join(', ')}
+          </div>
+        )}
+        {issues.length > 0 && (
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {issues.map((issue, idx) => (
+              <div key={`${issue.area}-${idx}`} style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.46)', lineHeight: 1.45 }}>
+                {issue.area}: {issue.issue}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -623,11 +824,13 @@ export default function InspectionPage() {
   )
 
   const handleOpenCamera = useCallback((key: string, label: string) => {
+    logPhotoFlow('capture_flow_opened', { key, label })
     setCameraTarget({ key, label })
   }, [])
 
   const handleCapture = useCallback(async (file: File, previewUrl: string) => {
     if (!cameraTarget) return
+    logPhotoFlow('confirm_received', { key: cameraTarget.key, label: cameraTarget.label, size: file.size, type: file.type })
     const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: true }
     setPhotos(prev => [...prev.filter(p => p.key !== cameraTarget.key), entry])
     setCameraTarget(null)
@@ -638,17 +841,22 @@ export default function InspectionPage() {
     const thumbUrl     = await toThumbnailDataUrl(file)
     const vehicleId    = session?.vehicleId
     if (vehicleId && thumbUrl) {
+      logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft' })
       savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl })
+      logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft' })
     }
 
     // Step 2: run AI analysis
     const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
     const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale)
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
+    logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, signal: result.signal })
 
     // Step 3: update persisted draft with AI result
     if (vehicleId && thumbUrl) {
+      logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
       savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
+      logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
     }
   }, [cameraTarget, i18n.language, i18n.resolvedLanguage, session, t])
 

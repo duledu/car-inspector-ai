@@ -9,13 +9,120 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 
+type IssueSeverity = 'minor' | 'moderate' | 'serious'
+type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
+type LegacySeverity = 'ok' | 'warn' | 'flag'
+
+interface PhotoIssue {
+  area: string
+  issue: string
+  severity: IssueSeverity
+  confidence: number
+}
+
+interface StructuredPhotoAnalysis {
+  imageQuality: ImageQuality
+  visibleAreas: string[]
+  detectedIssues: PhotoIssue[]
+  possibleIssues: PhotoIssue[]
+  uncertainAreas: string[]
+  confidenceScore: number
+  recommendation: string
+  summary: string
+}
+
 const schema = z.object({
   imageBase64: z.string().min(100),
-  mimeType:    z.string().default('image/jpeg'),
+  mimeType:    z.enum(['image/jpeg', 'image/png', 'image/webp']).default('image/jpeg'),
   angle:       z.string().min(1),        // e.g. "FRONT", "LEFT_SIDE"
   angleLabel:  z.string().min(1),        // human label e.g. "Front"
   locale:      z.string().min(2).max(10).optional().default('en'),
+  imageMeta: z.object({
+    width:        z.number().positive().optional(),
+    height:       z.number().positive().optional(),
+    size:         z.number().positive().optional(),
+    originalType: z.string().optional(),
+    originalSize: z.number().positive().optional(),
+  }).optional(),
 })
+
+const issueSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['area', 'issue', 'severity', 'confidence'],
+  properties: {
+    area: {
+      type: 'string',
+      description: 'Visible vehicle area where the issue appears, or "unknown" if unclear.',
+    },
+    issue: {
+      type: 'string',
+      description: 'Specific visual observation grounded in visible evidence.',
+    },
+    severity: {
+      type: 'string',
+      enum: ['minor', 'moderate', 'serious'],
+    },
+    confidence: {
+      type: 'number',
+      description: '0-100 confidence for this individual issue.',
+    },
+  },
+} as const
+
+const responseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'imageQuality',
+    'visibleAreas',
+    'detectedIssues',
+    'possibleIssues',
+    'uncertainAreas',
+    'confidenceScore',
+    'recommendation',
+    'summary',
+  ],
+  properties: {
+    imageQuality: {
+      type: 'string',
+      enum: ['good', 'medium', 'poor', 'unusable'],
+      description: 'good = detailed inspection possible, medium = usable with limitations, poor = usable only for broad comments, unusable = cannot inspect vehicle content.',
+    },
+    visibleAreas: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Concrete visible vehicle parts, e.g. front bumper, left headlight, hood gap.',
+    },
+    detectedIssues: {
+      type: 'array',
+      items: issueSchema,
+      description: 'High-confidence visible issues only.',
+    },
+    possibleIssues: {
+      type: 'array',
+      items: issueSchema,
+      description: 'Suspected issues where the image suggests a concern but evidence is incomplete.',
+    },
+    uncertainAreas: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Areas that are obscured, too dark, too blurry, cropped out, or not visible enough.',
+    },
+    confidenceScore: {
+      type: 'number',
+      description: '0-100 overall confidence in the inspection result.',
+    },
+    recommendation: {
+      type: 'string',
+      description: 'Actionable next step for the user, including retake guidance when needed.',
+    },
+    summary: {
+      type: 'string',
+      description: 'Professional 1-2 sentence summary based only on visible evidence.',
+    },
+  },
+} as const
 
 // ─── Prompt per angle ────────────────────────────────────────────────────────
 
@@ -57,6 +164,106 @@ function fallbackAnalysis(locale: string): { signal: string; detail: string } {
   return messages[lang] ?? messages.en
 }
 
+function fallbackForFailure(locale: string, reason: string): { signal: string; detail: string } {
+  const fallback = fallbackAnalysis(locale)
+  return {
+    signal: fallback.signal,
+    detail: `${fallback.detail} Reason: ${reason}`,
+  }
+}
+
+function extractJsonObject(text: string): string {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned
+
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
+  if (start >= 0 && end > start) {
+    return cleaned.slice(start, end + 1)
+  }
+
+  throw new Error('AI response did not contain a JSON object')
+}
+
+function asImageQuality(value: unknown): ImageQuality {
+  return value === 'good' || value === 'medium' || value === 'poor' || value === 'unusable'
+    ? value
+    : 'medium'
+}
+
+function asIssueSeverity(value: unknown): IssueSeverity {
+  return value === 'minor' || value === 'moderate' || value === 'serious'
+    ? value
+    : 'minor'
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string').slice(0, 8)
+    : []
+}
+
+function normalizeIssues(value: unknown): PhotoIssue[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .slice(0, 8)
+    .map(item => ({
+      area: typeof item.area === 'string' && item.area.trim() ? item.area.trim() : 'Visible area',
+      issue: typeof item.issue === 'string' && item.issue.trim() ? item.issue.trim() : 'Visible condition concern',
+      severity: asIssueSeverity(item.severity),
+      confidence: clampScore(typeof item.confidence === 'number' ? item.confidence : 50, 0, 100, 50),
+    }))
+}
+
+function normalizeAnalysis(value: unknown): StructuredPhotoAnalysis {
+  const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    imageQuality: asImageQuality(raw.imageQuality),
+    visibleAreas: asStringArray(raw.visibleAreas),
+    detectedIssues: normalizeIssues(raw.detectedIssues),
+    possibleIssues: normalizeIssues(raw.possibleIssues),
+    uncertainAreas: asStringArray(raw.uncertainAreas),
+    confidenceScore: clampScore(typeof raw.confidenceScore === 'number' ? raw.confidenceScore : 55, 0, 100, 55),
+    recommendation: typeof raw.recommendation === 'string' && raw.recommendation.trim()
+      ? raw.recommendation.trim()
+      : 'Retake the photo closer and in better light if you need a more detailed inspection.',
+    summary: typeof raw.summary === 'string' && raw.summary.trim()
+      ? raw.summary.trim()
+      : 'The image was reviewed, but the model returned limited detail.',
+  }
+}
+
+function legacySeverity(analysis: StructuredPhotoAnalysis): LegacySeverity {
+  if (analysis.imageQuality === 'unusable') return 'warn'
+  if (analysis.detectedIssues.some(issue => issue.severity === 'serious')) return 'flag'
+  if (analysis.detectedIssues.length > 0 || analysis.possibleIssues.length > 0 || analysis.imageQuality === 'poor') return 'warn'
+  return 'ok'
+}
+
+function legacySignal(analysis: StructuredPhotoAnalysis): string {
+  const serious = analysis.detectedIssues.find(issue => issue.severity === 'serious')
+  if (serious) return serious.issue.slice(0, 80)
+  const detected = analysis.detectedIssues[0]
+  if (detected) return detected.issue.slice(0, 80)
+  const possible = analysis.possibleIssues[0]
+  if (possible) return `Possible: ${possible.issue}`.slice(0, 80)
+  if (analysis.imageQuality === 'unusable') return 'Image not inspectable'
+  if (analysis.imageQuality === 'poor') return 'Limited photo quality'
+  return 'No clear visual issue'
+}
+
+function legacyDetail(analysis: StructuredPhotoAnalysis): string {
+  const parts = [analysis.summary]
+  if (analysis.uncertainAreas.length > 0) {
+    parts.push(`Uncertain: ${analysis.uncertainAreas.slice(0, 3).join(', ')}.`)
+  }
+  if (analysis.recommendation) {
+    parts.push(analysis.recommendation)
+  }
+  return parts.join(' ')
+}
+
 function buildPrompt(angle: string, angleLabel: string, locale: string): string {
   const areaGuide: Record<string, string> = {
     FRONT:       'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
@@ -79,28 +286,31 @@ function buildPrompt(angle: string, angleLabel: string, locale: string): string 
 
   const areaFocus = areaGuide[angle] ?? 'Inspect all visible surfaces for damage, repaints, misalignments, or anomalies.'
 
-  return `You are an expert pre-purchase car inspector analysing a photo of the vehicle's ${angleLabel} area.
+  return `You are an expert pre-purchase car inspector analysing a real user's mobile photo of the vehicle's ${angleLabel} area.
 
 ${areaFocus}
 
-Write the JSON string values in ${localeInstruction(locale)} using natural, professional automotive language.
+The photo may have poor lighting, outdoor backgrounds, partial cropping, reflections, dirt, shadows, or a non-ideal distance. Be tolerant: if any vehicle area is visible, provide a useful inspection based on that visible evidence instead of saying analysis is unavailable.
 
-Assess the image carefully and respond ONLY with valid JSON — no prose, no markdown fences:
+Write all JSON string values in ${localeInstruction(locale)} using natural, professional automotive language.
 
-{
-  "signal": "One short headline finding (max 8 words)",
-  "severity": "ok" | "warn" | "flag",
-  "detail": "1-2 sentence explanation of what you see and why it matters for a buyer",
-  "confidence": 0-100
-}
+Inspect strictly what is visible. Do not infer hidden damage, mileage, prior accidents, rust behind panels, or mechanical condition unless visual evidence is present.
 
-Severity rules:
-- "ok"   = no issues, consistent with factory condition
-- "warn" = minor concern, worth noting but not deal-breaking
-- "flag" = significant issue, should be investigated by a mechanic or used to negotiate price
+Separate findings into:
+- detectedIssues: high-confidence visual findings supported by clear evidence.
+- possibleIssues: plausible concerns where the evidence is partial, affected by reflections, angle, distance, or lighting.
+- uncertainAreas: important areas that are cropped, obscured, too dark, blurred, reflective, or not visible.
 
-Be honest. Do NOT default to "ok" unless the image is genuinely clean.
-If the image is blurry, dark, or not showing the expected area, set severity "warn" and explain in detail.`
+Image quality rules:
+- good: enough detail for a meaningful inspection of the requested area.
+- medium: usable but limited by distance, lighting, angle, reflection, or crop.
+- poor: vehicle is visible but only broad comments are reliable.
+- unusable: no relevant vehicle area is visible or the image is too corrupted, blurred, or dark to inspect.
+
+If imageQuality is poor but usable, still fill visibleAreas and possibleIssues or detectedIssues when evidence exists. Use recommendation to request a better retake only when it would materially improve confidence.
+
+Return only valid JSON matching the required schema.`
+
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
@@ -120,54 +330,93 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
+    console.warn('[analyze-photo] validation failed', parsed.error.flatten())
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
-  const { imageBase64, mimeType, angle, angleLabel, locale } = parsed.data
+  const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = parsed.data
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     console.error('[analyze-photo] OPENAI_API_KEY is not set')
-    return apiError('AI analysis unavailable', { status: 503, code: 'CONFIG_ERROR' })
+    const fallback = fallbackForFailure(locale, 'AI service is not configured on the server')
+    return NextResponse.json({
+      data: {
+        signal: fallback.signal,
+        severity: 'warn',
+        detail: fallback.detail,
+        confidence: 0,
+        imageQuality: 'unusable',
+        visibleAreas: [],
+        detectedIssues: [],
+        possibleIssues: [],
+        uncertainAreas: ['AI service is not configured'],
+        confidenceScore: 0,
+        recommendation: 'Try again later after AI analysis is available.',
+        failureReason: 'CONFIG_ERROR',
+      },
+    })
   }
 
   try {
-    console.log('[analyze-photo] analysing:', angle)
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: 300,
-        temperature: 0.2,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional car inspector. Respond only with valid JSON.',
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${imageBase64}`,
-                  detail: 'high',
-                },
-              },
-              {
-                type: 'text',
-                text: buildPrompt(angle, angleLabel, locale),
-              },
-            ],
-          },
-        ],
-      }),
+    const requestBytes = Math.round((imageBase64.length * 3) / 4)
+    console.log('[analyze-photo] request received', {
+      angle,
+      mimeType,
+      requestBytes,
+      imageMeta,
     })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 45000)
+    let response: Response
+    try {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 300,
+          temperature: 0.2,
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'car_photo_inspection',
+              strict: true,
+              schema: responseSchema,
+            },
+          },
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional car inspector. Respond only with valid JSON.',
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${mimeType};base64,${imageBase64}`,
+                    detail: 'high',
+                  },
+                },
+                {
+                  type: 'text',
+                  text: buildPrompt(angle, angleLabel, locale),
+                },
+              ],
+            },
+          ],
+        }),
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!response.ok) {
       const err = await response.text()
@@ -177,40 +426,71 @@ export async function POST(req: NextRequest) {
 
     const result = await response.json()
     const text: string = result.choices?.[0]?.message?.content ?? ''
-    const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+    console.log('[analyze-photo] OpenAI response received', {
+      angle,
+      finishReason: result.choices?.[0]?.finish_reason,
+      contentLength: text.length,
+    })
+    const jsonStr = extractJsonObject(text)
 
-    let parsed: { signal: string; severity: string; detail: string; confidence?: number }
+    let rawAnalysis: unknown
     try {
-      parsed = JSON.parse(jsonStr)
-    } catch {
-      throw new Error('Failed to parse AI response')
+      rawAnalysis = JSON.parse(jsonStr)
+    } catch (err) {
+      console.error('[analyze-photo] parse failed', { angle, text })
+      throw new Error(`Failed to parse AI response: ${err instanceof Error ? err.message : String(err)}`)
     }
 
-    // Normalise severity to expected values
-    const sev = (['ok', 'warn', 'flag'] as const).includes(parsed.severity as 'ok' | 'warn' | 'flag')
-      ? (parsed.severity as 'ok' | 'warn' | 'flag')
-      : 'warn'
+    const analysis = normalizeAnalysis(rawAnalysis)
+    const sev = legacySeverity(analysis)
+    const signal = legacySignal(analysis)
+    const detail = legacyDetail(analysis)
 
-    console.log('[analyze-photo] result:', angle, sev, parsed.signal)
+    console.log('[analyze-photo] parsed result', {
+      angle,
+      severity: sev,
+      signal,
+      imageQuality: analysis.imageQuality,
+      confidenceScore: analysis.confidenceScore,
+      detectedIssues: analysis.detectedIssues.length,
+      possibleIssues: analysis.possibleIssues.length,
+      uncertainAreas: analysis.uncertainAreas.length,
+    })
 
     return NextResponse.json({
       data: {
-        signal:     parsed.signal ?? 'Analysis complete',
-        severity:   sev,
-        detail:     parsed.detail ?? '',
-        confidence: clampScore(parsed.confidence, 0, 100, 80),
+        signal,
+        severity: sev,
+        detail,
+        confidence: analysis.confidenceScore,
+        imageQuality: analysis.imageQuality,
+        visibleAreas: analysis.visibleAreas,
+        detectedIssues: analysis.detectedIssues,
+        possibleIssues: analysis.possibleIssues,
+        uncertainAreas: analysis.uncertainAreas,
+        confidenceScore: analysis.confidenceScore,
+        recommendation: analysis.recommendation,
       },
     })
   } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
     logApiError('inspection/analyze-photo', 'analyze', error, { angle })
-    const fallback = fallbackAnalysis(locale)
+    const fallback = fallbackForFailure(locale, reason)
     return NextResponse.json(
       {
         data: {
-          signal:   fallback.signal,
+          signal: fallback.signal,
           severity: 'warn',
-          detail:   fallback.detail,
+          detail: fallback.detail,
           confidence: 0,
+          imageQuality: 'unusable',
+          visibleAreas: [],
+          detectedIssues: [],
+          possibleIssues: [],
+          uncertainAreas: ['AI analysis did not complete'],
+          confidenceScore: 0,
+          recommendation: 'Retake the photo or try again with a stable network connection.',
+          failureReason: reason,
         },
       },
       { status: 200 } // Return 200 so UI still renders — just shows the fallback
