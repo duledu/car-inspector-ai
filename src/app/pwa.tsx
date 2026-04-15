@@ -14,6 +14,7 @@ import { LANG_COOKIE, LS_KEY, isSupportedLang } from '@/i18n/shared'
 
 export function PWAProvider() {
   const [updateReady, setUpdateReady] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   const waitingSWRef = useRef<ServiceWorker | null>(null)
   const reloadingRef = useRef(false)
   const reloadTriggeredRef = useRef(false)
@@ -110,19 +111,20 @@ export function PWAProvider() {
   const handleUpdate = useCallback(async () => {
     if (reloadingRef.current) return
     reloadingRef.current = true
+    setIsUpdating(true)
 
     let sw: ServiceWorker | null = null
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration('/')
-      sw = registration?.waiting ?? null
+      try {
+        const registration = await navigator.serviceWorker.getRegistration('/')
+        sw = registration?.waiting ?? null
 
-      if (!sw && registration) {
-        try {
+        if (!sw && registration) {
           const updatedRegistration = await registration.update()
           sw = updatedRegistration.waiting ?? null
-        } catch {
-          // Fall back to a normal reload below.
         }
+      } catch {
+        // Fall back to a normal reload below.
       }
     }
 
@@ -132,6 +134,9 @@ export function PWAProvider() {
 
     if (sw) {
       sw.postMessage({ type: 'SKIP_WAITING' })
+      globalThis.setTimeout(() => {
+        if (reloadingRef.current) reloadOnce()
+      }, 1500)
     } else {
       reloadOnce()
     }
@@ -144,7 +149,13 @@ export function PWAProvider() {
   return (
     <>
       <InstallPrompt />
-      {updateReady && <UpdatePrompt onUpdate={handleUpdate} onDismiss={handleDismiss} />}
+      {updateReady && (
+        <UpdatePrompt
+          isUpdating={isUpdating}
+          onUpdate={handleUpdate}
+          onDismiss={handleDismiss}
+        />
+      )}
     </>
   )
 }

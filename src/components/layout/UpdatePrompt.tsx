@@ -3,20 +3,21 @@
 import { useTranslation } from 'react-i18next'
 
 interface UpdatePromptProps {
-  readonly onUpdate: () => void
+  readonly onUpdate: () => void | Promise<void>
   readonly onDismiss: () => void
+  readonly isUpdating?: boolean
 }
 
-export function UpdatePrompt({ onUpdate, onDismiss }: UpdatePromptProps) {
+export function UpdatePrompt({ onUpdate, onDismiss, isUpdating = false }: UpdatePromptProps) {
   const { t } = useTranslation()
 
   return (
-    <div style={{
+    <div className="update-prompt" style={{
       position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
-      zIndex: 9999,
+      zIndex: 10000,
       padding: '12px 16px',
       paddingTop: 'calc(12px + env(safe-area-inset-top))',
       background: 'rgba(8, 12, 20, 0.92)',
@@ -28,11 +29,24 @@ export function UpdatePrompt({ onUpdate, onDismiss }: UpdatePromptProps) {
       alignItems: 'center',
       gap: 12,
       animation: 'updateSlideDown 0.3s ease-out',
+      pointerEvents: 'auto',
     }}>
       <style>{`
         @keyframes updateSlideDown {
           from { transform: translateY(-100%); opacity: 0; }
           to   { transform: translateY(0);    opacity: 1; }
+        }
+        @media (max-width: 430px) {
+          .update-prompt {
+            flex-wrap: wrap;
+          }
+          .update-prompt__text {
+            flex-basis: calc(100% - 48px);
+          }
+          .update-prompt__actions {
+            width: 100%;
+            justify-content: flex-end;
+          }
         }
       `}</style>
 
@@ -57,7 +71,7 @@ export function UpdatePrompt({ onUpdate, onDismiss }: UpdatePromptProps) {
       </div>
 
       {/* Text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="update-prompt__text" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>
           {t('update.title')}
         </div>
@@ -66,50 +80,56 @@ export function UpdatePrompt({ onUpdate, onDismiss }: UpdatePromptProps) {
         </div>
       </div>
 
-      {/* Update button */}
-      <button
-        onClick={onUpdate}
-        style={{
-          flexShrink: 0,
-          padding: '8px 16px',
-          background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
-          color: '#000',
-          border: 'none',
-          borderRadius: 10,
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: 'pointer',
-          fontFamily: 'var(--font-sans)',
-          boxShadow: '0 2px 12px rgba(34,211,238,0.35)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {t('update.updateNow')}
-      </button>
+      <div className="update-prompt__actions" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* Update button */}
+        <button
+          type="button"
+          onClick={onUpdate}
+          disabled={isUpdating}
+          style={{
+            flexShrink: 0,
+            padding: '8px 16px',
+            background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
+            color: '#000',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: isUpdating ? 'wait' : 'pointer',
+            fontFamily: 'var(--font-sans)',
+            boxShadow: '0 2px 12px rgba(34,211,238,0.35)',
+            whiteSpace: 'nowrap',
+            opacity: isUpdating ? 0.78 : 1,
+          }}
+        >
+          {t('update.updateNow')}
+        </button>
 
-      {/* Dismiss */}
-      <button
-        onClick={onDismiss}
-        aria-label={t('update.later')}
-        style={{
-          flexShrink: 0,
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          background: 'none',
-          border: '1px solid rgba(255,255,255,0.1)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'rgba(255,255,255,0.4)',
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+        {/* Dismiss */}
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={t('update.later')}
+          style={{
+            flexShrink: 0,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: 'none',
+            border: '1px solid rgba(255,255,255,0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgba(255,255,255,0.4)',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }
