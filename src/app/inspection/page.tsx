@@ -66,10 +66,16 @@ type MockAIResult = {
 type ChecklistRow = { id: string; itemKey: string; itemLabel: string; status: ItemStatus; notes?: string | null }
 type PreparedAIImage = { imageBase64: string; mimeType: string; width: number; height: number; size: number }
 
-const AI_IMAGE_MAX_DIMENSION = 1600
+const AI_IMAGE_MAX_DIMENSION = 1024
 const AI_IMAGE_QUALITY = 0.82
 const AI_REQUEST_TIMEOUT_MS = 35_000
 const AI_MAX_ATTEMPTS = 3
+
+// Only these 6 angles are sent to AI — they give the highest diagnostic value
+// per API call and prevent 429 / queue overload when many photos are taken.
+// Both sides are included: LEFT_SIDE and RIGHT_SIDE catch paint and accident damage on each flank.
+// All other angles are captured and stored but not AI-analysed.
+const AI_PRIORITY_ANGLES = new Set(['ENGINE_BAY', 'FRONT', 'REAR', 'INTERIOR', 'LEFT_SIDE', 'RIGHT_SIDE'])
 
 let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
 
@@ -481,7 +487,7 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.80)' }}>{t(`angle.${angle.key}`, { defaultValue: angle.label })}</span>
-                  {photo && !photo.aiPending && (
+                  {photo?.aiResult && !photo.aiPending && (
                     <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(34,211,238,0.1)', color: '#22d3ee', letterSpacing: '0.04em' }}>AI</span>
                   )}
                   {photo?.aiPending && (
@@ -884,7 +890,8 @@ export default function InspectionPage() {
   const handleCapture = useCallback(async (file: File, previewUrl: string) => {
     if (!cameraTarget) return
     logPhotoFlow('confirm_received', { key: cameraTarget.key, label: cameraTarget.label, size: file.size, type: file.type })
-    const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: true }
+    const isPriorityAngle = AI_PRIORITY_ANGLES.has(cameraTarget.key)
+    const entry: PhotoEntry = { key: cameraTarget.key, label: cameraTarget.label, file, previewUrl, aiPending: isPriorityAngle }
     setPhotos(prev => [...prev.filter(p => p.key !== cameraTarget.key), entry])
     setCameraTarget(null)
 
@@ -899,17 +906,24 @@ export default function InspectionPage() {
       logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft' })
     }
 
-    // Step 2: run AI analysis
+    // Step 2: run AI analysis — only for the 5 priority angles
+    // Non-priority photos (wheels, hood, roof, trunk, extra angles) are stored
+    // but not sent to AI, preventing 429 errors and queue buildup.
     const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
-    const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale)
-    setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
-    logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, signal: result.signal })
+    if (isPriorityAngle) {
+      const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale)
+      setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
+      logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, signal: result.signal })
 
-    // Step 3: update persisted draft with AI result
-    if (vehicleId && thumbUrl) {
-      logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
-      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
-      logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
+      // Step 3: update persisted draft with AI result
+      if (vehicleId && thumbUrl) {
+        logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
+        savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
+        logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
+      }
+    } else {
+      // Non-priority angle — photo captured, AI skipped
+      logPhotoFlow('ai_skipped_non_priority', { key: entry.key })
     }
   }, [cameraTarget, i18n.language, i18n.resolvedLanguage, session, t])
 

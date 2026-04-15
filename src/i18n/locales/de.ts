@@ -573,7 +573,7 @@ const de = {
   'inspection.notePlaceholder':     'z.B. leichte Rostflecken am Radkasten…',
   'inspection.aiAnalysing':         'KI analysiert',
   'inspection.aiPhotoTitle':        'KI-Fotoinspektion',
-  'inspection.aiPhotoDesc':         'Fotografieren Sie jeden Bereich. KI prüft Reparaturen, Umlackierungen und Auffälligkeiten. Ergebnisse sind Hinweise.',
+  'inspection.aiPhotoDesc':         'Fotografieren Sie jeden Bereich. KI analysiert Motorraum, Front, Heck, Innenraum, linke Seite und rechte Seite. Andere Bereiche werden gespeichert, aber nicht KI-analysiert.',
   'inspection.analysing':           'Analysiert…',
   'inspection.noItems':             'Keine Einträge für diese Kategorie',
   'inspection.checkedProgress':     '{{done}} / {{total}} geprüft',

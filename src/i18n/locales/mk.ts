@@ -573,7 +573,7 @@ const mk = {
   'inspection.notePlaceholder':     'пр. видлива рѓа на работ на тркало…',
   'inspection.aiAnalysing':         'AI анализира',
   'inspection.aiPhotoTitle':        'AI фото преглед',
-  'inspection.aiPhotoDesc':         'Фотографирајте ја секоја област. AI бара поправки, прелакирања и аномалии. Резултатите се советодавни.',
+  'inspection.aiPhotoDesc':         'Фотографирајте ја секоја област. AI анализира Моторен простор, Предна, Задна, Внатрешност, Лева страна и Десна страна. Другите фотографии се зачувуваат, но AI не ги анализира.',
   'inspection.analysing':           'Анализира…',
   'inspection.noItems':             'Нема ставки за оваа категорија',
   'inspection.checkedProgress':     '{{done}} / {{total}} проверено',

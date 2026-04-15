@@ -278,7 +278,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
     } finally {
       clearTimeout(timeout)
     }
-    await sleep(800 * attempt)
+    await sleep(1200 * attempt)
   }
   throw new Error(`HTTP_${lastStatus || 503}`)
 }
@@ -502,7 +502,7 @@ export async function POST(req: NextRequest) {
               type: 'image_url',
               image_url: {
                 url: `data:${mimeType};base64,${imageBase64}`,
-                detail: 'high',
+                detail: 'auto',
               },
             },
             {

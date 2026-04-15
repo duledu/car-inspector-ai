@@ -310,6 +310,16 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
 .bottom-nav-container {
   padding-bottom: env(safe-area-inset-bottom);
 }
+body.camera-capture-active {
+  overflow: hidden;
+}
+body.camera-capture-active .mobile-page-content {
+  z-index: 120 !important;
+  overflow: visible !important;
+}
+body.camera-capture-active .bottom-nav-container {
+  display: none !important;
+}
 
 /* ─── Utility ────────────────────────────────────────────────── */
 .no-select { user-select: none; -webkit-user-select: none; }

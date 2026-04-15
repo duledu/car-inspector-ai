@@ -18,8 +18,8 @@ export function UpdatePrompt({ onUpdate, onDismiss, isUpdating = false }: Update
       left: 0,
       right: 0,
       zIndex: 10000,
-      padding: '12px 16px',
-      paddingTop: 'calc(12px + env(safe-area-inset-top))',
+      padding: '12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px))',
+      paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
       background: 'rgba(8, 12, 20, 0.92)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
@@ -88,6 +88,7 @@ export function UpdatePrompt({ onUpdate, onDismiss, isUpdating = false }: Update
           disabled={isUpdating}
           style={{
             flexShrink: 0,
+            minHeight: 44,
             padding: '8px 16px',
             background: 'linear-gradient(135deg, #22d3ee, #06b6d4)',
             color: '#000',
@@ -113,7 +114,7 @@ export function UpdatePrompt({ onUpdate, onDismiss, isUpdating = false }: Update
           style={{
             flexShrink: 0,
             width: 32,
-            height: 32,
+            height: 44,
             borderRadius: 8,
             background: 'none',
             border: '1px solid rgba(255,255,255,0.1)',

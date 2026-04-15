@@ -573,7 +573,7 @@ const sq = {
   'inspection.notePlaceholder':     'p.sh. gërryer i lehtë i dukshëm…',
   'inspection.aiAnalysing':         'AI analizon',
   'inspection.aiPhotoTitle':        'Inspektim foto me AI',
-  'inspection.aiPhotoDesc':         'Fotografoni çdo zonë. AI kontrollon riparime, rilyerje dhe anomali. Rezultatet janë këshilluese.',
+  'inspection.aiPhotoDesc':         'Fotografoni çdo zonë. AI analizon Motorin, Ballin, Pjesën e pasme, Brendësinë, Anën e majtë dhe Anën e djathtë. Fotografitë e tjera ruhen, por nuk analizohen nga AI.',
   'inspection.analysing':           'Duke analizuar…',
   'inspection.noItems':             'Nuk ka zëra për këtë kategori',
   'inspection.checkedProgress':     '{{done}} / {{total}} kontrolluar',

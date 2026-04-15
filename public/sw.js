@@ -14,7 +14,8 @@
 // stream has already been handed to the browser.
 // =============================================================================
 
-const CACHE_NAME = 'car-inspector-v7';
+const SW_VERSION = 'car-inspector-v8';
+const CACHE_NAME = SW_VERSION;
 
 function toUrl(input) {
   return new URL(typeof input === 'string' ? input : input.url);
@@ -105,7 +106,12 @@ globalThis.addEventListener('install', (event) => {
 
 globalThis.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
-    globalThis.skipWaiting();
+    event.waitUntil(globalThis.skipWaiting());
+    return;
+  }
+
+  if (event.data?.type === 'GET_VERSION') {
+    event.source?.postMessage({ type: 'SW_VERSION', version: SW_VERSION });
   }
 });
 

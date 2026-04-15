@@ -249,7 +249,7 @@ const en = {
   'inspection.notePlaceholder':     'e.g. slight rust visible on wheel arch…',
   'inspection.aiAnalysing':         'AI Analysing',
   'inspection.aiPhotoTitle':        'AI Photo Inspection',
-  'inspection.aiPhotoDesc':         'Photograph each area. AI analyses each image for repairs, repaints, and anomalies. Results are advisory.',
+  'inspection.aiPhotoDesc':         'Photograph each area. AI analyses Engine Bay, Front, Rear, Interior, Left Side and Right Side for repairs, repaints, and anomalies. Other angles are saved but not AI-analysed.',
   'inspection.analysing':           'Analysing…',
   'inspection.noItems':             'No items for this category',
   'inspection.checkedProgress':     '{{done}} / {{total}} checked',

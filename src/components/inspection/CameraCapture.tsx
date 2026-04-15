@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCamera } from '@/hooks/useCamera'
 
@@ -30,6 +30,18 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
   const { videoRef, status, startCamera, stopCamera } = useCamera({
     onError: () => setMode('choose'),
   })
+
+  useEffect(() => {
+    const win = window as typeof window & { __uciCameraCaptureActiveCount?: number }
+    win.__uciCameraCaptureActiveCount = (win.__uciCameraCaptureActiveCount ?? 0) + 1
+    document.body.classList.add('camera-capture-active')
+    return () => {
+      win.__uciCameraCaptureActiveCount = Math.max(0, (win.__uciCameraCaptureActiveCount ?? 1) - 1)
+      if (win.__uciCameraCaptureActiveCount === 0) {
+        document.body.classList.remove('camera-capture-active')
+      }
+    }
+  }, [])
 
   // ── Open camera ────────────────────────────────────────────────────────────
   // setMode('camera') FIRST so the <video> element is rendered in the DOM
@@ -118,6 +130,7 @@ export function CameraCapture({ onCapture, onClose, label }: CameraCaptureProps)
 
   return (
     <div
+      data-camera-capture-modal="true"
       role="dialog"
       aria-modal="true"
       style={{
