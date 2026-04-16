@@ -85,20 +85,15 @@ async function handleLogin(body: unknown) {
   }
 
   try {
-    console.log('[login] attempt for:', parsed.data.email)
-
     const user = await prisma.user.findUnique({
       where: { email: parsed.data.email },
     })
-
-    console.log('[login] user found:', user ? user.id : 'null')
 
     if (!user?.passwordHash) {
       return apiError('Invalid email or password', { status: 401, code: 'INVALID_CREDENTIALS' })
     }
 
     const passwordValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
-    console.log('[login] password valid:', passwordValid)
 
     if (!passwordValid) {
       return apiError('Invalid email or password', { status: 401, code: 'INVALID_CREDENTIALS' })

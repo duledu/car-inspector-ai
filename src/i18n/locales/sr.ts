@@ -41,9 +41,10 @@ const sr = {
   'nav.backToLanding':      'Nazad na početnu',
   'nav.privacy':            'Politika privatnosti',
   'nav.terms':              'Uslovi korišćenja',
+  'nav.accountDeletion':    'Brisanje naloga',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
-  'auth.brand':             'Used Car Inspector AI',
+  'auth.brand':             'Used Cars Doctor',
   'auth.tagline':           'AI pregled vozila',
   'auth.signIn':            'Prijava',
   'auth.createAccount':     'Kreiranje naloga',
@@ -58,7 +59,7 @@ const sr = {
   'auth.hidePassword':      'Sakrij lozinku',
   'auth.signingIn':         'Prijavljivanje…',
   'auth.creatingAccount':   'Kreiranje naloga…',
-  'auth.termsNote':         'Prijavom prihvatate naše uslove korišćenja.',
+  'auth.termsNote':         'Prijavom prihvatate Uslove korišćenja i Politiku privatnosti.',
   'auth.heroTitle':         'Svako polovni auto ima priču.',
   'auth.heroTitleAccent':   'Znajte je pre kupovine.',
   'auth.heroSub':           'AI vođeni pregledi, procena rizika i premium istorija vozila za kupce koji rade domaći zadatak.',
@@ -90,6 +91,7 @@ const sr = {
   'legal.englishOnly':      'Ovaj pravni dokument dostupan je samo na engleskom jeziku. Mašinski prevedene verzije nisu pravno obavezujuće. Za pitanja kontaktirajte nas na contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Politika privatnosti',
   'legal.terms.title':      'Uslovi korišćenja',
+  'disclaimer.photoAnalysis': 'Analiza fotografija je savetodavna. Rezultati mogu biti nepotpuni ili netačni i nisu garantovana dijagnoza niti profesionalni mehaničarski pregled. Važne nalaze proverite kod kvalifikovanog mehaničara ili pregledom uživo.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktivno vozilo',
@@ -455,7 +457,7 @@ const sr = {
   'topbar.messages.sub':      'Privatni razgovori',
   'topbar.profile.title':     'Profil',
   'topbar.profile.sub':       'Podešavanja naloga',
-  'topbar.fallback.title':    'Used Car Inspector AI',
+  'topbar.fallback.title':    'Used Cars Doctor',
 
   // ─── PWA install prompt ───────────────────────────────────────────────────────
   'pwa.addToHome':            'Dodajte na početni ekran',
@@ -669,11 +671,11 @@ const sr = {
   'landing.closing.titleAccent': 'zaslužuje bolje podatke.',
   'landing.closing.subtitle': 'Počnite besplatnim pregledom. Dodajte premium istoriju kada vam zatreba. Znajte šta kupujete pre potpisa.',
   'landing.closing.explorePremium': 'Istraži Premium',
-  'landing.footer.description': 'AI analiza pregleda za pametnije odluke pri kupovini polovnih automobila.',
+  'landing.footer.description': 'AI podržane smernice za pregled i pametnije odluke pri kupovini polovnih automobila.',
   'landing.footer.inspect': 'Pregled',
   'landing.footer.platform': 'Platforma',
   'landing.footer.premiumHistory': 'Premium istorija',
-  'landing.footer.tagline': 'Car Inspector AI, AI vođena automobilska analiza.',
+  'landing.footer.tagline': 'Used Cars Doctor, AI podržane automobilske smernice.',
   'landing.footer.privacy': 'Politika privatnosti',
   'landing.footer.terms':   'Uslovi korišćenja',
 
@@ -713,7 +715,8 @@ const sr = {
   'premiumPage.locked.features.bundle.support': 'Prioritetna podrška',
   'premiumPage.locked.preparingCheckout': 'Priprema plaćanja...',
   'premiumPage.locked.purchaseReport': 'Kupi izveštaj - {{price}}',
-  'premiumPage.locked.securityNote': 'Stripe plaćanje · SSL enkripcija · GDPR usklađeno · Bez pretplate',
+  'premiumPage.locked.currentlyUnavailable': 'Premium kupovina nije dostupna u ovoj verziji. I dalje možete završiti besplatan pregled i generisati standardni izveštaj.',
+  'premiumPage.locked.securityNote': 'Sigurno plaćanje obrađuje Stripe kada je kupovina omogućena · Bez pretplate',
   'premiumPage.payment.pendingTitle': 'Potvrda plaćanja',
   'premiumPage.payment.pendingDesc': 'Stripe potvrđuje uplatu. Obično traje nekoliko sekundi. Ne zatvarajte ovu stranicu.',
   'premiumPage.payment.successTitle': 'Plaćanje uspešno',
@@ -790,7 +793,7 @@ const sr = {
   'scroll.exterior.b1':            'Pregledajte lak na direktnom svetlu zbog prefarbavanja i prelaza',
   'scroll.exterior.b2':            'Proverite rubove blatobrana i pragove zbog mehura rđe',
   'scroll.photos.title':           'AI foto-analiza',
-  'scroll.photos.desc':            'Snimite 16 standardnih uglova za detekciju oštećenja.',
+  'scroll.photos.desc':            'Snimite 16 standardnih uglova za AI podržan pregled vidljivih oštećenja.',
   'scroll.photos.b0':              'Snimite svaki panel sa iste udaljenosti, oko tri metra',
   'scroll.photos.b1':              'AI poredi refleksije laka i traži skrivene popravke',
   'scroll.photos.b2':              'Nalazi se čuvaju i ulaze u konačnu ocenu pouzdanosti',

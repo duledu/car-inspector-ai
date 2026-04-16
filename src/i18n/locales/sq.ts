@@ -41,9 +41,10 @@ const sq = {
   'nav.backToLanding':      'Kthehu në faqen kryesore',
   'nav.privacy':            'Politika e privatësisë',
   'nav.terms':              'Kushtet e shërbimit',
+  'nav.accountDeletion':    'Fshirja e llogarisë',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
-  'auth.brand':             'Used Car Inspector AI',
+  'auth.brand':             'Used Cars Doctor',
   'auth.tagline':           'Inspektim automjeti me AI',
   'auth.signIn':            'Hyrje',
   'auth.createAccount':     'Krijo llogari',
@@ -58,7 +59,7 @@ const sq = {
   'auth.hidePassword':      'Fshih fjalëkalimin',
   'auth.signingIn':         'Duke hyrë…',
   'auth.creatingAccount':   'Duke krijuar llogarinë…',
-  'auth.termsNote':         'Duke u regjistruar pranoni kushtet tona të shërbimit.',
+  'auth.termsNote':         'Duke u identifikuar pranoni Kushtet e shërbimit dhe Politikën e privatësisë.',
   'auth.heroTitle':         'Çdo veturë e përdorur ka një histori.',
   'auth.heroTitleAccent':   'Dije atë para se të blesh.',
   'auth.heroSub':           'Inspektime të udhëhequra nga AI, vlerësim rreziku dhe raporte premium të historisë për blerës që bëjnë detyrat e shtëpisë.',
@@ -89,6 +90,7 @@ const sq = {
   'legal.englishOnly':      'Ky dokument juridik është i disponueshëm vetëm në anglisht. Versionet e përkthyera me makinë nuk janë juridikisht të detyrueshme. Për pyetje na kontaktoni në contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Politika e privatësisë',
   'legal.terms.title':      'Kushtet e shërbimit',
+  'disclaimer.photoAnalysis': 'Analiza e fotografive është vetëm këshilluese. Rezultatet mund të jenë të paplota ose të pasakta dhe nuk janë diagnozë e garantuar apo kontroll mekanik profesional. Verifikoni gjetjet e rëndësishme me një mekanik të kualifikuar ose kontroll fizik.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Automjeti aktiv',
@@ -454,7 +456,7 @@ const sq = {
   'topbar.messages.sub':      'Biseda private',
   'topbar.profile.title':     'Profili',
   'topbar.profile.sub':       'Cilësimet e llogarisë',
-  'topbar.fallback.title':    'Used Car Inspector AI',
+  'topbar.fallback.title':    'Used Cars Doctor',
 
   // ─── PWA install prompt ───────────────────────────────────────────────────────
   'pwa.addToHome':            'Shto në ekranin kryesor',
@@ -561,11 +563,11 @@ const sq = {
   'landing.closing.titleAccent': 'meriton të dhëna më të mira.',
   'landing.closing.subtitle': 'Filloni me inspektim falas. Shtoni histori premium kur ju duhet. Dijeni çfarë blini para nënshkrimit.',
   'landing.closing.explorePremium': 'Eksploro Premium',
-  'landing.footer.description': 'Inteligjencë inspektimi me AI për vendime më të zgjuara në blerjen e makinave të përdorura.',
+  'landing.footer.description': 'Udhëzime inspektimi të asistuara nga AI për vendime më të zgjuara në blerjen e makinave të përdorura.',
   'landing.footer.inspect': 'Inspektim',
   'landing.footer.platform': 'Platforma',
   'landing.footer.premiumHistory': 'Histori premium',
-  'landing.footer.tagline': 'Car Inspector AI, inteligjencë automobilistike me AI.',
+  'landing.footer.tagline': 'Used Cars Doctor, udhëzime automobilistike të asistuara nga AI.',
   'landing.footer.privacy': 'Politika e privatësisë',
   'landing.footer.terms':   'Kushtet e shërbimit',
 
@@ -712,7 +714,8 @@ const sq = {
   'premiumPage.locked.features.bundle.support': 'Mbështetje prioritare',
   'premiumPage.locked.preparingCheckout': 'Po përgatitet pagesa...',
   'premiumPage.locked.purchaseReport': 'Bli raportin - {{price}}',
-  'premiumPage.locked.securityNote': 'Pagesë me Stripe · SSL i enkriptuar · Në përputhje me GDPR · Pa abonim',
+  'premiumPage.locked.currentlyUnavailable': 'Blerja premium nuk është e disponueshme në këtë version. Mund të përfundoni ende inspektimin falas dhe të gjeneroni raportin standard.',
+  'premiumPage.locked.securityNote': 'Pagesa e sigurt përpunohet nga Stripe kur blerjet aktivizohen · Pa abonim',
   'premiumPage.payment.pendingTitle': 'Po konfirmohet pagesa',
   'premiumPage.payment.pendingDesc': 'Stripe po konfirmon pagesën. Zakonisht zgjat disa sekonda. Mos e mbyllni këtë faqe.',
   'premiumPage.payment.successTitle': 'Pagesa u krye me sukses',
@@ -789,7 +792,7 @@ const sq = {
   'scroll.exterior.b1':            'Kontrolloni bojën në dritë direkte për rilyerje dhe kalime',
   'scroll.exterior.b2':            'Kontrolloni harqet e rrotave dhe pragjet për flluska ndryshku nën bojë',
   'scroll.photos.title':           'Analizë fotosh me AI',
-  'scroll.photos.desc':            'Bëni 16 foto standarde për zbulimin e dëmeve me AI.',
+  'scroll.photos.desc':            'Bëni 16 foto standarde për kontroll të asistuar nga AI të dëmeve të dukshme.',
   'scroll.photos.b0':              'Fotografoni çdo panel nga një distancë konstante prej tre metrash',
   'scroll.photos.b1':              'AI krahason reflektimet e bojës për të zbuluar riparime të fshehura të karocerisë',
   'scroll.photos.b2':              'Rezultatet ruhen dhe merren parasysh në rezultatin përfundimtar të besueshmërisë',

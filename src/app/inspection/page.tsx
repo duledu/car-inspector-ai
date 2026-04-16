@@ -7,6 +7,7 @@ import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
+import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import AppShell from '../AppShell'
 
 // ─── Photo categories ──────────────────────────────────────────────────────────
@@ -754,6 +755,8 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
         </div>
       )}
 
+      {photos.length > 0 && <PhotoAnalysisDisclaimer style={{ marginBottom: 16 }} />}
+
       <div style={{ padding: '12px 0 4px' }}>
         <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
           {t('inspection.allPhasesComplete')}
@@ -1160,6 +1163,7 @@ export default function InspectionPage() {
                   </div>
                 </div>
               </div>
+              <PhotoAnalysisDisclaimer style={{ marginBottom: 14 }} />
               <PhotoGrid photos={photos} onAdd={handleOpenCamera} />
             </div>
           )}

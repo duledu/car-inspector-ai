@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
+import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import type { Vehicle, PremiumProduct } from '@/types'
 
 interface Props {
@@ -208,32 +209,51 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
           ))}
         </div>
 
-        {/* CTA Button */}
-        <button
-          onClick={comingSoon ? undefined : handlePurchase}
-          disabled={comingSoon || isCreatingCheckout || clicked}
-          style={{
-            width: '100%',
-            padding: '16px',
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 12,
-            fontSize: 15,
-            fontWeight: 700,
-            fontFamily: 'var(--font-sans)',
-            cursor: comingSoon || isCreatingCheckout ? 'not-allowed' : 'pointer',
-            boxShadow: '0 0 24px rgba(168,85,247,0.3)',
-            opacity: comingSoon ? 0.45 : isCreatingCheckout ? 0.7 : 1,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {comingSoon
-            ? t('premiumPage.comingSoon')
-            : isCreatingCheckout
+        {productType !== 'CARVERTICAL_REPORT' && (
+          <PhotoAnalysisDisclaimer style={{ marginBottom: 18 }} />
+        )}
+
+        {comingSoon ? (
+          <div
+            role="status"
+            style={{
+              padding: '13px 14px',
+              background: 'rgba(251,191,36,0.07)',
+              border: '1px solid rgba(251,191,36,0.22)',
+              borderRadius: 10,
+              fontSize: 12.5,
+              color: 'rgba(255,255,255,0.62)',
+              lineHeight: 1.6,
+              textAlign: 'center',
+            }}
+          >
+            {t('premiumPage.locked.currentlyUnavailable')}
+          </div>
+        ) : (
+          <button
+            onClick={handlePurchase}
+            disabled={isCreatingCheckout || clicked}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: 'linear-gradient(135deg,#7c3aed,#a855f7)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 12,
+              fontSize: 15,
+              fontWeight: 700,
+              fontFamily: 'var(--font-sans)',
+              cursor: isCreatingCheckout ? 'not-allowed' : 'pointer',
+              boxShadow: '0 0 24px rgba(168,85,247,0.3)',
+              opacity: isCreatingCheckout ? 0.7 : 1,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isCreatingCheckout
               ? t('premiumPage.locked.preparingCheckout')
               : t('premiumPage.locked.purchaseReport', { price })}
-        </button>
+          </button>
+        )}
 
         {error && (
           <div
@@ -251,17 +271,19 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
           </div>
         )}
 
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 11,
-            color: 'var(--color-text-secondary)',
-            marginTop: 12,
-            opacity: 0.6,
-          }}
-        >
-          {t('premiumPage.locked.securityNote')}
-        </div>
+        {!comingSoon && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: 11,
+              color: 'var(--color-text-secondary)',
+              marginTop: 12,
+              opacity: 0.6,
+            }}
+          >
+            {t('premiumPage.locked.securityNote')}
+          </div>
+        )}
       </div>
     </div>
   )

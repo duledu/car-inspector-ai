@@ -164,7 +164,7 @@ export default function PrivacyPage() {
 
         <Section title="1. Introduction">
           <P>
-            Used Car Inspector AI ("we," "our," "us") operates the web application and Progressive Web Application available at{' '}
+            Used Cars Doctor ("we," "our," "us") operates the web application and Progressive Web Application available at{' '}
             <a href="https://usedcarsdoctor.com" style={{ color: '#22d3ee', textDecoration: 'none' }}>usedcarsdoctor.com</a>.
             This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use our Service.
           </P>
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
         <Section title="3. How We Use Your Information">
           <P>We use the information we collect to:</P>
           <Ul items={[
-            'Provide and operate the Service, including AI-powered analysis features',
+            'Provide and operate the Service, including AI-assisted analysis features',
             'Generate decision-support inspection outputs, risk scores, and report summaries',
             'Process and confirm premium report purchases',
             'Authenticate your account and maintain session security',
@@ -221,7 +221,11 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="6. Data Retention">
-          <P>We retain your account and inspection data for as long as your account is active. You may request deletion of your account and all associated data at any time by contacting us (see Section 11).</P>
+          <P>
+            We retain your account and inspection data for as long as your account is active. You may request deletion of your account and associated data at any time from the{' '}
+            <Link href="/legal/account-deletion" style={{ color: '#22d3ee', textDecoration: 'none' }}>Account Deletion</Link>{' '}
+            page or by contacting us (see Section 11).
+          </P>
           <P>Payment transaction records may be retained for up to 7 years as required by applicable accounting and tax laws, even after account deletion. AI analysis results and inspection reports may be retained while your account remains active so you can access your inspection history. Raw photo handling depends on the feature used and the storage provider involved; where photos are processed only for analysis, we limit retention to what is necessary to provide the Service and maintain security.</P>
         </Section>
 

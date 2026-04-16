@@ -180,7 +180,7 @@ export default function TermsPage() {
 
         <Section title="1. Acceptance of Terms">
           <P>
-            These Terms of Service ("Terms") govern your access to and use of the Used Car Inspector AI web application and Progressive Web Application (the "Service") operated by Used Car Inspector AI ("we," "our," "us"), available at{' '}
+            These Terms of Service ("Terms") govern your access to and use of the Used Cars Doctor web application and Progressive Web Application (the "Service") operated by Used Cars Doctor ("we," "our," "us"), available at{' '}
             <a href="https://usedcarsdoctor.com" style={{ color: '#22d3ee', textDecoration: 'none' }}>usedcarsdoctor.com</a>.
           </P>
           <P>
@@ -195,11 +195,11 @@ export default function TermsPage() {
 
         <Section title="2. Description of Service">
           <P>
-            Used Car Inspector AI is an AI-assisted tool designed to help individuals evaluate used vehicles before purchase. The Service provides:
+            Used Cars Doctor is an AI-assisted tool designed to help individuals evaluate used vehicles before purchase. The Service provides:
           </P>
           <Ul items={[
             'Step-by-step guided inspection checklists for evaluating used vehicles',
-            'AI-powered photo analysis to identify visible defects, paint issues, and condition concerns from user-uploaded images',
+            'AI-assisted photo analysis to highlight visible defects, paint issues, and condition concerns from user-uploaded images',
             'AI-generated inspection summaries and risk assessments based on user-entered data',
             'Optional premium vehicle history reports sourced from third-party data providers (carVertical / autoDNA)',
             'PDF export of completed inspection reports',
@@ -242,6 +242,9 @@ export default function TermsPage() {
             AI models can and do make errors. They may miss defects that are not clearly visible in photos, misidentify conditions, or fail to detect issues that require physical examination by a qualified mechanic. The accuracy of AI analysis is dependent on the quality, angle, and completeness of the photos and data you provide.
           </P>
           <P>
+            Photo-based analysis is advisory only. Results generated from photos may be incomplete or inaccurate and are not a guaranteed diagnosis or professional mechanical inspection. You should verify important findings with a qualified mechanic or in-person inspection.
+          </P>
+          <P>
             The Service does not guarantee any vehicle's condition, history, mileage, value, safety, roadworthiness, legal status, ownership status, accident history, or suitability for purchase. You remain solely responsible for independent due diligence before buying, selling, registering, financing, or driving any vehicle.
           </P>
           <P>
@@ -275,7 +278,7 @@ export default function TermsPage() {
 
         <Section title="8. Intellectual Property">
           <P>
-            The Service, including its design, software, AI models, workflows, branding, and all original content created by us, is owned by Used Car Inspector AI and protected by copyright, trademark, and other intellectual property laws.
+            The Service, including its design, software, AI models, workflows, branding, and all original content created by us, is owned by Used Cars Doctor and protected by copyright, trademark, and other intellectual property laws.
           </P>
           <P>
             You retain ownership of any data, vehicle information, and photos you submit. You grant us a limited license to use that data solely to provide the Service to you as described in these Terms and our Privacy Policy.
@@ -316,7 +319,7 @@ export default function TermsPage() {
 
         <Section title="12. Indemnification">
           <P>
-            You agree to indemnify, defend, and hold harmless Used Car Inspector AI and its operators from and against any claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to: (a) your use of the Service; (b) your violation of these Terms; (c) your violation of any applicable law; or (d) any content or data you submit through the Service.
+            You agree to indemnify, defend, and hold harmless Used Cars Doctor and its operators from and against any claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to: (a) your use of the Service; (b) your violation of these Terms; (c) your violation of any applicable law; or (d) any content or data you submit through the Service.
           </P>
         </Section>
 

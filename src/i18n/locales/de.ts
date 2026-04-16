@@ -41,9 +41,10 @@ const de = {
   'nav.backToLanding':      'Zur Startseite',
   'nav.privacy':            'Datenschutzerklärung',
   'nav.terms':              'Nutzungsbedingungen',
+  'nav.accountDeletion':    'Kontolöschung',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
-  'auth.brand':             'Used Car Inspector AI',
+  'auth.brand':             'Used Cars Doctor',
   'auth.tagline':           'KI-gestützte Fahrzeugprüfung',
   'auth.signIn':            'Anmelden',
   'auth.createAccount':     'Konto erstellen',
@@ -58,7 +59,7 @@ const de = {
   'auth.hidePassword':      'Passwort verbergen',
   'auth.signingIn':         'Anmeldung läuft…',
   'auth.creatingAccount':   'Konto wird erstellt…',
-  'auth.termsNote':         'Mit der Anmeldung stimmen Sie unseren Nutzungsbedingungen zu.',
+  'auth.termsNote':         'Mit der Anmeldung stimmen Sie den Nutzungsbedingungen und der Datenschutzerklärung zu.',
   'auth.heroTitle':         'Jedes Gebrauchtwagen hat eine Geschichte.',
   'auth.heroTitleAccent':   'Kennen Sie sie, bevor Sie kaufen.',
   'auth.heroSub':           'KI-gestützte Prüfungen, Risikobewertung und Premium-Fahrzeughistorie für Käufer, die gründlich vorgehen.',
@@ -89,6 +90,7 @@ const de = {
   'legal.englishOnly':      'Dieses Rechtsdokument ist nur auf Englisch verfügbar. Maschinell übersetzte Versionen sind nicht rechtsverbindlich. Bei Fragen kontaktieren Sie uns unter contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Datenschutzerklärung',
   'legal.terms.title':      'Nutzungsbedingungen',
+  'disclaimer.photoAnalysis': 'Die Fotoanalyse dient nur der Orientierung. Ergebnisse können unvollständig oder ungenau sein und sind keine garantierte Diagnose oder professionelle mechanische Prüfung. Wichtige Befunde sollten Sie durch einen qualifizierten Mechaniker oder eine Vor-Ort-Prüfung bestätigen lassen.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktives Fahrzeug',
@@ -454,7 +456,7 @@ const de = {
   'topbar.messages.sub':      'Private Gespräche',
   'topbar.profile.title':     'Profil',
   'topbar.profile.sub':       'Kontoeinstellungen',
-  'topbar.fallback.title':    'Used Car Inspector AI',
+  'topbar.fallback.title':    'Used Cars Doctor',
 
   // ─── PWA install prompt ───────────────────────────────────────────────────────
   'pwa.addToHome':            'Zum Startbildschirm hinzufügen',
@@ -561,11 +563,11 @@ const de = {
   'landing.closing.titleAccent': 'verdient bessere Daten.',
   'landing.closing.subtitle': 'Starten Sie mit einer kostenlosen Prüfung. Fügen Sie Premium-Historie hinzu, wenn Sie sie brauchen. Wissen Sie, was Sie kaufen.',
   'landing.closing.explorePremium': 'Premium entdecken',
-  'landing.footer.description': 'KI-gestützte Prüfdaten für klügere Gebrauchtwagenentscheidungen.',
+  'landing.footer.description': 'KI-gestützte Prüfhilfe für klügere Gebrauchtwagenentscheidungen.',
   'landing.footer.inspect': 'Prüfen',
   'landing.footer.platform': 'Plattform',
   'landing.footer.premiumHistory': 'Premium-Historie',
-  'landing.footer.tagline': 'Car Inspector AI, KI-geführte Fahrzeuginformation.',
+  'landing.footer.tagline': 'Used Cars Doctor, KI-gestützte Fahrzeughilfe.',
   'landing.footer.privacy': 'Datenschutzerklärung',
   'landing.footer.terms':   'Nutzungsbedingungen',
 
@@ -712,7 +714,8 @@ const de = {
   'premiumPage.locked.features.bundle.support': 'Priorisierter Support',
   'premiumPage.locked.preparingCheckout': 'Checkout wird vorbereitet...',
   'premiumPage.locked.purchaseReport': 'Bericht kaufen - {{price}}',
-  'premiumPage.locked.securityNote': 'Gesichert durch Stripe · SSL-verschlüsselt · DSGVO-konform · Kein Abo',
+  'premiumPage.locked.currentlyUnavailable': 'Premium-Käufe sind in dieser Version nicht verfügbar. Sie können die kostenlose Prüfung weiterhin abschließen und den Standardbericht erstellen.',
+  'premiumPage.locked.securityNote': 'Sichere Zahlung wird von Stripe verarbeitet, sobald Käufe aktiviert sind · Kein Abo',
   'premiumPage.payment.pendingTitle': 'Zahlung wird bestätigt',
   'premiumPage.payment.pendingDesc': 'Stripe bestätigt Ihre Zahlung. Das dauert normalerweise nur wenige Sekunden. Schließen Sie diese Seite nicht.',
   'premiumPage.payment.successTitle': 'Zahlung erfolgreich',
@@ -789,7 +792,7 @@ const de = {
   'scroll.exterior.b1':            'Lack unter direktem Licht auf Überlackierung und Übergangsnähte untersuchen',
   'scroll.exterior.b2':            'Radläufe und Schweller auf Rostblasen unter dem Lack prüfen',
   'scroll.photos.title':           'KI-Fotoanalyse',
-  'scroll.photos.desc':            '16 Standardwinkel für KI-gestützte Schadenserkennung aufnehmen.',
+  'scroll.photos.desc':            '16 Standardwinkel für eine KI-gestützte Prüfung sichtbarer Schäden aufnehmen.',
   'scroll.photos.b0':              'Jedes Panel aus konstantem Drei-Meter-Abstand fotografieren',
   'scroll.photos.b1':              'KI vergleicht Lackreflexionen, um versteckte Karosseriereparaturen aufzudecken',
   'scroll.photos.b2':              'Ergebnisse werden gespeichert und in den endgültigen Vertrauensscore einbezogen',

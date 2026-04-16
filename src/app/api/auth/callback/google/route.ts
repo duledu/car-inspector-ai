@@ -229,7 +229,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { user: googleUser } = userResult
-    console.log(`${tag} userinfo OK. email=${googleUser.email ? 'yes' : 'NO'} verified=${googleUser.email_verified}`)
+    console.log(`${tag} userinfo OK. emailPresent=${googleUser.email ? 'yes' : 'no'} verified=${googleUser.email_verified ? 'yes' : 'no'}`)
 
     if (!googleUser.email || !googleUser.email_verified) {
       console.error(`${tag} FAIL: email missing or unverified`)
@@ -239,7 +239,7 @@ export async function GET(req: NextRequest) {
     // ── DB upsert ─────────────────────────────────────────────────────────
     console.log(`${tag} upserting user…`)
     const { user, action } = await upsertGoogleUser(googleUser)
-    console.log(`${tag} DB OK. action=${action} userId=${user.id}`)
+    console.log(`${tag} DB OK. action=${action}`)
 
     // ── Session ───────────────────────────────────────────────────────────
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)

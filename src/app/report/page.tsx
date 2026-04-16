@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
+import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import type { RiskScore } from '@/types'
 import AppShell from '../AppShell'
 
@@ -399,6 +400,8 @@ export default function ReportPage() {
             {/* ══════════════════════════════════════════════════════════
                 2. RISK FLAGS — one card per active flag
                ══════════════════════════════════════════════════════════ */}
+            <PhotoAnalysisDisclaimer />
+
             {riskScore.riskFlags.length > 0 && (
               <div>
                 <SectionLabel>{t('report.riskFlags')}</SectionLabel>

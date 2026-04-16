@@ -247,6 +247,9 @@ export default function ProfilePage() {
             <Link href="/legal/terms" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
               {t('nav.terms')}
             </Link>
+            <Link href="/legal/account-deletion" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
+              {t('nav.accountDeletion')}
+            </Link>
           </div>
         </div>
 

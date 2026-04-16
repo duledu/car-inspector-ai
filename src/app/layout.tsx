@@ -31,15 +31,15 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://usedcarsdoctor.com'),
   title: {
-    default: 'Used Car Inspector AI',
-    template: '%s · Used Car Inspector AI',
+    default: 'Used Cars Doctor',
+    template: '%s · Used Cars Doctor',
   },
-  description: 'AI-powered used car inspection and risk scoring. Take photos, get analysis, buy with confidence.',
+  description: 'AI-assisted used car inspection and risk scoring. Take photos, review guidance, and make a more informed decision.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Car Inspector AI',
+    title: 'Used Cars Doctor',
   },
   icons: {
     icon:     '/icons/favicon_used_cars_doctor.png',
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
     shortcut: '/icons/favicon_used_cars_doctor.png',
   },
   openGraph: {
-    title: 'Used Car Inspector AI',
-    description: 'AI-powered used car inspection and risk scoring',
+    title: 'Used Cars Doctor',
+    description: 'AI-assisted used car inspection and risk scoring',
     type: 'website',
   },
 }

@@ -41,9 +41,10 @@ const en = {
   'nav.backToLanding':      'Back to landing',
   'nav.privacy':            'Privacy Policy',
   'nav.terms':              'Terms of Service',
+  'nav.accountDeletion':    'Account Deletion',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
-  'auth.brand':             'Used Car Inspector AI',
+  'auth.brand':             'Used Cars Doctor',
   'auth.tagline':           'AI-Powered Car Inspection',
   'auth.signIn':            'Sign In',
   'auth.createAccount':     'Create Account',
@@ -58,7 +59,7 @@ const en = {
   'auth.hidePassword':      'Hide password',
   'auth.signingIn':         'Signing in…',
   'auth.creatingAccount':   'Creating account…',
-  'auth.termsNote':         'By signing in you agree to our terms of service.',
+  'auth.termsNote':         'By signing in you agree to our Terms of Service and Privacy Policy.',
   'auth.heroTitle':         'Every used car has a story.',
   'auth.heroTitleAccent':   'Know it before you buy.',
   'auth.heroSub':           'AI-guided inspections, risk scoring, and premium vehicle history for buyers who do their homework.',
@@ -90,6 +91,7 @@ const en = {
   'legal.englishOnly':      'This legal document is available in English only. Machine-translated versions are not legally binding. If you have questions, please contact us at contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Privacy Policy',
   'legal.terms.title':      'Terms of Service',
+  'disclaimer.photoAnalysis': 'Photo analysis is advisory only. Results may be incomplete or inaccurate and are not a guaranteed diagnosis or professional mechanical inspection. Verify important findings with a qualified mechanic or in-person inspection.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Active Vehicle',
@@ -476,7 +478,7 @@ const en = {
   'topbar.messages.sub':      'Private conversations',
   'topbar.profile.title':     'Profile',
   'topbar.profile.sub':       'Account settings',
-  'topbar.fallback.title':    'Used Car Inspector AI',
+  'topbar.fallback.title':    'Used Cars Doctor',
 
   // ─── PWA install prompt ───────────────────────────────────────────────────────
   'pwa.addToHome':            'Add to Home Screen',
@@ -667,11 +669,11 @@ const en = {
   'landing.closing.titleAccent': 'deserves better data.',
   'landing.closing.subtitle': "Start with a free inspection. Add premium history when you need it. Know what you're buying before you sign anything.",
   'landing.closing.explorePremium': 'Explore Premium',
-  'landing.footer.description': 'AI-powered inspection intelligence for smarter used car buying decisions.',
+  'landing.footer.description': 'AI-assisted inspection guidance for smarter used car buying decisions.',
   'landing.footer.inspect': 'Inspect',
   'landing.footer.platform': 'Platform',
   'landing.footer.premiumHistory': 'Premium History',
-  'landing.footer.tagline': 'Car Inspector AI, AI-guided automotive intelligence.',
+  'landing.footer.tagline': 'Used Cars Doctor, AI-assisted automotive guidance.',
   'landing.footer.privacy': 'Privacy Policy',
   'landing.footer.terms':   'Terms of Service',
 
@@ -711,7 +713,8 @@ const en = {
   'premiumPage.locked.features.bundle.support': 'Priority support',
   'premiumPage.locked.preparingCheckout': 'Preparing checkout...',
   'premiumPage.locked.purchaseReport': 'Purchase Report - {{price}}',
-  'premiumPage.locked.securityNote': 'Secured by Stripe · SSL encrypted · GDPR compliant · No subscription',
+  'premiumPage.locked.currentlyUnavailable': 'Premium purchase is not available in this release. You can still complete the free inspection and generate the standard report.',
+  'premiumPage.locked.securityNote': 'Secure checkout is handled by Stripe when purchases are enabled · No subscription',
   'premiumPage.payment.pendingTitle': 'Confirming payment',
   'premiumPage.payment.pendingDesc': 'Stripe is confirming your payment. This usually takes a few seconds. Do not close this page.',
   'premiumPage.payment.successTitle': 'Payment successful',
@@ -788,7 +791,7 @@ const en = {
   'scroll.exterior.b1':            'Inspect paint under direct light for overspray and blend lines',
   'scroll.exterior.b2':            'Probe wheel arches and sills for rust bubbling under the paint',
   'scroll.photos.title':           'AI Photo Analysis',
-  'scroll.photos.desc':            'Capture 16 standardised angles for AI-powered damage detection.',
+  'scroll.photos.desc':            'Capture 16 standardised angles for AI-assisted visible damage review.',
   'scroll.photos.b0':              'Photograph every panel from a consistent three-metre distance',
   'scroll.photos.b1':              'AI compares paint reflections to detect hidden bodywork repairs',
   'scroll.photos.b2':              'Results are stored and factored into the final confidence score',

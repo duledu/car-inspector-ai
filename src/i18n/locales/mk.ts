@@ -41,9 +41,10 @@ const mk = {
   'nav.backToLanding':      'Назад на почетна',
   'nav.privacy':            'Политика за приватност',
   'nav.terms':              'Услови за користење',
+  'nav.accountDeletion':    'Бришење на сметка',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
-  'auth.brand':             'Used Car Inspector AI',
+  'auth.brand':             'Used Cars Doctor',
   'auth.tagline':           'ВИ-напојувана инспекција на возила',
   'auth.signIn':            'Најава',
   'auth.createAccount':     'Создај сметка',
@@ -58,7 +59,7 @@ const mk = {
   'auth.hidePassword':      'Скриј лозинка',
   'auth.signingIn':         'Се најавувате…',
   'auth.creatingAccount':   'Се создава сметка…',
-  'auth.termsNote':         'Со најавувањето ги прифаќате нашите услови за користење.',
+  'auth.termsNote':         'Со најавувањето ги прифаќате Условите за користење и Политиката за приватност.',
   'auth.heroTitle':         'Секое половно возило има приказна.',
   'auth.heroTitleAccent':   'Дознајте ја пред да купите.',
   'auth.heroSub':           'ВИ-водена инспекција, оцена на ризик и премиум историја на возилото за купувачи кои прават домашна задача.',
@@ -89,6 +90,7 @@ const mk = {
   'legal.englishOnly':      'Овој правен документ е достапен само на англиски јазик. Машински преведените верзии не се правно обврзувачки. За прашања контактирајте нè на contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Политика за приватност',
   'legal.terms.title':      'Услови за користење',
+  'disclaimer.photoAnalysis': 'Анализата од фотографии е само советодавна. Резултатите може да бидат нецелосни или неточни и не претставуваат гарантирана дијагноза ниту професионален механичарски преглед. Важните наоди проверете ги со квалификуван механичар или преглед во живо.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Активно возило',
@@ -454,7 +456,7 @@ const mk = {
   'topbar.messages.sub':      'Приватни разговори',
   'topbar.profile.title':     'Профил',
   'topbar.profile.sub':       'Поставки на сметката',
-  'topbar.fallback.title':    'Used Car Inspector AI',
+  'topbar.fallback.title':    'Used Cars Doctor',
 
   // ─── PWA install prompt ───────────────────────────────────────────────────────
   'pwa.addToHome':            'Додај на почетниот екран',
@@ -561,11 +563,11 @@ const mk = {
   'landing.closing.titleAccent': 'заслужува подобри податоци.',
   'landing.closing.subtitle': 'Почнете со бесплатен преглед. Додајте premium историја кога ви треба. Знајте што купувате пред потпис.',
   'landing.closing.explorePremium': 'Истражи Premium',
-  'landing.footer.description': 'AI анализа на прегледи за попаметни одлуки при купување половни автомобили.',
+  'landing.footer.description': 'AI поддржани насоки за преглед за попаметни одлуки при купување половни автомобили.',
   'landing.footer.inspect': 'Преглед',
   'landing.footer.platform': 'Платформа',
   'landing.footer.premiumHistory': 'Premium историја',
-  'landing.footer.tagline': 'Car Inspector AI, AI водена автомобилска анализа.',
+  'landing.footer.tagline': 'Used Cars Doctor, AI поддржани автомобилски насоки.',
   'landing.footer.privacy': 'Политика за приватност',
   'landing.footer.terms':   'Услови за користење',
 
@@ -712,7 +714,8 @@ const mk = {
   'premiumPage.locked.features.bundle.support': 'Приоритетна поддршка',
   'premiumPage.locked.preparingCheckout': 'Се подготвува плаќање...',
   'premiumPage.locked.purchaseReport': 'Купи извештај - {{price}}',
-  'premiumPage.locked.securityNote': 'Плаќање преку Stripe · SSL енкрипција · GDPR усогласено · Без претплата',
+  'premiumPage.locked.currentlyUnavailable': 'Premium купување не е достапно во оваа верзија. Сè уште можете да го завршите бесплатниот преглед и да го генерирате стандардниот извештај.',
+  'premiumPage.locked.securityNote': 'Сигурното плаќање го обработува Stripe кога купувањето е овозможено · Без претплата',
   'premiumPage.payment.pendingTitle': 'Потврда на плаќање',
   'premiumPage.payment.pendingDesc': 'Stripe го потврдува плаќањето. Обично трае неколку секунди. Не ја затворајте страницата.',
   'premiumPage.payment.successTitle': 'Плаќањето е успешно',
@@ -789,7 +792,7 @@ const mk = {
   'scroll.exterior.b1':            'Проверете го лакот под директна светлина за прелакирање и премини',
   'scroll.exterior.b2':            'Проверете ги лаковите на тркалата и праговите за меури од рѓа',
   'scroll.photos.title':           'AI анализа на фотографии',
-  'scroll.photos.desc':            'Снимете 16 стандардизирани агли за AI детекција на оштетувања.',
+  'scroll.photos.desc':            'Снимете 16 стандардизирани агли за AI поддржан преглед на видливи оштетувања.',
   'scroll.photos.b0':              'Фотографирајте го секој панел од константно растојание од три метри',
   'scroll.photos.b1':              'AI ги споредува рефлексиите на лакот за откривање скриени поправки на каросеријата',
   'scroll.photos.b2':              'Резултатите се зачувуваат и влегуваат во финалната оценка',

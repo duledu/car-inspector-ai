@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Used Car Inspector AI",
-  "short_name": "Car Inspector",
-  "description": "AI-powered used car inspection and risk scoring platform",
+  "name": "Used Cars Doctor",
+  "short_name": "Cars Doctor",
+  "description": "AI-assisted used car inspection and risk scoring platform",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

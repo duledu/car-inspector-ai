@@ -334,7 +334,7 @@ function AuthPageContent() {
           {/* Brand mark */}
           <div style={{ marginBottom: 'auto', paddingTop: 48 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
-              Used Car Inspector AI
+              Used Cars Doctor
             </div>
           </div>
 

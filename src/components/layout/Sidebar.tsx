@@ -187,6 +187,12 @@ export function Sidebar() {
           >
             {t('nav.terms')}
           </Link>
+          <Link
+            href="/legal/account-deletion"
+            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
+          >
+            {t('nav.accountDeletion')}
+          </Link>
         </div>
       </div>
     </div>
