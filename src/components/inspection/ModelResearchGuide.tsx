@@ -6,7 +6,7 @@
 // and inspection priorities before the user starts their walkthrough.
 // =============================================================================
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { VehicleResearchResult, ResearchSection, ResearchIssue, ResearchTagType, PriceContext } from '@/types'
 import { researchApi } from '@/services/api/research.api'
@@ -859,8 +859,26 @@ export function ModelResearchGuide({
   const [state,    setState]    = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [result,   setResult]   = useState<VehicleResearchResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
+  const latestIdentityRef = useRef('')
+  const vehicleIdentityKey = useMemo(() => JSON.stringify({
+    make, model, year, engineCc, powerKw, engine, trim,
+    askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage,
+    locale: (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0],
+  }), [
+    make, model, year, engineCc, powerKw, engine, trim,
+    askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage,
+    i18n.resolvedLanguage, i18n.language,
+  ])
+  latestIdentityRef.current = vehicleIdentityKey
+
+  useEffect(() => {
+    setState('idle')
+    setResult(null)
+    setErrorMsg('')
+  }, [vehicleIdentityKey])
 
   const runResearch = useCallback(async () => {
+    const requestIdentityKey = vehicleIdentityKey
     setState('loading')
     setErrorMsg('')
     try {
@@ -878,15 +896,17 @@ export function ModelResearchGuide({
         locale:       (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0],
         engine, trim,
       })
+      if (latestIdentityRef.current !== requestIdentityKey) return
       setResult(data)
       setState('success')
     } catch (err: unknown) {
+      if (latestIdentityRef.current !== requestIdentityKey) return
       const msg = (err as { message?: string })?.message
         ?? t('research.errorConnection')
       setErrorMsg(msg)
       setState('error')
     }
-  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, i18n.resolvedLanguage, i18n.language, engine, trim, t])
+  }, [make, model, year, engineCc, powerKw, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, i18n.resolvedLanguage, i18n.language, engine, trim, t, vehicleIdentityKey])
 
   const reset = useCallback(() => {
     setState('idle')

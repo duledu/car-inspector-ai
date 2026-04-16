@@ -6,7 +6,8 @@
 
 import { normalizeVehicle }    from '../src/lib/vehicle/normalize'
 import { matchIssues }         from '../src/lib/vehicle/matcher'
-import { deduplicateAiSections } from '../src/modules/research/research.service'
+import { buildKbResearchSections, deduplicateAiSections } from '../src/modules/research/research.service'
+import { allIssues } from '../data/vehicle-issues'
 import type { VehicleIssue }   from '../src/lib/vehicle/types'
 import type { ResearchParams } from '../src/modules/research/research.service'
 
@@ -468,6 +469,56 @@ describe('deduplicateAiSections', () => {
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+describe('buildKbResearchSections - model-specific overview content', () => {
+  function sectionTitlesFor(params: ResearchParams): string[] {
+    const identity = normalizeVehicle(params)
+    const matches = matchIssues(identity, allIssues, 12)
+    const sections = buildKbResearchSections(matches, params.locale)
+    return [
+      ...sections.commonProblems.items.map(item => item.title),
+      ...sections.highPriorityChecks.items.map(item => item.title),
+      ...sections.visualAttention.items.map(item => item.title),
+      ...sections.mechanicalWatchouts.items.map(item => item.title),
+      ...sections.testDriveFocus.items.map(item => item.title),
+      ...sections.costAwareness.items.map(item => item.title),
+    ]
+  }
+
+  it('surfaces distinct Audi A4, BMW 3 Series, and VW Golf guidance', () => {
+    const audi = sectionTitlesFor(base({
+      make: 'Audi',
+      model: 'A4',
+      year: 2017,
+      fuelType: 'petrol',
+      engineCc: 1984,
+      transmission: 'S tronic',
+    }))
+    const bmw = sectionTitlesFor(base({
+      make: 'BMW',
+      model: '3 Series',
+      year: 2010,
+      fuelType: 'diesel',
+      engineCc: 1995,
+    }))
+    const golf = sectionTitlesFor(base({
+      make: 'Volkswagen',
+      model: 'Golf',
+      year: 2016,
+      fuelType: 'diesel',
+      engineCc: 1968,
+      transmission: 'DSG',
+    }))
+
+    expect(audi).toEqual(expect.arrayContaining(['EA888 Gen 3 oil consumption (B9 petrol)']))
+    expect(bmw).toEqual(expect.arrayContaining(['N47 timing chain failure — CRITICAL']))
+    expect(golf).toEqual(expect.arrayContaining(['Timing chain stretch (EA288 2.0 TDI)']))
+
+    expect(new Set(audi)).not.toEqual(new Set(bmw))
+    expect(new Set(audi)).not.toEqual(new Set(golf))
+    expect(new Set(bmw)).not.toEqual(new Set(golf))
+  })
+})
 
 function base(overrides: Partial<ResearchParams> & { make: string; model: string; year: number }): ResearchParams {
   return {

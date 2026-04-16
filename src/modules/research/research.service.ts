@@ -4,7 +4,7 @@
 // Pricing: pricing.service runs in parallel, result merged into priceContext
 // =============================================================================
 
-import type { VehicleResearchResult, PriceContext, ResearchSection } from '@/types'
+import type { VehicleResearchResult, PriceContext, ResearchIssue, ResearchSection, ResearchTagType } from '@/types'
 import { generateFallbackResult }                   from './fallback.knowledge'
 import { pricingService }                           from '@/modules/pricing/pricing.service'
 import type { MarketPriceResult }                   from '@/modules/pricing/provider.interface'
@@ -110,12 +110,11 @@ function sectionTitles(locale?: string): Record<string, string> {
 
 function buildKbContext(kbIssues: MatchedIssue[]): string {
   if (kbIssues.length === 0) return ''
-  // Emit all KB issues (not just 8) so AI cannot "accidentally" add any of them back.
-  // Format is compact (title + category) to save tokens while giving AI a clear exclusion list.
+  // Emit compact KB context so AI can enrich without repeating deterministic KB content.
   const lines = kbIssues
-    .map(i => `- [${i.severity.toUpperCase()}/${i.category}] ${i.title}`)
+    .map(i => `- [${i.severity.toUpperCase()}/${i.category}] ${i.title}: ${i.inspectionAdvice.slice(0, 240)}`)
     .join('\n')
-  return `\n\nKNOWN ISSUES (already covered — NEVER include these titles or their substance in your output sections):\n${lines}`
+  return `\n\nDETERMINISTIC VEHICLE-SPECIFIC KB ISSUES (these will be inserted into the visible guide before your items):\n${lines}\n\nYour output must add only complementary, vehicle-specific findings. Do not repeat these titles or rewrite generic used-car checklist items unless they are genuinely specific to this exact vehicle identity.`
 }
 
 function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): string {
@@ -360,6 +359,153 @@ export function deduplicateAiSections(
 
 // ─── Anthropic API caller ─────────────────────────────────────────────────────
 
+function severityFromKb(issue: MatchedIssue): ResearchIssue['severity'] {
+  if (issue.severity === 'critical' || issue.severity === 'major') return 'high'
+  if (issue.severity === 'minor') return 'medium'
+  return 'low'
+}
+
+function tagsFromKb(issue: MatchedIssue, primaryTag: ResearchTagType): ResearchTagType[] {
+  const tags = new Set<ResearchTagType>([primaryTag])
+  if (issue.severity === 'critical' || issue.severity === 'major') tags.add('HIGH_ATTENTION')
+  if (issue.frequency === 'widespread' || issue.frequency === 'common') tags.add('COMMON_ISSUE')
+  if (issue.category === 'body' || issue.category === 'interior' || issue.category === 'rust' || issue.category === 'safety') tags.add('VISUAL_CHECK')
+  if (issue.estimatedRepairCost && issue.estimatedRepairCost.max >= 1000) tags.add('EXPENSIVE_RISK')
+  return Array.from(tags)
+}
+
+function repairCostText(issue: MatchedIssue): string {
+  if (!issue.estimatedRepairCost) return ''
+  const { min, max, currency } = issue.estimatedRepairCost
+  return ` Estimated repair exposure: ${min.toLocaleString('de-DE')}-${max.toLocaleString('de-DE')} ${currency}.`
+}
+
+function issueToResearchIssue(issue: MatchedIssue, description: string, primaryTag: ResearchTagType): ResearchIssue {
+  const notes = issue.applicabilityNotes ? ` ${issue.applicabilityNotes}` : ''
+  return {
+    title: issue.title,
+    description: `${description}${repairCostText(issue)}${notes}`.trim(),
+    severity: severityFromKb(issue),
+    tags: tagsFromKb(issue, primaryTag),
+  }
+}
+
+function emptySections(locale?: string): VehicleResearchResult['sections'] {
+  const st = sectionTitles(locale)
+  return {
+    commonProblems:      { id: 'commonProblems',      title: st.commonProblems,      items: [] },
+    highPriorityChecks:  { id: 'highPriorityChecks',  title: st.highPriorityChecks,  items: [] },
+    visualAttention:     { id: 'visualAttention',     title: st.visualAttention,     items: [] },
+    mechanicalWatchouts: { id: 'mechanicalWatchouts', title: st.mechanicalWatchouts, items: [] },
+    testDriveFocus:      { id: 'testDriveFocus',      title: st.testDriveFocus,      items: [] },
+    costAwareness:       { id: 'costAwareness',       title: st.costAwareness,       items: [] },
+  }
+}
+
+function takeIssues(issues: MatchedIssue[], predicate: (issue: MatchedIssue) => boolean, limit: number): MatchedIssue[] {
+  return issues.filter(predicate).slice(0, limit)
+}
+
+export function buildKbResearchSections(kbIssues: MatchedIssue[], locale?: string): VehicleResearchResult['sections'] {
+  const sections = emptySections(locale)
+  if (kbIssues.length === 0) return sections
+
+  const common = takeIssues(kbIssues, issue =>
+    issue.frequency === 'widespread' || issue.frequency === 'common' || issue.severity === 'critical',
+  5)
+  const priority = takeIssues(kbIssues, issue =>
+    issue.severity === 'critical' || issue.severity === 'major',
+  5)
+  const visual = takeIssues(kbIssues, issue =>
+    issue.category === 'body' || issue.category === 'interior' || issue.category === 'rust' || issue.category === 'safety',
+  5)
+  const mechanical = takeIssues(kbIssues, issue =>
+    issue.category === 'mechanical' || issue.category === 'electrical' || issue.category === 'wear',
+  5)
+  const testDrive = takeIssues(kbIssues, issue =>
+    issue.category === 'mechanical' || issue.transmission != null || issue.drivetrain != null,
+  5)
+  const cost = [...kbIssues]
+    .filter(issue => issue.estimatedRepairCost)
+    .sort((a, b) => (b.estimatedRepairCost?.max ?? 0) - (a.estimatedRepairCost?.max ?? 0))
+    .slice(0, 5)
+
+  sections.commonProblems.items = common.map(issue => issueToResearchIssue(issue, issue.explanation, 'COMMON_ISSUE'))
+  sections.highPriorityChecks.items = priority.map(issue => issueToResearchIssue(issue, issue.inspectionAdvice, 'HIGH_ATTENTION'))
+  sections.visualAttention.items = visual.map(issue => issueToResearchIssue(issue, issue.inspectionAdvice, 'VISUAL_CHECK'))
+  sections.mechanicalWatchouts.items = mechanical.map(issue => issueToResearchIssue(issue, issue.explanation, 'COMMON_ISSUE'))
+  sections.testDriveFocus.items = testDrive.map(issue => issueToResearchIssue(issue, issue.inspectionAdvice, 'TEST_DRIVE'))
+  sections.costAwareness.items = cost.map(issue => issueToResearchIssue(issue, issue.inspectionAdvice, 'EXPENSIVE_RISK'))
+
+  return sections
+}
+
+function mergeKbSections(
+  sections: VehicleResearchResult['sections'],
+  kbIssues: MatchedIssue[],
+  locale?: string,
+): VehicleResearchResult['sections'] {
+  if (kbIssues.length === 0) return sections
+  const kbSections = buildKbResearchSections(kbIssues, locale)
+  const aiSections = deduplicateAiSections(sections, kbIssues)
+
+  function mergeSection(key: keyof VehicleResearchResult['sections']): ResearchSection {
+    const seen = new Set<string>()
+    const items = [...kbSections[key].items, ...aiSections[key].items]
+      .filter(item => {
+        const normalized = normTitle(item.title)
+        if (seen.has(normalized)) return false
+        seen.add(normalized)
+        return true
+      })
+      .slice(0, 6)
+
+    return {
+      ...aiSections[key],
+      title: aiSections[key]?.title ?? kbSections[key].title,
+      items,
+    }
+  }
+
+  return {
+    commonProblems:      mergeSection('commonProblems'),
+    highPriorityChecks:  mergeSection('highPriorityChecks'),
+    visualAttention:     mergeSection('visualAttention'),
+    mechanicalWatchouts: mergeSection('mechanicalWatchouts'),
+    testDriveFocus:      mergeSection('testDriveFocus'),
+    costAwareness:       mergeSection('costAwareness'),
+  }
+}
+
+function buildVehicleKey(params: ResearchParams): string {
+  return [
+    params.year,
+    params.make,
+    params.model,
+    params.trim,
+    params.engine,
+    params.engineCc ? `${(params.engineCc / 1000).toFixed(1)}L` : null,
+    params.fuelType,
+    params.transmission,
+  ].filter(Boolean).join(' ')
+}
+
+function buildKbFallbackResult(params: ResearchParams, kbIssues: MatchedIssue[]): VehicleResearchResult {
+  const vehicleKey = buildVehicleKey(params)
+  const top = kbIssues[0]
+  return {
+    vehicleKey,
+    generatedAt: new Date().toISOString(),
+    confidence: kbIssues.length >= 3 ? 'medium' : 'low',
+    overallRiskLevel: kbIssues.some(issue => issue.severity === 'critical') ? 'high' : 'moderate',
+    summary: top
+      ? `${vehicleKey}: live AI enrichment is unavailable, so this guide uses the matched vehicle knowledge base. The highest-priority known item is "${top.title}".`
+      : `${vehicleKey}: live AI enrichment is unavailable and no model-specific knowledge base entries were matched.`,
+    sections: buildKbResearchSections(kbIssues, params.locale),
+    disclaimer: 'Live AI enrichment was unavailable. This guide uses deterministic vehicle-specific knowledge base matches and should still be verified by a qualified mechanic before purchase.',
+  }
+}
+
 async function callAnthropic(
   apiKey: string,
   params: ResearchParams,
@@ -451,14 +597,14 @@ export class VehicleResearchService {
 
     if (researchOutcome.status === 'fulfilled') {
       base = researchOutcome.value
-      // Remove AI items that duplicate KB issues (belt-and-suspenders — prompt already instructs AI not to repeat them)
+      // KB is first-class output: prepend deterministic vehicle-specific issues, then keep non-duplicated AI enrichment.
       if (kbIssues.length > 0 && base.sections) {
-        base = { ...base, sections: deduplicateAiSections(base.sections, kbIssues) }
+        base = { ...base, sections: mergeKbSections(base.sections, kbIssues, params.locale) }
       }
       console.log('[research] Anthropic OK')
     } else {
       console.warn('[research] AI failed — using knowledge base:', researchOutcome.reason)
-      base        = generateFallbackResult(params)
+      base        = kbIssues.length > 0 ? buildKbFallbackResult(params, kbIssues) : generateFallbackResult(params)
       limitedMode = true
     }
 
