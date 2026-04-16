@@ -75,6 +75,12 @@ const sr = {
   'auth.error.registerFailed':    'Registracija nije uspela.',
   'auth.error.googleDenied':      'Google prijava je otkazana.',
   'auth.error.googleFailed':      'Google prijava nije uspela. Pokušajte ponovo.',
+  'auth.error.googleConfig':      'Google prijava nije pravilno podešena. Kontaktirajte podršku.',
+  'auth.error.googleStateMissing': 'Google sesija za prijavu je istekla ili je korišćena druga adresa aplikacije. Pokušajte ponovo sa usedcarsdoctor.com.',
+  'auth.error.googleStateMismatch': 'Google prijava nije mogla da se potvrdi. Pokušajte ponovo.',
+  'auth.error.googleRedirectMismatch': 'Google prijava koristi pogrešnu callback adresu. Kontaktirajte podršku.',
+  'auth.error.googleProvider':    'Google nije mogao da završi prijavu. Pokušajte ponovo.',
+  'auth.error.googleEmailUnverified': 'Email adresa Google naloga mora biti potvrđena pre prijave.',
   'auth.googleContinue':          'Nastavi sa Google nalogom',
   'auth.orDivider':               'ili',
 

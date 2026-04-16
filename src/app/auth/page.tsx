@@ -21,6 +21,7 @@ function AuthPageContent() {
   const searchParams = useSearchParams()
   const redirect     = searchParams.get('redirect') ?? '/dashboard'
   const urlError     = searchParams.get('error')
+  const errorReason  = searchParams.get('reason')
   const { t }        = useTranslation()
 
   const { login, register, isAuthenticated, isLoading, error, clearError } = useUserStore()
@@ -33,6 +34,14 @@ function AuthPageContent() {
 
   useEffect(() => { if (isAuthenticated) router.replace(redirect) }, [isAuthenticated])
   useEffect(() => { clearError() },                                   [tab])
+  useEffect(() => {
+    if (urlError) {
+      console.error('[auth/google] sign-in failed', {
+        error: urlError,
+        reason: errorReason ?? 'none',
+      })
+    }
+  }, [urlError, errorReason])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,7 +173,7 @@ function AuthPageContent() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              {t(`auth.error.${urlError}`)}
+              {t(`auth.error.${urlError}`, { defaultValue: t('auth.error.googleFailed') })}
             </div>
           )}
 

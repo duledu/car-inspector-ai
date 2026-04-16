@@ -75,6 +75,12 @@ const en = {
   'auth.error.registerFailed':     'Registration failed.',
   'auth.error.googleDenied':       'Google sign-in was cancelled.',
   'auth.error.googleFailed':       'Google sign-in failed. Please try again.',
+  'auth.error.googleConfig':       'Google sign-in is not configured correctly. Please contact support.',
+  'auth.error.googleStateMissing': 'Your Google sign-in session expired or used a different app address. Please try again from usedcarsdoctor.com.',
+  'auth.error.googleStateMismatch': 'Google sign-in could not be verified. Please try again.',
+  'auth.error.googleRedirectMismatch': 'Google sign-in is using the wrong callback address. Please contact support.',
+  'auth.error.googleProvider':     'Google could not complete sign-in. Please try again.',
+  'auth.error.googleEmailUnverified': 'Your Google account email must be verified before signing in.',
   'auth.googleContinue':           'Continue with Google',
   'auth.orDivider':                'or',
 

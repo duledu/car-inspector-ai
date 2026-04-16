@@ -1,23 +1,69 @@
-# dependencies
-node_modules
+# ========================
+# Node / Next.js
+# ========================
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
 
-# build
-.next
-dist
-build
-
-# env files (CRITICAL)
-.env
-.env.local
-.env.*
-!.env.example
-
-# logs
-*.log
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# misc
+# Env
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# ========================
+# Vercel
+# ========================
+.vercel
+
+# ========================
+# Android / TWA (CRITICAL)
+# ========================
+.gradle/
+build/
+app/build/
+local.properties
+
+# Android build outputs
+*.apk
+*.aab
+*.ap_
+*.idsig
+
+# Signing keys (NEVER COMMIT)
+*.keystore
+*.jks
+
+# ========================
+# Python (Claude / tools)
+# ========================
+__pycache__/
+*.pyc
+
+# ========================
+# OS files
+# ========================
 .DS_Store
-tsconfig.tsbuildinfo
+Thumbs.db
+
+# ========================
+# IDE
+# ========================
+.vscode/
+.idea/
+
+# ========================
+# Misc
+# ========================
+tsc_out.txt
+*.log

@@ -9,6 +9,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { issueTokens } from '@/utils/auth.middleware'
+import {
+  CANONICAL_GOOGLE_CALLBACK_URL,
+  buildUrlForOrigin,
+  getProductionAuthConfigIssues,
+  getAppOrigin as getCanonicalAppOrigin,
+  getRequestOrigin,
+  shouldUseCanonicalHost,
+} from '@/utils/canonical-origin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -107,25 +115,13 @@ async function upsertGoogleUser(googleUser: GoogleUserInfo) {
 // ── Origin helper ──────────────────────────────────────────────────────────
 
 /**
- * Resolves the app's public origin, accounting for reverse-proxy SSL termination.
+ * Canonical origin is resolved by src/utils/canonical-origin.
  *
- * Priority:
+ * Shared origin rules:
  *   1. NEXT_PUBLIC_APP_URL (explicit env var — always canonical in production)
  *   2. X-Forwarded-Proto + X-Forwarded-Host (fallback for proxy setups without the env var)
  *   3. req.nextUrl.origin (local dev fallback)
  */
-function getAppOrigin(req: NextRequest): string {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (envUrl) return envUrl.replace(/\/$/, '')
-
-  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
-  const host  = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-                ?? req.headers.get('host')
-
-  if (proto && host) return `${proto}://${host}`
-
-  return req.nextUrl.origin
-}
 
 // ── Route handler ──────────────────────────────────────────────────────────
 
@@ -136,7 +132,21 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
   const jwtSecret    = process.env.JWT_SECRET ?? ''
 
-  const origin      = getAppOrigin(req)
+  const origin      = getCanonicalAppOrigin(req)
+  const requestOrigin = getRequestOrigin(req)
+  const configIssues = getProductionAuthConfigIssues()
+
+  if (configIssues.length) {
+    console.error(`${tag} production auth config mismatch: ${configIssues.join(', ')}`)
+  }
+
+  if (shouldUseCanonicalHost(req) || requestOrigin !== origin) {
+    const response = NextResponse.redirect(buildUrlForOrigin(req, origin), 308)
+    response.headers.set('Cache-Control', 'no-store')
+    console.warn(`${tag} non-canonical callback origin redirected: requestOrigin=${requestOrigin} canonicalOrigin=${origin}`)
+    return response
+  }
+
   // This must exactly match the redirect URI registered in Google Cloud Console
   // and sent by /api/auth/google/init
   const callbackUrl = new URL('/api/auth/callback/google', origin).toString()
@@ -145,19 +155,26 @@ export async function GET(req: NextRequest) {
 
   const fwdProto = req.headers.get('x-forwarded-proto') ?? 'none'
   const fwdHost  = req.headers.get('x-forwarded-host') ?? 'none'
-  console.log(`${tag} origin=${origin} callbackUrl=${callbackUrl} fwd-proto=${fwdProto} fwd-host=${fwdHost}`)
+  console.log(`${tag} host=${req.headers.get('host') ?? 'none'} origin=${origin} callbackUrl=${callbackUrl} redirectUrl=${dashboardUrl} fwd-proto=${fwdProto} fwd-host=${fwdHost}`)
 
-  function redirectError(reason: 'googleDenied' | 'googleFailed') {
-    authUrl.searchParams.set('error', reason)
+  function redirectError(error: string, reason: string) {
+    authUrl.searchParams.set('error', error)
+    authUrl.searchParams.set('reason', reason)
     const r = NextResponse.redirect(authUrl)
     r.headers.set('Cache-Control', 'no-store')
+    r.cookies.delete('gauth_state')
     return r
   }
 
   // ── Env checks ────────────────────────────────────────────────────────────
-  if (!clientId)     { console.error(`${tag} FAIL: GOOGLE_CLIENT_ID not set`);     return redirectError('googleFailed') }
-  if (!clientSecret) { console.error(`${tag} FAIL: GOOGLE_CLIENT_SECRET not set`); return redirectError('googleFailed') }
-  if (!jwtSecret)    { console.error(`${tag} FAIL: JWT_SECRET not set`);            return redirectError('googleFailed') }
+  if (process.env.VERCEL_ENV === 'production' && callbackUrl !== CANONICAL_GOOGLE_CALLBACK_URL) {
+    console.error(`${tag} FAIL: production callbackUrl mismatch. callbackUrl=${callbackUrl}`)
+    return redirectError('googleConfig', 'bad_redirect_uri')
+  }
+
+  if (!clientId)     { console.error(`${tag} FAIL: GOOGLE_CLIENT_ID not set`);     return redirectError('googleConfig', 'missing_client_id') }
+  if (!clientSecret) { console.error(`${tag} FAIL: GOOGLE_CLIENT_SECRET not set`); return redirectError('googleConfig', 'missing_client_secret') }
+  if (!jwtSecret)    { console.error(`${tag} FAIL: JWT_SECRET not set`);            return redirectError('googleConfig', 'missing_jwt_secret') }
 
   // ── OAuth params ──────────────────────────────────────────────────────────
   const code       = req.nextUrl.searchParams.get('code')
@@ -168,25 +185,25 @@ export async function GET(req: NextRequest) {
 
   if (errorParam === 'access_denied') {
     console.error(`${tag} FAIL: user denied consent`)
-    return redirectError('googleDenied')
+    return redirectError('googleDenied', 'access_denied')
   }
 
   if (!code || !state) {
     console.error(`${tag} FAIL: missing code=${!!code} state=${!!state}`)
-    return redirectError('googleFailed')
+    return redirectError('googleFailed', 'missing_oauth_params')
   }
 
   // ── CSRF check ────────────────────────────────────────────────────────────
   const cookieState = req.cookies.get('gauth_state')?.value
 
   if (!cookieState) {
-    console.error(`${tag} FAIL: gauth_state cookie missing — cookie blocked, wrong domain, or secure/SameSite mismatch`)
-    return redirectError('googleFailed')
+    console.error(`${tag} FAIL: gauth_state cookie missing — likely non-canonical init host, blocked cookie, or SameSite mismatch. requestOrigin=${requestOrigin} callbackUrl=${callbackUrl}`)
+    return redirectError('googleStateMissing', 'state_cookie_missing')
   }
 
   if (cookieState !== state) {
     console.error(`${tag} FAIL: CSRF mismatch. cookie="${cookieState.slice(0, 8)}…" param="${state.slice(0, 8)}…"`)
-    return redirectError('googleFailed')
+    return redirectError('googleStateMismatch', 'state_mismatch')
   }
 
   try {
@@ -196,7 +213,8 @@ export async function GET(req: NextRequest) {
 
     if (!tokenResult.ok) {
       console.error(`${tag} FAIL: token exchange — error=${tokenResult.error} desc=${tokenResult.description}`)
-      return redirectError('googleFailed')
+      const isRedirectMismatch = tokenResult.error === 'redirect_uri_mismatch'
+      return redirectError(isRedirectMismatch ? 'googleRedirectMismatch' : 'googleProvider', tokenResult.error)
     }
 
     console.log(`${tag} token exchange OK`)
@@ -207,7 +225,7 @@ export async function GET(req: NextRequest) {
 
     if (!userResult.ok) {
       console.error(`${tag} FAIL: userinfo fetch status=${userResult.status}`)
-      return redirectError('googleFailed')
+      return redirectError('googleProvider', `userinfo_${userResult.status}`)
     }
 
     const { user: googleUser } = userResult
@@ -215,7 +233,7 @@ export async function GET(req: NextRequest) {
 
     if (!googleUser.email || !googleUser.email_verified) {
       console.error(`${tag} FAIL: email missing or unverified`)
-      return redirectError('googleFailed')
+      return redirectError('googleEmailUnverified', 'email_missing_or_unverified')
     }
 
     // ── DB upsert ─────────────────────────────────────────────────────────
@@ -284,6 +302,6 @@ export async function GET(req: NextRequest) {
 
   } catch (err) {
     console.error(`${tag} FAIL: unexpected exception —`, err)
-    return redirectError('googleFailed')
+    return redirectError('googleFailed', 'unexpected_exception')
   }
 }

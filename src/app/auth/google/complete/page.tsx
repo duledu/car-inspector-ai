@@ -21,14 +21,22 @@ export default function GoogleComplete() {
     async function finalize() {
       try {
         const res = await fetch('/api/auth/google/session', { credentials: 'same-origin' })
-        if (!res.ok) throw new Error('no session')
+        if (!res.ok) {
+          let reason = 'no_session'
+          try {
+            const body = await res.json()
+            reason = body?.code ?? body?.message ?? reason
+          } catch { /* ignore malformed error body */ }
+          throw new Error(reason)
+        }
         const { data }: { data: AuthSession } = await res.json()
         if (!cancelled) {
           loginWithGoogle(data)
           router.replace('/dashboard')
         }
-      } catch {
-        if (!cancelled) router.replace('/auth?error=googleFailed')
+      } catch (err) {
+        console.error('[auth/google/complete] session handoff failed', err)
+        if (!cancelled) router.replace('/auth?error=googleFailed&reason=session_handoff_failed')
       }
     }
 

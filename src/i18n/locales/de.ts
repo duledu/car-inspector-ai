@@ -74,6 +74,12 @@ const de = {
   'auth.error.registerFailed':    'Registrierung fehlgeschlagen.',
   'auth.error.googleDenied':      'Google-Anmeldung wurde abgebrochen.',
   'auth.error.googleFailed':      'Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  'auth.error.googleConfig':      'Google-Anmeldung ist nicht korrekt konfiguriert. Bitte kontaktieren Sie den Support.',
+  'auth.error.googleStateMissing': 'Ihre Google-Anmeldesitzung ist abgelaufen oder hat eine andere App-Adresse verwendet. Bitte versuchen Sie es erneut über usedcarsdoctor.com.',
+  'auth.error.googleStateMismatch': 'Google-Anmeldung konnte nicht verifiziert werden. Bitte versuchen Sie es erneut.',
+  'auth.error.googleRedirectMismatch': 'Google-Anmeldung verwendet die falsche Callback-Adresse. Bitte kontaktieren Sie den Support.',
+  'auth.error.googleProvider':    'Google konnte die Anmeldung nicht abschließen. Bitte versuchen Sie es erneut.',
+  'auth.error.googleEmailUnverified': 'Die E-Mail-Adresse Ihres Google-Kontos muss vor der Anmeldung verifiziert sein.',
   'auth.googleContinue':          'Mit Google fortfahren',
   'auth.orDivider':               'oder',
 

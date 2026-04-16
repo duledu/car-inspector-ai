@@ -74,6 +74,12 @@ const sq = {
   'auth.error.registerFailed':    'Regjistrimi dështoi.',
   'auth.error.googleDenied':      'Hyrja me Google u anulua.',
   'auth.error.googleFailed':      'Hyrja me Google dështoi. Provoni përsëri.',
+  'auth.error.googleConfig':      'Hyrja me Google nuk është konfiguruar si duhet. Kontaktoni mbështetjen.',
+  'auth.error.googleStateMissing': 'Sesioni i hyrjes me Google skadoi ose përdori një adresë tjetër të aplikacionit. Provoni përsëri nga usedcarsdoctor.com.',
+  'auth.error.googleStateMismatch': 'Hyrja me Google nuk mund të verifikohej. Provoni përsëri.',
+  'auth.error.googleRedirectMismatch': 'Hyrja me Google po përdor adresën e gabuar të callback. Kontaktoni mbështetjen.',
+  'auth.error.googleProvider':    'Google nuk mund ta përfundonte hyrjen. Provoni përsëri.',
+  'auth.error.googleEmailUnverified': 'Email-i i llogarisë suaj Google duhet të jetë i verifikuar para hyrjes.',
   'auth.googleContinue':          'Vazhdo me Google',
   'auth.orDivider':               'ose',
 

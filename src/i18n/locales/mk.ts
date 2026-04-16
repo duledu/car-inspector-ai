@@ -74,6 +74,12 @@ const mk = {
   'auth.error.registerFailed':    'Регистрацијата не успеа.',
   'auth.error.googleDenied':      'Google најавувањето е откажано.',
   'auth.error.googleFailed':      'Google најавувањето не успеа. Обидете се повторно.',
+  'auth.error.googleConfig':      'Google најавувањето не е правилно конфигурирано. Контактирајте поддршка.',
+  'auth.error.googleStateMissing': 'Google сесијата за најавување истече или користеше друга адреса на апликацијата. Обидете се повторно од usedcarsdoctor.com.',
+  'auth.error.googleStateMismatch': 'Google најавувањето не можеше да се потврди. Обидете се повторно.',
+  'auth.error.googleRedirectMismatch': 'Google најавувањето користи погрешна callback адреса. Контактирајте поддршка.',
+  'auth.error.googleProvider':    'Google не можеше да го заврши најавувањето. Обидете се повторно.',
+  'auth.error.googleEmailUnverified': 'Email адресата на Google сметката мора да биде потврдена пред најавување.',
   'auth.googleContinue':          'Продолжете со Google',
   'auth.orDivider':               'или',
 
