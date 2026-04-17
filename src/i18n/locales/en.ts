@@ -92,6 +92,7 @@ const en = {
   'legal.privacy.title':    'Privacy Policy',
   'legal.terms.title':      'Terms of Service',
   'disclaimer.photoAnalysis': 'AI-based photo analysis is provided for informational purposes only and does not guarantee the actual condition of the vehicle. Results may be incomplete or inaccurate. Always verify findings with a qualified mechanic before making a purchase decision.',
+  'disclaimer.photoAnalysisExtended': 'AI photo analysis is for informational purposes only and does not guarantee the actual condition of the vehicle. Using advanced AI technology, we aim to provide additional insight and support when evaluating a vehicle — but results may be incomplete or inaccurate. Accuracy can be affected by many factors including camera type and quality, lighting conditions, shooting angle, and other visual circumstances. We strongly recommend verifying all findings with a qualified professional before making any purchase decision.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Active Vehicle',

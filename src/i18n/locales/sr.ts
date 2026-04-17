@@ -92,6 +92,7 @@ const sr = {
   'legal.privacy.title':    'Politika privatnosti',
   'legal.terms.title':      'Uslovi korišćenja',
   'disclaimer.photoAnalysis': 'AI analiza fotografija je isključivo informativnog karaktera i ne garantuje stvarno stanje vozila. Rezultati mogu biti nepotpuni ili netačni. Uvek proverite nalaze kod kvalifikovanog mehaničara pre donošenja odluke o kupovini.',
+  'disclaimer.photoAnalysisExtended': 'AI analiza fotografija je isključivo informativnog karaktera i ne garantuje stvarno stanje vozila. Korišćenjem napredne AI tehnologije nastojimo da korisnicima pružimo dodatni uvid i podršku u proceni vozila, ali rezultati mogu biti nepotpuni ili netačni. Na tačnost rezultata mogu uticati brojni faktori, uključujući tip i kvalitet kamere, osvetljenje, ugao snimanja i druge vizuelne uslove. Preporučujemo da sve nalaze uvek potvrdite kod kvalifikovanog stručnjaka pre donošenja konačne odluke o kupovini.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktivno vozilo',

@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next'
 
 interface PhotoAnalysisDisclaimerProps {
   style?: CSSProperties
+  variant?: 'short' | 'extended'
 }
 
-export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclaimerProps>) {
+export function PhotoAnalysisDisclaimer({ style, variant = 'short' }: Readonly<PhotoAnalysisDisclaimerProps>) {
   const { t } = useTranslation()
+  const key = variant === 'extended' ? 'disclaimer.photoAnalysisExtended' : 'disclaimer.photoAnalysis'
 
   return (
     <div
@@ -17,7 +19,7 @@ export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclai
         display: 'flex',
         alignItems: 'flex-start',
         gap: 10,
-        padding: '10px 12px',
+        padding: variant === 'extended' ? '12px 14px' : '10px 12px',
         background: 'rgba(245,158,11,0.055)',
         border: '1px solid rgba(245,158,11,0.18)',
         borderRadius: 10,
@@ -34,7 +36,7 @@ export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclai
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        style={{ flexShrink: 0, marginTop: 2 }}
+        style={{ flexShrink: 0, marginTop: variant === 'extended' ? 3 : 2 }}
       >
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="12" />
@@ -42,13 +44,13 @@ export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclai
       </svg>
       <div
         style={{
-          fontSize: 11.5,
-          color: 'rgba(255,255,255,0.56)',
-          lineHeight: 1.55,
+          fontSize: variant === 'extended' ? 11 : 11.5,
+          color: 'rgba(255,255,255,0.5)',
+          lineHeight: 1.6,
           overflowWrap: 'anywhere',
         }}
       >
-        {t('disclaimer.photoAnalysis')}
+        {t(key)}
       </div>
     </div>
   )

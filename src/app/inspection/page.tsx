@@ -790,7 +790,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
         </div>
       )}
 
-      {photos.length > 0 && <PhotoAnalysisDisclaimer style={{ marginBottom: 16 }} />}
+      {photos.length > 0 && <PhotoAnalysisDisclaimer variant="extended" style={{ marginBottom: 16 }} />}
 
       <div style={{ padding: '12px 0 4px' }}>
         <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>

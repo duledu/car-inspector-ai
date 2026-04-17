@@ -91,6 +91,7 @@ const sq = {
   'legal.privacy.title':    'Politika e privatësisë',
   'legal.terms.title':      'Kushtet e shërbimit',
   'disclaimer.photoAnalysis': 'Analiza e fotografive bazuar në AI ofrohet vetëm për qëllime informuese dhe nuk garanton gjendjen aktuale të automjetit. Rezultatet mund të jenë të paplota ose të pasakta. Gjithmonë verifikoni gjetjet me një mekanik të kualifikuar para vendimit të blerjes.',
+  'disclaimer.photoAnalysisExtended': 'Analiza e fotografive me AI është vetëm për qëllime informative dhe nuk garanton gjendjen aktuale të automjetit. Duke përdorur teknologjinë e avancuar të AI, synojmë t\'u ofrojmë përdoruesve njohuri dhe mbështetje shtesë në vlerësimin e automjetit — por rezultatet mund të jenë të pakompletuara ose të pasakta. Saktësia mund të ndikohet nga shumë faktorë, duke përfshirë llojin dhe cilësinë e kamerës, ndriçimin, këndin e xhirimit dhe kushte të tjera vizuale. Rekomandojmë fuqishëm konfirmimin e të gjitha gjetjeve me një profesionist të kualifikuar para çdo vendimi blerjeje.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Automjeti aktiv',

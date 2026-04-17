@@ -91,6 +91,7 @@ const de = {
   'legal.privacy.title':    'Datenschutzerklärung',
   'legal.terms.title':      'Nutzungsbedingungen',
   'disclaimer.photoAnalysis': 'Die KI-basierte Fotoanalyse dient ausschließlich zu Informationszwecken und garantiert nicht den tatsächlichen Fahrzeugzustand. Ergebnisse können unvollständig oder ungenau sein. Lassen Sie Befunde stets von einem qualifizierten Mechaniker prüfen, bevor Sie eine Kaufentscheidung treffen.',
+  'disclaimer.photoAnalysisExtended': 'Die KI-Fotoanalyse dient ausschließlich zu Informationszwecken und gibt keine Garantie für den tatsächlichen Zustand des Fahrzeugs. Mithilfe fortschrittlicher KI-Technologie möchten wir Nutzern zusätzliche Einblicke und Unterstützung bei der Fahrzeugbewertung bieten — die Ergebnisse können jedoch unvollständig oder ungenau sein. Die Genauigkeit kann durch viele Faktoren beeinflusst werden, darunter Kameratyp und -qualität, Lichtverhältnisse, Aufnahmewinkel und andere visuelle Bedingungen. Wir empfehlen dringend, alle Befunde vor einer endgültigen Kaufentscheidung von einem qualifizierten Fachmann prüfen zu lassen.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Aktives Fahrzeug',

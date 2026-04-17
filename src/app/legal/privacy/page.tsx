@@ -184,7 +184,7 @@ export default function PrivacyPage() {
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>AI Results.</strong> AI-generated findings, confidence scores, inspection summaries, risk scores, and related report content generated from your photos and inspection inputs.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Payment Data.</strong> If you purchase a premium report, payment is processed by Stripe. We do not store card numbers or full payment instrument details on our servers. We retain transaction records (amount, date, vehicle reference, and status) for billing and legal compliance.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Usage Data.</strong> Browser type, device type, IP address, pages visited, feature interactions, and general usage patterns collected to improve the Service.</P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Session Storage.</strong> Your authentication session is stored in browser sessionStorage on your device. It is not persisted across browser sessions.</P>
+          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Local Storage.</strong> Your authentication session is stored in browser localStorage on your device and persists across browser sessions until you explicitly sign out.</P>
         </Section>
 
         <Section title="3. How We Use Your Information">

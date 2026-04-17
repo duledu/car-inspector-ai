@@ -280,7 +280,7 @@ export async function GET(req: NextRequest) {
   <body>
     <script>
       try {
-        sessionStorage.setItem('uci-user-store', ${htmlEscapeJson(JSON.stringify(persistedSession))});
+        localStorage.setItem('uci-user-store', ${htmlEscapeJson(JSON.stringify(persistedSession))});
       } catch (err) {}
       window.location.replace(${htmlEscapeJson(dashboardUrl.toString())});
     </script>
