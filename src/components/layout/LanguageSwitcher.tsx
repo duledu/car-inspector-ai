@@ -64,7 +64,7 @@ export function LanguageSwitcher() {
           transition: 'background 0.15s, border-color 0.15s',
         }}
       >
-        <span style={{ fontSize: 13, lineHeight: 1 }}>{meta.flag}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 16, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 3, fontSize: 8, fontWeight: 800, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.7)', flexShrink: 0, fontFamily: 'var(--font-sans)' }}>{meta.countryCode}</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: open ? '#22d3ee' : 'rgba(255,255,255,0.55)', letterSpacing: '0.04em' }}>
           {meta.label}
         </span>
@@ -125,7 +125,7 @@ export function LanguageSwitcher() {
                   if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
                 }}
               >
-                <span style={{ fontSize: 14, lineHeight: 1 }}>{m.flag}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 16, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 3, fontSize: 8, fontWeight: 800, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.6)', flexShrink: 0, fontFamily: 'var(--font-sans)' }}>{m.countryCode}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? '#22d3ee' : 'rgba(255,255,255,0.75)', lineHeight: 1.2 }}>
                     {m.full}

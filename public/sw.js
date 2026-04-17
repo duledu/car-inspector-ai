@@ -14,7 +14,7 @@
 // stream has already been handed to the browser.
 // =============================================================================
 
-const SW_VERSION = 'car-inspector-v8';
+const SW_VERSION = 'car-inspector-v9';
 const CACHE_NAME = SW_VERSION;
 
 function toUrl(input) {

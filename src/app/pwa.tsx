@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { UpdatePrompt } from '@/components/layout/UpdatePrompt'
 import i18n from '@/i18n/config'
@@ -45,6 +46,7 @@ function isSupportedServiceWorkerState(state: ServiceWorkerState): boolean {
 }
 
 export function PWAProvider() {
+  const pathname = usePathname()
   const [updateReady, setUpdateReady] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const waitingSWRef = useRef<ServiceWorker | null>(null)
@@ -304,7 +306,7 @@ export function PWAProvider() {
 
   return (
     <>
-      <InstallPrompt />
+      {pathname !== '/inspection' && <InstallPrompt />}
       {updateReady && (
         <UpdatePrompt
           isUpdating={isUpdating}

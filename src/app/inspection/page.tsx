@@ -448,7 +448,8 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {PHOTO_ANGLES.map(angle => {
-          const photo = photos.find(p => p.key === angle.key)
+          const photo    = photos.find(p => p.key === angle.key)
+          const isFailed = !!(photo?.aiResult?.failureReason && !photo?.aiPending)
           return (
             <div key={angle.key} style={{
               display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -496,6 +497,14 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>{t(`hint.${angle.key}`, { defaultValue: angle.hint })}</div>
                 {photo?.aiResult && <AIBadge result={photo.aiResult} />}
+                {isFailed && (
+                  <div style={{ marginTop: 5, fontSize: 10, color: 'rgba(245,158,11,0.75)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.65"/>
+                    </svg>
+                    {t('inspection.retryImage')}
+                  </div>
+                )}
               </div>
 
               {/* Capture / retake button */}
@@ -503,11 +512,11 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
                 onClick={() => onAdd(angle.key, t(`angle.${angle.key}`, { defaultValue: angle.label }))}
                 style={{
                   flexShrink: 0, width: 40, height: 40,
-                  background: photo ? 'rgba(255,255,255,0.04)' : 'rgba(34,211,238,0.09)',
-                  border: `1px solid ${photo ? 'rgba(255,255,255,0.09)' : 'rgba(34,211,238,0.22)'}`,
+                  background: photo ? (isFailed ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.04)') : 'rgba(34,211,238,0.09)',
+                  border: `1px solid ${photo ? (isFailed ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.09)') : 'rgba(34,211,238,0.22)'}`,
                   borderRadius: 10, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: photo ? 'rgba(255,255,255,0.35)' : '#22d3ee',
+                  color: photo ? (isFailed ? '#f59e0b' : 'rgba(255,255,255,0.35)') : '#22d3ee',
                   transition: 'all 0.15s',
                 }}
                 aria-label={photo ? `Retake ${angle.label}` : `Capture ${angle.label}`}
@@ -717,13 +726,16 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
 // ─── Risk Analysis ─────────────────────────────────────────────────────────────
 function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
   const { t }    = useTranslation()
-  const total    = PHOTO_ANGLES.length
-  const analyzed = photos.filter(p => p.aiResult && !p.aiPending)
-  const failed   = analyzed.filter(p => p.aiResult?.failureReason)
-  const flagged  = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity !== 'ok')
-  const clean    = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity === 'ok')
-  const missing  = total - analyzed.length
-  const isPartial = failed.length > 0 || missing > 0
+  const total        = PHOTO_ANGLES.length
+  const analyzed     = photos.filter(p => p.aiResult && !p.aiPending)
+  const failed       = analyzed.filter(p => p.aiResult?.failureReason)
+  const flagged      = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity !== 'ok')
+  const clean        = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity === 'ok')
+  const missing      = total - analyzed.length
+  const isPartial    = failed.length > 0 || missing > 0
+  const successCount = analyzed.length - failed.length
+  const confidenceLevel: 'high' | 'medium' | 'low' = successCount >= 5 ? 'high' : successCount >= 3 ? 'medium' : 'low'
+  const confidenceColor = successCount >= 5 ? '#22c55e' : successCount >= 3 ? '#f59e0b' : 'rgba(255,255,255,0.32)'
 
   return (
     <div>
@@ -733,9 +745,22 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {t('inspection.photoAnalysisSummary')}
             </div>
-            {/* Analyzed count badge */}
-            <div style={{ fontSize: 10.5, color: isPartial ? '#f59e0b' : 'rgba(255,255,255,0.38)', fontWeight: 600 }}>
-              {t('inspection.analyzedCount', { count: analyzed.length, total })}
+            {/* Analyzed count + confidence badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 10.5, color: isPartial ? '#f59e0b' : 'rgba(255,255,255,0.38)', fontWeight: 600 }}>
+                {t('inspection.analyzedCount', { count: analyzed.length, total })}
+              </div>
+              {analyzed.length > 0 && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                  color: confidenceColor,
+                  border: `1px solid ${confidenceColor}55`,
+                  background: `${confidenceColor}12`,
+                  letterSpacing: '0.02em',
+                }}>
+                  {t(`inspection.confidence.${confidenceLevel}`)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -756,7 +781,11 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               <div>
                 <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</div>
-                {clean.length > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{t('inspection.analyzedCount', { count: clean.length, total })}</div>}
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                  {!isPartial && analyzed.length === total
+                    ? t('inspection.analysisFull', { total })
+                    : t('inspection.analyzedCount', { count: clean.length, total })}
+                </div>
               </div>
             </div>
           ) : (
@@ -790,7 +819,7 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
         </div>
       )}
 
-      {photos.length > 0 && <PhotoAnalysisDisclaimer variant="extended" style={{ marginBottom: 16 }} />}
+      {photos.length > 0 && <PhotoAnalysisDisclaimer style={{ marginBottom: 16 }} />}
 
       <div style={{ padding: '12px 0 4px' }}>
         <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
@@ -1003,7 +1032,7 @@ export default function InspectionPage() {
         />
       )}
 
-      <div style={{ maxWidth: 680 }}>
+      <div className="inspection-page-layout">
 
         {/* Vehicle banner — premium glass card */}
         <div style={{
@@ -1111,12 +1140,12 @@ export default function InspectionPage() {
 
         {/* Phase card */}
         <div style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: currentPhase === 'AI_PHOTOS' ? 'transparent' : 'rgba(255,255,255,0.02)',
+          border: currentPhase === 'AI_PHOTOS' ? '1px solid transparent' : '1px solid rgba(255,255,255,0.07)',
           borderRadius: 18,
           padding: '18px 16px',
           marginBottom: 12,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
+          boxShadow: currentPhase === 'AI_PHOTOS' ? 'none' : '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
         }}>
           {/* Phase header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

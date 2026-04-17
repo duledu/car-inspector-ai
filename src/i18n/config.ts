@@ -29,7 +29,15 @@ function getInitialLang(): SupportedLang {
   return readCookieLang() ?? FALLBACK_LANG
 }
 
-if (!i18n.isInitialized) {
+if (i18n.isInitialized) {
+  // Re-apply locale bundles on HMR re-evaluation so locale file edits
+  // are visible without a full server restart.
+  i18n.addResourceBundle('en', 'translation', en, true, true)
+  i18n.addResourceBundle('sr', 'translation', sr, true, true)
+  i18n.addResourceBundle('de', 'translation', de, true, true)
+  i18n.addResourceBundle('mk', 'translation', mk, true, true)
+  i18n.addResourceBundle('sq', 'translation', sq, true, true)
+} else {
   i18n
     .use(initReactI18next)
     .init({

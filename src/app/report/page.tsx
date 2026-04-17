@@ -240,6 +240,46 @@ function EmptyReport({ icon, title, sub }: Readonly<{ icon: React.ReactNode; tit
   )
 }
 
+// ─── Next steps derivation ────────────────────────────────────────────────────
+function deriveNextSteps(
+  findings: Array<{ severity: string; recommendation?: string }>,
+  failedCount: number,
+  t: Translate,
+): string[] {
+  const steps: string[] = []
+  const seen = new Set<string>()
+
+  for (const f of findings) {
+    const rec = (f as any).recommendation as string | undefined
+    if (rec && rec.length > 5 && !seen.has(rec)) {
+      seen.add(rec)
+      steps.push(rec)
+    }
+  }
+
+  const hasCritical = findings.some(f => f.severity === 'critical')
+  const hasWarning  = findings.some(f => f.severity === 'warning')
+
+  if (hasCritical && steps.length < 3) {
+    const mechRec = t('report.recommendMechanic')
+    if (!seen.has(mechRec)) { seen.add(mechRec); steps.push(mechRec) }
+  }
+  if (hasWarning && !hasCritical && steps.length === 0) {
+    steps.push(t('report.recommendDiagnostic'))
+  }
+  if (failedCount > 0) {
+    steps.push(t('report.recommendBetterPhotos'))
+  }
+
+  if (steps.length === 0) {
+    return findings.length === 0
+      ? [t('report.nextStepClean')]
+      : [t('report.nextStepFallback')]
+  }
+
+  return steps.slice(0, 4)
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ReportPage() {
   const { t }                          = useTranslation()
@@ -552,7 +592,29 @@ export default function ReportPage() {
               </div>
 
             {/* ══════════════════════════════════════════════════════════
-                7. PREMIUM UPSELL / UNLOCKED
+                7. RECOMMENDED NEXT STEPS
+               ══════════════════════════════════════════════════════════ */}
+              {latestAI && (() => {
+                const failedCount = (latestAI as any).failedCount ?? 0
+                const steps = deriveNextSteps(latestAI.findings as any[], failedCount, t)
+                return (
+                  <div>
+                    <SectionLabel>{t('report.nextSteps')}</SectionLabel>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                      {steps.map((step, i) => (
+                        // eslint-disable-next-line react/no-array-index-key
+                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 12.5, color: 'rgba(255,255,255,0.62)', lineHeight: 1.55 }}>
+                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(34,211,238,0.55)', flexShrink: 0, marginTop: 7 }} />
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+            {/* ══════════════════════════════════════════════════════════
+                8. PREMIUM UPSELL / UNLOCKED
                ══════════════════════════════════════════════════════════ */}
               <div className="report-premium-card" style={{ padding: '18px 20px', background: hasPremium ? 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(34,211,238,0.025))' : 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))', border: `1px solid ${hasPremium ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, boxShadow: hasPremium ? '0 0 28px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
               <div style={{ minWidth: 0 }}>

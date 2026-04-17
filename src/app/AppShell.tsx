@@ -29,6 +29,16 @@ const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
   '/profile':    { slug: 'profile' },
 }
 
+const APP_BACKGROUND_PATHS = new Set([
+  '/dashboard',
+  '/vehicle',
+  '/report',
+  '/premium',
+  '/community',
+  '/messages',
+  '/profile',
+])
+
 interface AppShellProps {
   readonly children: React.ReactNode
 }
@@ -55,6 +65,9 @@ export default function AppShell({ children }: AppShellProps) {
   if (!isAuthenticated) return null
 
   const pageMeta = PAGE_SLUG[pathname] ?? { slug: 'fallback' }
+  const backgroundContext = pathname === '/inspection'
+    ? 'inspection'
+    : APP_BACKGROUND_PATHS.has(pathname) ? 'app' : 'default'
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
     : 'U'
@@ -66,7 +79,7 @@ export default function AppShell({ children }: AppShellProps) {
         className="desktop-only"
         style={{ height: '100vh', overflow: 'hidden', background: '#080c14', position: 'relative', isolation: 'isolate' }}
       >
-        <AmbientBackground variant="desktop" />
+        <AmbientBackground variant="desktop" context={backgroundContext} />
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', width: '100%', height: '100%' }}>
           <Sidebar />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -83,7 +96,7 @@ export default function AppShell({ children }: AppShellProps) {
         className="mobile-only"
         style={{ flexDirection: 'column', height: '100dvh', minHeight: '100svh', background: '#080c14', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}
       >
-        <AmbientBackground variant="mobile" />
+        <AmbientBackground variant="mobile" context={backgroundContext} />
         {/* ── Premium glass top bar ── */}
         <header style={{
           height: 56,
