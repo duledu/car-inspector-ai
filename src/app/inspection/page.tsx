@@ -10,24 +10,13 @@ import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import AppShell from '../AppShell'
 
-// ─── Photo categories ──────────────────────────────────────────────────────────
+// ─── AI photo slots (exactly 5 — these are the required upload slots) ──────────
 const PHOTO_ANGLES = [
-  { key: 'FRONT',       label: 'Front',          hint: 'Straight on from front' },
-  { key: 'REAR',        label: 'Rear',            hint: 'Straight on from behind' },
-  { key: 'LEFT_SIDE',   label: 'Left Side',       hint: 'Full left profile' },
-  { key: 'RIGHT_SIDE',  label: 'Right Side',      hint: 'Full right profile' },
-  { key: 'FRONT_LEFT',  label: 'Front-Left 45°',  hint: 'Front corner angle' },
-  { key: 'FRONT_RIGHT', label: 'Front-Right 45°', hint: 'Front corner angle' },
-  { key: 'HOOD',        label: 'Hood',            hint: 'Top of hood close-up' },
-  { key: 'ROOF',        label: 'Roof',            hint: 'Roof panel' },
-  { key: 'TRUNK',       label: 'Trunk / Boot',    hint: 'Rear trunk area' },
-  { key: 'ENGINE_BAY',  label: 'Engine Bay',      hint: 'Open hood, engine visible' },
-  { key: 'INTERIOR',    label: 'Interior',        hint: 'Dashboard and seats' },
-  { key: 'ODOMETER',    label: 'Odometer',        hint: 'Dashboard showing mileage' },
-  { key: 'VIN_PLATE',   label: 'VIN Plate',       hint: 'VIN number visible' },
-  { key: 'WHEELS_FL',   label: 'Wheel – Front L', hint: 'Front left wheel close-up' },
-  { key: 'WHEELS_FR',   label: 'Wheel – Front R', hint: 'Front right wheel close-up' },
-  { key: 'UNDERBODY',   label: 'Underbody',       hint: 'Under vehicle if accessible' },
+  { key: 'FRONT',      label: 'Front',      hint: 'Straight from the front' },
+  { key: 'REAR',       label: 'Rear',       hint: 'Straight from the rear' },
+  { key: 'LEFT_SIDE',  label: 'Left Side',  hint: 'Full left profile' },
+  { key: 'RIGHT_SIDE', label: 'Right Side', hint: 'Full right profile' },
+  { key: 'ENGINE_BAY', label: 'Engine Bay', hint: 'Hood open, engine visible' },
 ] as const
 
 // ─── Phase config ──────────────────────────────────────────────────────────────
@@ -72,11 +61,8 @@ const AI_IMAGE_QUALITY = 0.82
 const AI_REQUEST_TIMEOUT_MS = 35_000
 const AI_MAX_ATTEMPTS = 3
 
-// Only these 6 angles are sent to AI — they give the highest diagnostic value
-// per API call and prevent 429 / queue overload when many photos are taken.
-// Both sides are included: LEFT_SIDE and RIGHT_SIDE catch paint and accident damage on each flank.
-// All other angles are captured and stored but not AI-analysed.
-const AI_PRIORITY_ANGLES = new Set(['ENGINE_BAY', 'FRONT', 'REAR', 'INTERIOR', 'LEFT_SIDE', 'RIGHT_SIDE'])
+// All 5 upload slots are analysed by AI — every slot is a priority angle.
+const AI_PRIORITY_ANGLES = new Set(['FRONT', 'REAR', 'LEFT_SIDE', 'RIGHT_SIDE', 'ENGINE_BAY'])
 
 let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
 
@@ -92,16 +78,10 @@ function isRetriableAIStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
 }
 
-function friendlyAIDetail(fallbackDetail: string, reason: string): string {
-  if (reason === 'IMAGE_VALIDATION') {
-    return fallbackDetail
-  }
-  if (reason === 'TIMEOUT') {
-    return fallbackDetail
-  }
-  if (reason === 'RATE_LIMIT') {
-    return fallbackDetail
-  }
+function friendlyAIDetail(fallbackDetail: string, reason: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (reason === 'IMAGE_VALIDATION') return t('inspection.analysisFailedImage', { defaultValue: fallbackDetail })
+  if (reason === 'TIMEOUT')          return t('inspection.analysisFailedTimeout', { defaultValue: fallbackDetail })
+  if (reason === 'RATE_LIMIT')       return t('inspection.analysisFailedBusy', { defaultValue: fallbackDetail })
   return fallbackDetail
 }
 
@@ -256,18 +236,18 @@ async function prepareImageForAI(file: File): Promise<PreparedAIImage> {
 
 function getAuthHeader(): string {
   try {
-    const stored = sessionStorage.getItem('uci-user-store')
+    const stored = localStorage.getItem('uci-user-store')
     if (stored) {
       const token = JSON.parse(stored)?.state?.session?.accessToken
       if (token) return `Bearer ${token}`
     }
   } catch { /* ignore */ }
-
-  try { localStorage.removeItem('uci-user-store') } catch { /* ignore legacy auth cache */ }
   return ''
 }
 
-async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string): Promise<MockAIResult> {
+type TFn = (key: string, opts?: Record<string, unknown>) => string
+
+async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn): Promise<MockAIResult> {
   const startedAt = Date.now()
   try {
     logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type })
@@ -364,14 +344,14 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     return {
       signal: fallbackSignal,
       severity: 'warn',
-      detail: friendlyAIDetail(fallbackDetail, friendlyReason),
+      detail: friendlyAIDetail(fallbackDetail, friendlyReason, tFn),
       imageQuality: 'unusable',
       visibleAreas: [],
       detectedIssues: [],
       possibleIssues: [],
-      uncertainAreas: ['AI analysis did not complete'],
+      uncertainAreas: [tFn('inspection.aiDidNotComplete', { defaultValue: 'AI analysis did not complete' })],
       confidenceScore: 0,
-      recommendation: 'Retake the photo or try again with a stable network connection.',
+      recommendation: tFn('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photo or try again with a stable network connection.' }),
       failureReason: friendlyReason,
     }
   }
@@ -379,6 +359,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
 
 // ─── AI Badge ─────────────────────────────────────────────────────────────────
 function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
+  const { t } = useTranslation()
   const colors = {
     ok:   { bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.22)',  text: '#22c55e', dot: '#22c55e' },
     warn: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.22)', text: '#f59e0b', dot: '#f59e0b' },
@@ -396,22 +377,35 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{result.signal}</div>
-          {result.imageQuality && (
+          {/* Show imageQuality badge only on success, not on failures (redundant with failure message) */}
+          {result.imageQuality && !result.failureReason && result.imageQuality !== 'good' && (
             <span style={{
               fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.42)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              color: result.imageQuality === 'unusable' ? '#f59e0b' : 'rgba(255,255,255,0.42)',
+              border: `1px solid ${result.imageQuality === 'unusable' ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: 4,
               padding: '1px 5px',
             }}>
-              {result.imageQuality}
+              {t(`inspection.imgQuality.${result.imageQuality}`, { defaultValue: result.imageQuality })}
+            </span>
+          )}
+          {/* Confidence level badge on successful analysis */}
+          {!result.failureReason && result.confidenceScore !== undefined && result.confidenceScore > 0 && (
+            <span style={{
+              fontSize: 9, fontWeight: 600,
+              color: result.confidenceScore >= 70 ? '#22c55e' : result.confidenceScore >= 45 ? '#f59e0b' : 'rgba(255,255,255,0.38)',
+              border: `1px solid ${result.confidenceScore >= 70 ? 'rgba(34,197,94,0.2)' : result.confidenceScore >= 45 ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.07)'}`,
+              borderRadius: 4,
+              padding: '1px 5px',
+            }}>
+              {result.confidenceScore >= 70 ? t('inspection.confidence.high') : result.confidenceScore >= 45 ? t('inspection.confidence.medium') : t('inspection.confidence.low')}
             </span>
           )}
         </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{result.detail}</div>
         {visibleAreas.length > 0 && (
           <div style={{ marginTop: 6, fontSize: 10.5, color: 'rgba(255,255,255,0.34)', lineHeight: 1.45 }}>
-            Visible: {visibleAreas.join(', ')}
+            {t('inspection.aiVisible')}: {visibleAreas.join(', ')}
           </div>
         )}
         {issues.length > 0 && (
@@ -421,6 +415,11 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
                 {issue.area}: {issue.issue}
               </div>
             ))}
+          </div>
+        )}
+        {result.recommendation && !result.failureReason && result.severity !== 'ok' && (
+          <div style={{ marginTop: 6, fontSize: 10.5, color: 'rgba(34,211,238,0.65)', lineHeight: 1.45, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 5 }}>
+            {result.recommendation}
           </div>
         )}
       </div>
@@ -717,21 +716,48 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
 
 // ─── Risk Analysis ─────────────────────────────────────────────────────────────
 function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
-  const { t }   = useTranslation()
-  const flagged = photos.filter(p => p.aiResult && p.aiResult.severity !== 'ok')
-  const allOk   = flagged.length === 0 && photos.length > 0
+  const { t }    = useTranslation()
+  const total    = PHOTO_ANGLES.length
+  const analyzed = photos.filter(p => p.aiResult && !p.aiPending)
+  const failed   = analyzed.filter(p => p.aiResult?.failureReason)
+  const flagged  = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity !== 'ok')
+  const clean    = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity === 'ok')
+  const missing  = total - analyzed.length
+  const isPartial = failed.length > 0 || missing > 0
 
   return (
     <div>
       {photos.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            {t('inspection.photoAnalysisSummary')}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {t('inspection.photoAnalysisSummary')}
+            </div>
+            {/* Analyzed count badge */}
+            <div style={{ fontSize: 10.5, color: isPartial ? '#f59e0b' : 'rgba(255,255,255,0.38)', fontWeight: 600 }}>
+              {t('inspection.analyzedCount', { count: analyzed.length, total })}
+            </div>
           </div>
-          {allOk ? (
+
+          {/* Partial analysis notice */}
+          {isPartial && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 9, marginBottom: 10 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                {t('inspection.analysisPartial', { failed: failed.length + missing })}
+              </span>
+            </div>
+          )}
+
+          {flagged.length === 0 && failed.length === 0 && analyzed.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</span>
+              <div>
+                <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</div>
+                {clean.length > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{t('inspection.analyzedCount', { count: clean.length, total })}</div>}
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -744,9 +770,18 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
                   borderRadius: 10,
                 }}>
                   <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.aiResult?.severity === 'flag' ? '#ef4444' : '#f59e0b', flexShrink: 0, marginTop: 3 }} />
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{p.label}</div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>{p.aiResult?.signal}</div>
+                  </div>
+                </div>
+              ))}
+              {failed.map(p => (
+                <div key={p.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', flexShrink: 0, marginTop: 3 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.45)' }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{t('inspection.analysisCouldNotComplete')}</div>
                   </div>
                 </div>
               ))}
@@ -830,11 +865,13 @@ export default function InspectionPage() {
     setFindingsSaved(true)
 
     const photoResults = completed.map(p => ({
-      angle:    p.key,
-      label:    p.label,
-      signal:   p.aiResult!.signal,
-      severity: p.aiResult!.severity,
-      detail:   p.aiResult!.detail,
+      angle:          p.key,
+      label:          p.label,
+      signal:         p.aiResult!.signal,
+      severity:       p.aiResult!.severity,
+      detail:         p.aiResult!.detail,
+      confidence:     p.aiResult!.confidenceScore ?? 80,
+      recommendation: p.aiResult!.recommendation ?? '',
     }))
 
     const authHeader = getAuthHeader()
@@ -914,7 +951,7 @@ export default function InspectionPage() {
     // but not sent to AI, preventing 429 errors and queue buildup.
     const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
     if (isPriorityAngle) {
-      const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale)
+      const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn)
       setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
       logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, signal: result.signal })
 

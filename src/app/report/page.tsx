@@ -219,9 +219,9 @@ function DimBar({ label, score, explanation }: Readonly<{ label: string; score: 
 }
 
 // ─── Section label ────────────────────────────────────────────────────────────
-function SectionLabel({ children }: Readonly<{ children: React.ReactNode }>) {
+function SectionLabel({ children, style }: Readonly<{ children: React.ReactNode; style?: React.CSSProperties }>) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 10 }}>
+    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 10, ...style }}>
       {children}
     </div>
   )
@@ -515,7 +515,10 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             <div className="report-lower-stack">
               <div>
-                <SectionLabel>{t('report.aiFindings')} ({latestAI?.findings.length ?? 0})</SectionLabel>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <SectionLabel style={{ marginBottom: 0 }}>{t('report.aiFindings')} {latestAI && latestAI.findings.length > 0 ? `(${latestAI.findings.length})` : ''}</SectionLabel>
+                  <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.22)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('report.aiAssisted')}</span>
+                </div>
                 <div style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.035) 0%, rgba(255,255,255,0.018) 100%)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
                   {latestAI && latestAI.findings.length > 0 ? latestAI.findings.map((f, i) => (
                     // eslint-disable-next-line react/no-array-index-key
@@ -524,6 +527,11 @@ export default function ReportPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 650, color: 'rgba(255,255,255,0.86)', lineHeight: 1.35 }}>{f.title}</div>
                         {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.44)', marginTop: 4, lineHeight: 1.55 }}>{f.description}</div>}
+                        {(f as any).recommendation && (f as any).recommendation.length > 5 && (
+                          <div style={{ marginTop: 5, fontSize: 11, color: 'rgba(34,211,238,0.6)', lineHeight: 1.45 }}>
+                            {t('report.aiNextStep')} {(f as any).recommendation}
+                          </div>
+                        )}
                       </div>
                       <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 1, padding: '3px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
                         {t(`report.severity.${f.severity}`)}

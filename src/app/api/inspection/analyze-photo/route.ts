@@ -358,10 +358,10 @@ function legacySignal(analysis: StructuredPhotoAnalysis): string {
   const detected = analysis.detectedIssues[0]
   if (detected) return detected.issue.slice(0, 80)
   const possible = analysis.possibleIssues[0]
-  if (possible) return `Possible: ${possible.issue}`.slice(0, 80)
+  if (possible) return possible.issue.slice(0, 80)
   if (analysis.imageQuality === 'unusable') return 'Image not inspectable'
-  if (analysis.imageQuality === 'poor') return 'Limited photo quality'
-  return 'No clear visual issue'
+  if (analysis.imageQuality === 'poor') return 'Limited visibility — broad inspection only'
+  return 'No issues detected'
 }
 
 function legacyDetail(analysis: StructuredPhotoAnalysis): string {

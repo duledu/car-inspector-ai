@@ -153,17 +153,7 @@ export const useUserStore = create<UserStore>()(
     })),
     {
       name: 'uci-user-store',
-      storage: createJSONStorage(() => sessionStorage),
-      // Only persist session tokens — never full user data in localStorage in production
-      onRehydrateStorage: () => {
-        try {
-          const legacy = localStorage.getItem('uci-user-store')
-          if (legacy && !sessionStorage.getItem('uci-user-store')) {
-            sessionStorage.setItem('uci-user-store', legacy)
-          }
-          localStorage.removeItem('uci-user-store')
-        } catch { /* ignore legacy auth cache */ }
-      },
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         session: state.session,
         isAuthenticated: state.isAuthenticated,

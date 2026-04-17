@@ -12,12 +12,13 @@ import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 
 const photoResultSchema = z.object({
-  angle:      z.string().min(1),
-  label:      z.string().min(1),
-  signal:     z.string().min(1),
-  severity:   z.enum(['ok', 'warn', 'flag']),
-  detail:     z.string(),
-  confidence: z.number().finite().int().min(0).max(100).optional().default(80),
+  angle:          z.string().min(1),
+  label:          z.string().min(1),
+  signal:         z.string().min(1),
+  severity:       z.enum(['ok', 'warn', 'flag']),
+  detail:         z.string(),
+  confidence:     z.number().finite().int().min(0).max(100).optional().default(80),
+  recommendation: z.string().optional().default(''),
 })
 
 const bodySchema = z.object({
@@ -62,16 +63,20 @@ export async function POST(req: NextRequest) {
     return apiError('Failed to verify vehicle', { status: 500, code: 'INTERNAL_ERROR' })
   }
 
+  const analyzedCount = photoResults.length
+  const failedCount   = photoResults.filter(r => r.severity === 'warn' && r.signal.toLowerCase().includes('unavailable')).length
+
   // Convert per-photo results → AIFinding[] (skip "ok" ones to reduce noise)
   const findings = photoResults
     .filter(r => r.severity !== 'ok')
     .map((r, i) => ({
-      id:          `${r.angle}-${i}`,
-      area:        r.label,
-      title:       r.signal,
-      description: r.detail,
-      severity:    mapSeverity(r.severity),
-      confidence:  clampScore(r.confidence, 0, 100, 80),
+      id:             `${r.angle}-${i}`,
+      area:           r.label,
+      title:          r.signal,
+      description:    r.detail,
+      severity:       mapSeverity(r.severity),
+      confidence:     clampScore(r.confidence, 0, 100, 80),
+      recommendation: r.recommendation ?? '',
     }))
 
   // Score: start at 100, deduct per finding (critical = 20pts, warning = 8pts)
@@ -94,12 +99,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       data: {
-        id:           result.id,
-        vehicleId:    result.vehicleId,
+        id:            result.id,
+        vehicleId:     result.vehicleId,
         findings,
-        overallScore: result.overallScore,
-        modelVersion: result.modelVersion,
-        createdAt:    result.createdAt.toISOString(),
+        overallScore:  result.overallScore,
+        modelVersion:  result.modelVersion,
+        createdAt:     result.createdAt.toISOString(),
+        analyzedCount,
+        failedCount,
       },
     })
   } catch (err: any) {

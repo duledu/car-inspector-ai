@@ -1,0 +1,18 @@
+warning: in the working copy of 'src/app/api/ai-analysis/analyze/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/report/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/modules/scoring/scoring.logic.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/api/client.ts', LF will be replaced by CRLF the next time Git touches it
+ src/app/api/ai-analysis/analyze/route.ts      |  41 [32m++++[m[31m---[m
+ src/app/api/inspection/analyze-photo/route.ts |   6 [32m+[m[31m-[m
+ src/app/inspection/page.tsx                   | 153 [32m++++++++++++++++[m[31m----------[m
+ src/app/report/page.tsx                       |  14 [32m++[m[31m-[m
+ src/i18n/locales/de.ts                        |  23 [32m+++[m[31m-[m
+ src/i18n/locales/en.ts                        |  27 [32m++++[m[31m-[m
+ src/i18n/locales/mk.ts                        |  23 [32m+++[m[31m-[m
+ src/i18n/locales/sq.ts                        |  23 [32m+++[m[31m-[m
+ src/i18n/locales/sr.ts                        |  23 [32m+++[m[31m-[m
+ src/modules/scoring/scoring.logic.ts          |   3 [32m+[m[31m-[m
+ src/services/api/client.ts                    |  20 [32m+[m[31m---[m
+ src/store/useUserStore.ts                     |  12 [32m+[m[31m-[m
+ tsconfig.tsbuildinfo                          |   2 [32m+[m[31m-[m
+ 13 files changed, 242 insertions(+), 128 deletions(-)

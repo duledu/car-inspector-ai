@@ -418,7 +418,8 @@ function generateReasons(
     if (ownerCount <= 2) for_.push(`Only ${ownerCount} previous owner(s)`)
   }
 
-  if (aiFindings.filter((f) => f.severity === 'critical').length === 0) {
+  // Only claim "no anomalies" when there are truly no findings — not when warnings exist
+  if (aiFindings.length === 0 || aiFindings.every((f) => f.severity === 'info')) {
     for_.push('No critical AI anomalies detected in photos')
   }
 

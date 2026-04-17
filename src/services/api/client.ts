@@ -16,38 +16,24 @@ export const apiClient = axios.create({
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function clearSessionAndRedirect() {
-  try { sessionStorage.removeItem('uci-user-store') } catch { /* ignore */ }
   try { localStorage.removeItem('uci-user-store') } catch { /* ignore */ }
-  // Use replace so the user can't navigate back to the broken state
+  try { sessionStorage.removeItem('uci-user-store') } catch { /* ignore */ }
   globalThis.location.replace('/auth')
 }
 
 function readStoredAuthState(): any | null {
   try {
-    const stored = sessionStorage.getItem('uci-user-store')
+    const stored = localStorage.getItem('uci-user-store')
     if (stored) return JSON.parse(stored)
   } catch {
     // Silently ignore storage parse errors
   }
-
-  try {
-    const legacy = localStorage.getItem('uci-user-store')
-    if (legacy) {
-      sessionStorage.setItem('uci-user-store', legacy)
-      localStorage.removeItem('uci-user-store')
-      return JSON.parse(legacy)
-    }
-  } catch {
-    try { localStorage.removeItem('uci-user-store') } catch { /* ignore legacy auth cache */ }
-  }
-
   return null
 }
 
 function writeStoredAuthState(state: any) {
   try {
-    sessionStorage.setItem('uci-user-store', JSON.stringify(state))
-    localStorage.removeItem('uci-user-store')
+    localStorage.setItem('uci-user-store', JSON.stringify(state))
   } catch {
     // Silently ignore storage write errors
   }
