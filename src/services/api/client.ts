@@ -64,7 +64,19 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     const status  = error.response?.status
-    const responseData = error.response?.data as (ApiError & { error?: string }) | undefined
+
+    // When responseType is 'blob' (e.g. PDF download), error bodies arrive as Blob objects.
+    // Parse them back to JSON so we can read the message field.
+    let parsedData: (ApiError & { error?: string }) | undefined
+    if (error.response?.data instanceof Blob) {
+      try {
+        const text = await (error.response.data as Blob).text()
+        parsedData = JSON.parse(text)
+      } catch { /* use undefined fallback */ }
+    } else {
+      parsedData = error.response?.data as (ApiError & { error?: string }) | undefined
+    }
+    const responseData = parsedData
     const message = responseData?.message ?? responseData?.error ?? ''
 
     // ── Hard auth failures: token is invalid or server has no secret ──────────

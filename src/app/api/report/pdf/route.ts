@@ -8,6 +8,7 @@ import { buildInspectionReportPdf } from '@/lib/report/pdf'
 import { normalizePdfLocale } from '@/lib/report/i18n'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
       (await scoringService.computeAndPersist(vehicleId, auth.userId))
 
     const vehicle = toVehicleDto(vehicleRecord)
-    const research = await vehicleResearchService.research({
+    const researchParams = {
       make: vehicle.make,
       model: vehicle.model,
       year: vehicle.year,
@@ -141,6 +142,15 @@ export async function POST(req: NextRequest) {
       bodyType: vehicle.bodyType ?? undefined,
       mileage: vehicle.mileage ?? undefined,
       locale,
+    }
+    const research = await Promise.race([
+      vehicleResearchService.research(researchParams),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('research_timeout')), 8_000)
+      ),
+    ]).catch((err: Error) => {
+      console.warn('[pdf] research timed out or failed, using fallback:', err.message)
+      return generateFallbackResult({ make: vehicle.make, model: vehicle.model, year: vehicle.year, locale })
     })
 
     const pdf = await buildInspectionReportPdf({

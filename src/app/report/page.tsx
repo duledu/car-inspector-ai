@@ -352,8 +352,8 @@ export default function ReportPage() {
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 2500)
-    } catch (err: unknown) {
-      setPdfError((err as { message?: string })?.message ?? t('report.pdf.error'))
+    } catch {
+      setPdfError(t('report.pdf.error'))
     } finally {
       setPdfLoading(false)
     }
