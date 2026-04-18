@@ -1,12 +1,20 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import type { CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
+import { balanceHeadlineText } from '@/lib/typography'
 
 type Tab = 'login' | 'register'
+
+const balancedHeadlineStyle = {
+  textWrap: 'balance',
+  overflowWrap: 'normal',
+  hyphens: 'manual',
+} as CSSProperties
 
 export default function AuthPage() {
   return (
@@ -341,9 +349,9 @@ function AuthPageContent() {
           {/* Quote */}
           <div>
             <div style={{ width: 32, height: 2, background: '#22d3ee', borderRadius: 2, marginBottom: 20 }} />
-            <p style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.35, marginBottom: 16, maxWidth: 360 }}>
-              {t('auth.heroTitle')}<br />
-              <span style={{ color: '#22d3ee' }}>{t('auth.heroTitleAccent')}</span>
+            <p style={{ ...balancedHeadlineStyle, fontSize: 'clamp(20px, 2.1vw, 24px)', fontWeight: 700, color: '#fff', letterSpacing: 0, lineHeight: 1.28, marginBottom: 16, maxWidth: 390 }}>
+              {balanceHeadlineText(t('auth.heroTitle'))}<br />
+              <span style={{ color: '#22d3ee' }}>{balanceHeadlineText(t('auth.heroTitleAccent'))}</span>
             </p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6, maxWidth: 340 }}>
               {t('auth.heroSub')}

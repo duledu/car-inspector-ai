@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import '@/i18n/config'
 import { useUserStore } from '@/store/useUserStore'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { balanceHeadlineText } from '@/lib/typography'
 
 // ══════════════════════════════════════════════════════════════
 // HOOKS
@@ -57,6 +58,12 @@ const glass: React.CSSProperties = {
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
 }
+
+const balancedHeadlineStyle = {
+  textWrap: 'balance',
+  overflowWrap: 'normal',
+  hyphens: 'manual',
+} as React.CSSProperties
 
 // ══════════════════════════════════════════════════════════════
 // NAV
@@ -632,10 +639,10 @@ function Hero() {
               </span>
             </div>
 
-            <h1 style={{ margin: '0 0 20px', fontSize: 'clamp(36px, 6vw, 60px)', fontWeight: 900, letterSpacing: '-2.5px', lineHeight: 1.03, color: '#fff' }}>
-              {t('landing.hero.title')}<br />
+            <h1 style={{ ...balancedHeadlineStyle, margin: '0 0 20px', fontSize: 'clamp(34px, 5.4vw, 58px)', fontWeight: 900, letterSpacing: 0, lineHeight: 1.08, color: '#fff', maxWidth: 560 }}>
+              {balanceHeadlineText(t('landing.hero.title'))}<br />
               <span style={{ background: 'linear-gradient(95deg, #22d3ee 0%, #818cf8 60%, #a78bfa 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                {t('landing.hero.titleAccent')}
+                {balanceHeadlineText(t('landing.hero.titleAccent'))}
               </span>
             </h1>
 
@@ -1200,10 +1207,10 @@ function ClosingCTA() {
 
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>{t('landing.closing.badge')}</div>
-          <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(26px, 4vw, 46px)', fontWeight: 900, letterSpacing: '-2px', color: '#fff', lineHeight: 1.05, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-            {t('landing.closing.title')}<br />
+          <h2 style={{ ...balancedHeadlineStyle, margin: '0 0 16px', fontSize: 'clamp(25px, 3.6vw, 44px)', fontWeight: 900, letterSpacing: 0, color: '#fff', lineHeight: 1.12, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+            {balanceHeadlineText(t('landing.closing.title'))}<br />
             <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {t('landing.closing.titleAccent')}
+              {balanceHeadlineText(t('landing.closing.titleAccent'))}
             </span>
           </h2>
           <p style={{ margin: '0 auto 36px', fontSize: 15, color: 'rgba(255,255,255,0.42)', maxWidth: 420, lineHeight: 1.65 }}>

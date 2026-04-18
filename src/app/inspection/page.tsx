@@ -10,13 +10,23 @@ import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import AppShell from '../AppShell'
 
-// ─── AI photo slots (exactly 5 — these are the required upload slots) ──────────
+// ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
 const PHOTO_ANGLES = [
-  { key: 'FRONT',      label: 'Front',      hint: 'Straight from the front' },
-  { key: 'REAR',       label: 'Rear',       hint: 'Straight from the rear' },
-  { key: 'LEFT_SIDE',  label: 'Left Side',  hint: 'Full left profile' },
-  { key: 'RIGHT_SIDE', label: 'Right Side', hint: 'Full right profile' },
-  { key: 'ENGINE_BAY', label: 'Engine Bay', hint: 'Hood open, engine visible' },
+  { key: 'FRONT',             label: 'Front',            hint: 'Straight from the front' },
+  { key: 'FRONT_ANGLE_LEFT',  label: 'Front-Left 45°',   hint: 'Front-left corner, 45°' },
+  { key: 'FRONT_ANGLE_RIGHT', label: 'Front-Right 45°',  hint: 'Front-right corner, 45°' },
+  { key: 'LEFT_SIDE',         label: 'Left Side',        hint: 'Full left profile' },
+  { key: 'RIGHT_SIDE',        label: 'Right Side',       hint: 'Full right profile' },
+  { key: 'REAR',              label: 'Rear',             hint: 'Straight from the rear' },
+  { key: 'REAR_ANGLE_LEFT',   label: 'Rear-Left 45°',    hint: 'Rear-left corner, 45°' },
+  { key: 'REAR_ANGLE_RIGHT',  label: 'Rear-Right 45°',   hint: 'Rear-right corner, 45°' },
+] as const
+
+// Grid row grouping — drives the 3+2+3 layout
+const PHOTO_ROWS = [
+  { rowKey: 'front', labelKey: 'inspection.rowFront', cols: 3, angles: ['FRONT', 'FRONT_ANGLE_LEFT', 'FRONT_ANGLE_RIGHT'] },
+  { rowKey: 'sides', labelKey: 'inspection.rowSides', cols: 2, angles: ['LEFT_SIDE', 'RIGHT_SIDE'] },
+  { rowKey: 'rear',  labelKey: 'inspection.rowRear',  cols: 3, angles: ['REAR', 'REAR_ANGLE_LEFT', 'REAR_ANGLE_RIGHT'] },
 ] as const
 
 // ─── Phase config ──────────────────────────────────────────────────────────────
@@ -61,8 +71,13 @@ const AI_IMAGE_QUALITY = 0.82
 const AI_REQUEST_TIMEOUT_MS = 35_000
 const AI_MAX_ATTEMPTS = 3
 
-// All 5 upload slots are analysed by AI — every slot is a priority angle.
-const AI_PRIORITY_ANGLES = new Set(['FRONT', 'REAR', 'LEFT_SIDE', 'RIGHT_SIDE', 'ENGINE_BAY'])
+// All 8 exterior slots are analysed. Angle shots expose accident damage best;
+// side shots provide supporting context on panel continuity.
+const AI_PRIORITY_ANGLES = new Set([
+  'FRONT', 'FRONT_ANGLE_LEFT', 'FRONT_ANGLE_RIGHT',
+  'LEFT_SIDE', 'RIGHT_SIDE',
+  'REAR', 'REAR_ANGLE_LEFT', 'REAR_ANGLE_RIGHT',
+])
 
 let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
 
@@ -231,6 +246,26 @@ async function prepareImageForAI(file: File): Promise<PreparedAIImage> {
     height,
     size: blob.size,
   }
+}
+
+// ─── Interior questionnaire ───────────────────────────────────────────────────
+type InteriorKey = 'seats' | 'damage' | 'odor' | 'controls'
+type InteriorAnswers = Record<InteriorKey, ItemStatus>
+const INTERIOR_QUESTIONS: InteriorKey[] = ['seats', 'damage', 'odor', 'controls']
+const INTERIOR_STORAGE_PREFIX = 'uci-interior-'
+
+function loadInteriorAnswers(vehicleId: string): InteriorAnswers {
+  try {
+    const raw = localStorage.getItem(`${INTERIOR_STORAGE_PREFIX}${vehicleId}`)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return { seats: 'PENDING', damage: 'PENDING', odor: 'PENDING', controls: 'PENDING' }
+}
+
+function saveInteriorAnswers(vehicleId: string, answers: InteriorAnswers) {
+  try {
+    localStorage.setItem(`${INTERIOR_STORAGE_PREFIX}${vehicleId}`, JSON.stringify(answers))
+  } catch { /* quota — skip */ }
 }
 
 function getAuthHeader(): string {
@@ -435,112 +470,298 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
   )
 }
 
+// ─── Compact photo card (used inside the grid rows) ──────────────────────────
+function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
+  angle: { key: string; label: string; hint: string }
+  photo: PhotoEntry | undefined
+  onAdd: (key: string, label: string) => void
+}>) {
+  const { t } = useTranslation()
+  const label = t(`angle.${angle.key}`, { defaultValue: angle.label })
+  const isFailed  = !!(photo?.aiResult?.failureReason && !photo?.aiPending)
+  const hasResult = !!(photo?.aiResult && !photo?.aiPending)
+  const sev = photo?.aiResult?.severity
+  const borderColor = hasResult && !isFailed
+    ? sev === 'flag' ? 'rgba(239,68,68,0.55)' : sev === 'warn' ? 'rgba(245,158,11,0.45)' : 'rgba(34,197,94,0.45)'
+    : photo ? 'rgba(34,211,238,0.22)' : 'rgba(255,255,255,0.08)'
+  const dotColor = isFailed ? '#f59e0b' : sev === 'flag' ? '#ef4444' : sev === 'warn' ? '#f59e0b' : '#22c55e'
+
+  return (
+    <button
+      onClick={() => onAdd(angle.key, label)}
+      aria-label={photo ? `Retake ${label}` : `Capture ${label}`}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+        padding: 0, background: 'transparent', border: 'none', cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {/* Thumbnail */}
+      <div style={{
+        width: '100%', aspectRatio: '4/3', borderRadius: 10, overflow: 'hidden',
+        position: 'relative',
+        background: photo ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.03)',
+        border: `1.5px solid ${borderColor}`,
+        transition: 'border-color 0.15s',
+      }}>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo.previewUrl}
+            alt={label}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+        )}
+
+        {/* AI loading spinner */}
+        {photo?.aiPending && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(34,211,238,0.3)', borderTopColor: '#22d3ee', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
+
+        {/* AI status dot */}
+        {hasResult && (
+          <div style={{
+            position: 'absolute', top: 4, right: 4,
+            width: 7, height: 7, borderRadius: '50%',
+            background: dotColor,
+            boxShadow: `0 0 5px ${dotColor}`,
+          }} />
+        )}
+
+        {/* Retake icon (bottom-right) */}
+        {photo && (
+          <div style={{
+            position: 'absolute', bottom: 4, right: 4,
+            width: 20, height: 20, borderRadius: 5,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+          </div>
+        )}
+
+        {/* Camera icon for empty slots */}
+        {!photo && (
+          <div style={{
+            position: 'absolute', bottom: 4, right: 4,
+            width: 20, height: 20, borderRadius: 5,
+            background: 'rgba(34,211,238,0.12)',
+            border: '1px solid rgba(34,211,238,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Label */}
+      <div style={{
+        fontSize: 10, fontWeight: 600, lineHeight: 1.3,
+        color: photo ? '#fff' : 'rgba(255,255,255,0.45)',
+        textAlign: 'center', width: '100%',
+        overflow: 'hidden', display: '-webkit-box',
+        WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+      }}>
+        {label}
+      </div>
+    </button>
+  )
+}
+
 // ─── Photo Grid ───────────────────────────────────────────────────────────────
 function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (key: string, label: string) => void }>) {
-  const { t }     = useTranslation()
-  const captured  = photos.length
+  const { t } = useTranslation()
+  const captured = photos.length
+  const total    = PHOTO_ANGLES.length
+
   return (
     <div>
       {/* Progress summary */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>
-          {t('inspection.photosCaptured', { count: captured, total: PHOTO_ANGLES.length })}
+          {t('inspection.photosCaptured', { count: captured, total })}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 80, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(captured / PHOTO_ANGLES.length) * 100}%`, background: '#22d3ee', borderRadius: 2, transition: 'width 0.3s ease' }} />
+            <div style={{ height: '100%', width: `${(captured / total) * 100}%`, background: '#22d3ee', borderRadius: 2, transition: 'width 0.3s ease' }} />
           </div>
-          <span style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{Math.round((captured / PHOTO_ANGLES.length) * 100)}%</span>
+          <span style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, minWidth: 28, textAlign: 'right' }}>
+            {Math.round((captured / total) * 100)}%
+          </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {PHOTO_ANGLES.map(angle => {
-          const photo    = photos.find(p => p.key === angle.key)
-          const isFailed = !!(photo?.aiResult?.failureReason && !photo?.aiPending)
+      {/* 3-row grid: Front (3-col) → Sides (2-col) → Rear (3-col) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {PHOTO_ROWS.map(row => {
+          const rowItems = row.angles.map(key => ({
+            angle: PHOTO_ANGLES.find(a => a.key === key)!,
+            photo: photos.find(p => p.key === key),
+          }))
+          const capturedInRow = rowItems.filter(({ photo }) => !!photo)
+          const resultsInRow  = rowItems.filter(({ photo }) => photo?.aiResult && !photo?.aiPending)
+
           return (
-            <div key={angle.key} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12,
-              padding: '12px 14px',
-              background: photo ? 'rgba(34,211,238,0.03)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${photo ? 'rgba(34,211,238,0.14)' : 'rgba(255,255,255,0.06)'}`,
-              borderRadius: 12,
-              transition: 'border-color 0.15s, background 0.15s',
-            }}>
-              {/* Thumbnail */}
+            <div key={row.rowKey}>
+              {/* Row header */}
               <div style={{
-                width: 54, height: 54, borderRadius: 10, flexShrink: 0,
-                overflow: 'hidden',
-                background: photo ? 'transparent' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${photo ? 'rgba(34,211,238,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                position: 'relative',
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em',
+                color: 'rgba(255,255,255,0.28)',
+                marginBottom: 8,
+                display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.previewUrl} alt={t(`angle.${angle.key}`, { defaultValue: angle.label })} className="photo-thumb" />
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                )}
-                {photo?.aiPending && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(34,211,238,0.3)', borderTopColor: '#22d3ee', animation: 'spin 0.8s linear infinite' }} />
-                  </div>
+                {t(row.labelKey)}
+                {capturedInRow.length > 0 && (
+                  <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>
+                    {capturedInRow.length}/{row.angles.length}
+                  </span>
                 )}
               </div>
 
-              {/* Info + AI result */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: photo ? '#fff' : 'rgba(255,255,255,0.80)' }}>{t(`angle.${angle.key}`, { defaultValue: angle.label })}</span>
-                  {photo?.aiResult && !photo.aiPending && (
-                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(34,211,238,0.1)', color: '#22d3ee', letterSpacing: '0.04em' }}>AI</span>
-                  )}
-                  {photo?.aiPending && (
-                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', letterSpacing: '0.04em' }}>{t('inspection.analysing')}</span>
-                  )}
+              {/* Compact thumbnail grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${row.cols}, 1fr)`,
+                gap: 8,
+              }}>
+                {rowItems.map(({ angle, photo }) => (
+                  <CompactPhotoCard key={angle.key} angle={angle} photo={photo} onAdd={onAdd} />
+                ))}
+              </div>
+
+              {/* AI analysis results for this row (only when available) */}
+              {resultsInRow.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {resultsInRow.map(({ angle, photo }) => (
+                    <div key={angle.key}>
+                      <div style={{
+                        fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
+                        color: 'rgba(255,255,255,0.25)', marginBottom: 3,
+                      }}>
+                        {t(`angle.${angle.key}`, { defaultValue: angle.label })}
+                      </div>
+                      <AIBadge result={photo!.aiResult!} />
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>{t(`hint.${angle.key}`, { defaultValue: angle.hint })}</div>
-                {photo?.aiResult && <AIBadge result={photo.aiResult} />}
-                {isFailed && (
-                  <div style={{ marginTop: 5, fontSize: 10, color: 'rgba(245,158,11,0.75)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.65"/>
-                    </svg>
-                    {t('inspection.retryImage')}
-                  </div>
-                )}
-              </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
-              {/* Capture / retake button */}
-              <button
-                onClick={() => onAdd(angle.key, t(`angle.${angle.key}`, { defaultValue: angle.label }))}
-                style={{
-                  flexShrink: 0, width: 40, height: 40,
-                  background: photo ? (isFailed ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.04)') : 'rgba(34,211,238,0.09)',
-                  border: `1px solid ${photo ? (isFailed ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.09)') : 'rgba(34,211,238,0.22)'}`,
-                  borderRadius: 10, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: photo ? (isFailed ? '#f59e0b' : 'rgba(255,255,255,0.35)') : '#22d3ee',
-                  transition: 'all 0.15s',
-                }}
-                aria-label={photo ? `Retake ${angle.label}` : `Capture ${angle.label}`}
-              >
-                {photo ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                  </svg>
-                ) : (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                )}
-              </button>
+// ─── Interior Questionnaire ───────────────────────────────────────────────────
+function InteriorQuestionnaire({ vehicleId }: Readonly<{ vehicleId: string }>) {
+  const { t } = useTranslation()
+  const [answers, setAnswers] = useState<InteriorAnswers>(() => loadInteriorAnswers(vehicleId))
+
+  const handleAnswer = (key: InteriorKey, status: ItemStatus) => {
+    setAnswers(prev => {
+      const next = { ...prev, [key]: status }
+      saveInteriorAnswers(vehicleId, next)
+      return next
+    })
+  }
+
+  const statusCfg = {
+    OK:      { bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.3)',   text: '#22c55e', icon: '✓' },
+    WARNING: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.3)',  text: '#f59e0b', icon: '!' },
+    PROBLEM: { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',   text: '#ef4444', icon: '✕' },
+  }
+
+  return (
+    <div style={{
+      marginTop: 20,
+      padding: '14px 14px 12px',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 14,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+          background: 'rgba(129,140,248,0.1)', border: '1px solid rgba(129,140,248,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/>
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>
+            {t('inspection.interiorAssessment')}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>
+            {t('inspection.interiorAssessmentDesc')}
+          </div>
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {INTERIOR_QUESTIONS.map(key => {
+          const status = answers[key]
+          const cfg    = status !== 'PENDING' ? statusCfg[status] : null
+          return (
+            <div key={key} style={{
+              padding: '11px 12px',
+              background: cfg ? cfg.bg : 'transparent',
+              border: `1px solid ${cfg ? cfg.border : 'rgba(255,255,255,0.06)'}`,
+              borderRadius: 10,
+              transition: 'background 0.15s, border-color 0.15s',
+            }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>
+                {t(`interiorQ.${key}`)}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5, marginBottom: 9 }}>
+                {t(`interiorQ.${key}Helper`)}
+              </div>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {(['OK', 'WARNING', 'PROBLEM'] as const).map(st => {
+                  const s   = statusCfg[st]
+                  const sel = status === st
+                  const labels: Record<string, string> = { OK: t('inspection.statusOK'), WARNING: t('inspection.statusWarning'), PROBLEM: t('inspection.statusIssue') }
+                  return (
+                    <button
+                      key={st}
+                      onClick={() => handleAnswer(key, sel ? 'PENDING' : st)}
+                      style={{
+                        flex: 1, padding: '8px 4px', borderRadius: 8,
+                        border: `1px solid ${sel ? s.border : 'rgba(255,255,255,0.07)'}`,
+                        background: sel ? s.bg : 'rgba(255,255,255,0.02)',
+                        color: sel ? s.text : 'rgba(255,255,255,0.28)',
+                        fontSize: 11.5, fontWeight: sel ? 700 : 400,
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        transition: 'all 0.15s ease',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                      }}
+                    >
+                      {sel && <span style={{ fontSize: 9, fontWeight: 900 }}>{s.icon}</span>}
+                      {labels[st]}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )
         })}
@@ -742,8 +963,9 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
   const missing      = total - analyzed.length
   const isPartial    = failed.length > 0 || missing > 0
   const successCount = analyzed.length - failed.length
-  const confidenceLevel: 'high' | 'medium' | 'low' = successCount >= 5 ? 'high' : successCount >= 3 ? 'medium' : 'low'
-  const confidenceColor = successCount >= 5 ? '#22c55e' : successCount >= 3 ? '#f59e0b' : 'rgba(255,255,255,0.32)'
+  // Thresholds scaled for 8-image set: 7+ = high, 5+ = medium, <5 = low
+  const confidenceLevel: 'high' | 'medium' | 'low' = successCount >= 7 ? 'high' : successCount >= 5 ? 'medium' : 'low'
+  const confidenceColor = successCount >= 7 ? '#22c55e' : successCount >= 5 ? '#f59e0b' : 'rgba(255,255,255,0.32)'
 
   return (
     <div>
@@ -863,7 +1085,7 @@ export default function InspectionPage() {
   } = useInspectionStore()
 
   const [photos, setPhotos]             = useState<PhotoEntry[]>([])
-  const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string } | null>(null)
+  const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string; shotNumber: number } | null>(null)
   const [findingsSaved, setFindingsSaved] = useState(false)
 
   useEffect(() => {
@@ -961,7 +1183,8 @@ export default function InspectionPage() {
 
   const handleOpenCamera = useCallback((key: string, label: string) => {
     logPhotoFlow('capture_flow_opened', { key, label })
-    setCameraTarget({ key, label })
+    const shotNumber = PHOTO_ANGLES.findIndex(a => a.key === key) + 1
+    setCameraTarget({ key, label, shotNumber })
   }, [])
 
   const handleCapture = useCallback(async (file: File, previewUrl: string) => {
@@ -1035,6 +1258,11 @@ export default function InspectionPage() {
       {cameraTarget && (
         <CameraCapture
           label={cameraTarget.label}
+          angleKey={cameraTarget.key}
+          shotNumber={cameraTarget.shotNumber}
+          totalShots={PHOTO_ANGLES.length}
+          allAngles={PHOTO_ANGLES}
+          completedKeys={photos.map(p => p.key)}
           onCapture={handleCapture}
           onClose={() => setCameraTarget(null)}
         />
@@ -1247,7 +1475,12 @@ export default function InspectionPage() {
 
           {/* All checklist phases */}
           {currentPhase !== 'AI_PHOTOS' && currentPhase !== 'RISK_ANALYSIS' && currentPhase !== 'PRE_SCREENING' && (
-            <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} onNotes={handleNotes} />
+            <>
+              {currentPhase === 'INTERIOR' && session?.vehicleId && (
+                <InteriorQuestionnaire vehicleId={session.vehicleId} />
+              )}
+              <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} onNotes={handleNotes} />
+            </>
           )}
         </div>
 

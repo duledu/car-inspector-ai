@@ -468,7 +468,7 @@ export default function ReportPage() {
                ══════════════════════════════════════════════════════════ */}
             {(riskScore.reasonsFor.length > 0 || riskScore.reasonsAgainst.length > 0) && (
               <div>
-                <SectionLabel>{t('report.breakdown')}</SectionLabel>
+                <SectionLabel>{t('report.keyFindings')}</SectionLabel>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                   {riskScore.reasonsFor.length > 0 && (
                     <div style={{ padding: '16px 18px', background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.12)', borderRadius: 14 }}>
@@ -530,7 +530,7 @@ export default function ReportPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>{t('report.negotiation')}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('topbar.inspection.sub')}</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('report.negotiationSub')}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
