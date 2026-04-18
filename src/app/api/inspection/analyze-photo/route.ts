@@ -220,13 +220,50 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function isRetriableStatus(status: number): boolean {
-  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
+// ─── OpenAI error body parsing ────────────────────────────────────────────────
+
+interface OpenAIErrorDetail {
+  status: number
+  code: string    // e.g. 'insufficient_quota', 'rate_limit_exceeded', 'invalid_api_key'
+  type: string    // e.g. 'insufficient_quota', 'requests', 'tokens'
+  message: string // first 300 chars of the human-readable message
+}
+
+function parseOpenAIError(body: string, status: number): OpenAIErrorDetail {
+  let code = ''
+  let type = ''
+  let message = ''
+  try {
+    const parsed = JSON.parse(body)
+    code    = parsed?.error?.code    ?? ''
+    type    = parsed?.error?.type    ?? ''
+    message = (parsed?.error?.message ?? body).slice(0, 300)
+  } catch {
+    message = body.slice(0, 300)
+  }
+  return { status, code, type, message }
+}
+
+// Maps the parsed OpenAI error to our internal failure enum.
+// More specific than failureFromStatus because it reads the error payload.
+function failureFromOpenAIError(detail: OpenAIErrorDetail): AIProviderFailure {
+  // Billing quota exhausted — no point retrying, user needs to top up the account.
+  if (detail.code === 'insufficient_quota' || detail.type === 'insufficient_quota') return 'CONFIG_ERROR'
+  // Invalid or revoked API key
+  if (detail.code === 'invalid_api_key' || detail.status === 401 || detail.status === 403) return 'CONFIG_ERROR'
+  // Genuine per-minute/per-day rate limit (retriable)
+  if (detail.status === 429) return 'RATE_LIMIT'
+  // OpenAI 5xx
+  if (detail.status >= 500) return 'PROVIDER_OUTAGE'
+  // Bad payload (our bug)
+  if (detail.status === 400 || detail.status === 422) return 'BAD_REQUEST'
+  return 'UNKNOWN'
 }
 
 function failureFromStatus(status: number): AIProviderFailure {
   if (status === 429) return 'RATE_LIMIT'
   if (status === 400 || status === 413 || status === 415 || status === 422) return 'BAD_REQUEST'
+  if (status === 401 || status === 403) return 'CONFIG_ERROR'
   if (status >= 500) return 'PROVIDER_OUTAGE'
   return 'UNKNOWN'
 }
@@ -236,6 +273,7 @@ function failureFromError(error: unknown): AIProviderFailure {
   const message = error instanceof Error ? error.message : String(error)
   if (message === 'RATE_LIMIT') return 'RATE_LIMIT'
   if (message === 'TIMEOUT') return 'TIMEOUT'
+  if (message === 'OPENAI_QUOTA_EXCEEDED') return 'CONFIG_ERROR'
   if (message.startsWith('HTTP_')) {
     const status = Number(message.slice(5))
     return Number.isFinite(status) ? failureFromStatus(status) : 'UNKNOWN'
@@ -256,6 +294,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), OPENAI_ATTEMPT_TIMEOUT_MS)
     try {
+      console.log('[analyze-photo] calling OpenAI', { angle, attempt, model: 'gpt-4o' })
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         signal: controller.signal,
@@ -266,18 +305,56 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
         body: JSON.stringify(payload),
       })
       lastStatus = response.status
-      // Only retry on rate-limit (429), and only if we have attempts remaining
-      if (response.ok || response.status !== 429 || attempt === OPENAI_MAX_ATTEMPTS) {
-        return response
+
+      if (!response.ok) {
+        // Read and parse the error body once — the response stream can only be read once.
+        const rawBody = await response.text()
+        const errDetail = parseOpenAIError(rawBody, response.status)
+        const failureType = failureFromOpenAIError(errDetail)
+
+        console.error('[analyze-photo] OpenAI non-ok response', {
+          angle, attempt,
+          status:         errDetail.status,
+          openAICode:     errDetail.code    || '(none)',
+          openAIType:     errDetail.type    || '(none)',
+          openAIMessage:  errDetail.message || '(none)',
+          classifiedAs:   failureType,
+        })
+
+        // Quota exhausted or invalid key — these are permanent; throw immediately,
+        // no retry will help.
+        if (failureType === 'CONFIG_ERROR') {
+          throw new Error('OPENAI_QUOTA_EXCEEDED')
+        }
+
+        // For genuine rate-limit (429), retry once if we have attempts left.
+        if (response.status === 429 && attempt < OPENAI_MAX_ATTEMPTS) {
+          console.warn('[analyze-photo] rate-limit — retrying after backoff', { angle, attempt })
+          clearTimeout(timeout)
+          await sleep(1500)
+          continue
+        }
+
+        // All other non-ok responses (5xx, 400, etc.) — throw immediately.
+        throw new Error(`HTTP_${response.status}`)
       }
-      console.warn('[analyze-photo] OpenAI rate-limit — retrying', { angle, attempt })
+
+      return response
     } catch (error) {
-      // Do not retry on timeout — return immediately so the client can handle it
+      if (error instanceof Error && (error.message === 'OPENAI_QUOTA_EXCEEDED' || error.message.startsWith('HTTP_'))) {
+        throw error // already classified — propagate without wrapping
+      }
+      // Timeout (AbortError) or network failure — propagate immediately (no retry)
+      const isTimeout = error instanceof DOMException && error.name === 'AbortError'
+      console.warn('[analyze-photo] OpenAI call threw', {
+        angle, attempt,
+        errorType: isTimeout ? 'AbortError/timeout' : 'network',
+        message: error instanceof Error ? error.message : String(error),
+      })
       throw error
     } finally {
       clearTimeout(timeout)
     }
-    await sleep(1500)
   }
   throw new Error(`HTTP_${lastStatus || 503}`)
 }
@@ -538,7 +615,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const requestBytes = Math.round((imageBase64.length * 3) / 4)
-    console.log('[analyze-photo] request received', { angle, mimeType, requestBytes, imageMeta })
+    // Log key presence without exposing the key value.
+    console.log('[analyze-photo] request received', {
+      angle, mimeType, requestBytes,
+      imageMeta,
+      apiKeyPresent: !!apiKey,
+      apiKeyLength: apiKey.length,
+      apiKeyPrefix: apiKey.startsWith('sk-') ? apiKey.slice(0, 7) : '(unexpected prefix)',
+    })
 
     // ── Shared image content block (reused in condensed retry) ────────────────
     const imageContent = {
@@ -546,6 +630,7 @@ export async function POST(req: NextRequest) {
       image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'auto' as const },
     }
 
+    // callOpenAIWithRetry now throws on any non-ok response — no need to check response.ok here.
     const response = await callOpenAIWithRetry(apiKey, {
       model: 'gpt-4o',
       max_tokens: 800,
@@ -560,17 +645,17 @@ export async function POST(req: NextRequest) {
       ],
     }, angle)
 
-    if (!response.ok) {
-      const err = await response.text()
-      const failureType = failureFromStatus(response.status)
-      console.error('[analyze-photo] OpenAI error', { angle, status: response.status, failureType, body: err.slice(0, 500) })
-      throw new Error(`HTTP_${response.status}`)
-    }
-
     const result = await response.json()
     const finishReason: string = result.choices?.[0]?.finish_reason ?? 'unknown'
     const rawText: string = result.choices?.[0]?.message?.content ?? ''
-    console.log('[analyze-photo] OpenAI response received', { angle, finishReason, contentLength: rawText.length })
+    const usage = result.usage ?? {}
+    console.log('[analyze-photo] OpenAI response received', {
+      angle, finishReason,
+      contentLength: rawText.length,
+      promptTokens:     usage.prompt_tokens     ?? '?',
+      completionTokens: usage.completion_tokens ?? '?',
+      totalTokens:      usage.total_tokens      ?? '?',
+    })
 
     // ── Truncation recovery ──────────────────────────────────────────────────
     // If the model hit the token limit, attempt one condensed retry before giving up.
