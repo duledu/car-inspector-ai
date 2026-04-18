@@ -1,4 +1,3 @@
-import path from 'node:path'
 import pdfMake from 'pdfmake'
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces'
 import { createPdfTranslator, normalizePdfLocale, type PdfTranslate } from '@/lib/report/i18n'
@@ -27,16 +26,29 @@ type PdfReportInput = {
   locale: string
 }
 
-const fontBase = path.join(process.cwd(), 'node_modules', 'pdfmake', 'fonts', 'Roboto')
+type PdfMakeFontContainer = {
+  vfs: Record<string, { data: string; encoding: BufferEncoding }>
+  fonts: Record<string, {
+    normal: string
+    bold: string
+    italics: string
+    bolditalics: string
+  }>
+}
 
-pdfMake.addFonts({
-  Roboto: {
-    normal: path.join(fontBase, 'Roboto-Regular.ttf'),
-    bold: path.join(fontBase, 'Roboto-Medium.ttf'),
-    italics: path.join(fontBase, 'Roboto-Italic.ttf'),
-    bolditalics: path.join(fontBase, 'Roboto-MediumItalic.ttf'),
-  },
-})
+type PdfMakeWithVirtualFs = typeof pdfMake & {
+  virtualfs?: {
+    writeFileSync(filename: string, content: string, options?: BufferEncoding | { encoding?: BufferEncoding }): void
+  }
+}
+
+const robotoFontContainer = require('pdfmake/build/fonts/Roboto.js') as PdfMakeFontContainer
+const pdfMakeWithVirtualFs = pdfMake as PdfMakeWithVirtualFs
+
+for (const [filename, file] of Object.entries(robotoFontContainer.vfs)) {
+  pdfMakeWithVirtualFs.virtualfs?.writeFileSync(filename, file.data, file.encoding)
+}
+pdfMake.addFonts(robotoFontContainer.fonts)
 ;(pdfMake as unknown as { setUrlAccessPolicy?: (policy: (url: string) => boolean) => void })
   .setUrlAccessPolicy?.(() => false)
 
