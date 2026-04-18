@@ -72,8 +72,8 @@ function fallbackAnalysis(locale: string): { signal: string; detail: string } {
   const lang = locale.split('-')[0]
   const messages: Record<string, { signal: string; detail: string }> = {
     en: {
-      signal: 'Analysis unavailable',
-      detail: 'Could not analyse this image. Please check your connection and try again.',
+      signal: 'We couldn\'t analyze this photo.',
+      detail: 'We had trouble analyzing this photo. Check your connection and try again.',
     },
     sr: {
       signal: 'Analiza nije dostupna',
@@ -378,7 +378,7 @@ function normalizeAnalysis(value: unknown): StructuredPhotoAnalysis {
       : 'Retake the photo closer and in better light if you need a more detailed inspection.',
     summary: typeof raw.summary === 'string' && raw.summary.trim()
       ? raw.summary.trim()
-      : 'The image was reviewed, but the model returned limited detail.',
+      : 'This photo provided limited visual detail for a complete analysis.',
   })
 }
 
@@ -402,16 +402,13 @@ function legacySignal(analysis: StructuredPhotoAnalysis): string {
   if (detected) return detected.issue.slice(0, 80)
   const possible = analysis.possibleIssues[0]
   if (possible) return possible.issue.slice(0, 80)
-  if (analysis.imageQuality === 'unusable') return 'Image not inspectable'
+  if (analysis.imageQuality === 'unusable') return 'Not inspectable'
   if (analysis.imageQuality === 'poor') return 'Limited visibility — broad inspection only'
-  return 'No issues detected'
+  return 'No visible issues found'
 }
 
 function legacyDetail(analysis: StructuredPhotoAnalysis): string {
   const parts = [analysis.summary]
-  if (analysis.uncertainAreas.length > 0) {
-    parts.push(`Uncertain: ${analysis.uncertainAreas.slice(0, 3).join(', ')}.`)
-  }
   if (analysis.recommendation) {
     parts.push(analysis.recommendation)
   }
@@ -586,7 +583,7 @@ export async function POST(req: NextRequest) {
         visibleAreas: [],
         detectedIssues: [],
         possibleIssues: [],
-        uncertainAreas: ['AI service is not configured'],
+        uncertainAreas: [],
         confidenceScore: 0,
         recommendation: fallback.recommendation,
         failureReason: 'CONFIG_ERROR',
@@ -718,7 +715,7 @@ export async function POST(req: NextRequest) {
           visibleAreas: [],
           detectedIssues: [],
           possibleIssues: [],
-          uncertainAreas: ['AI analysis did not complete'],
+          uncertainAreas: [],
           confidenceScore: 0,
           recommendation: fallback.recommendation,
           failureReason: failureType,

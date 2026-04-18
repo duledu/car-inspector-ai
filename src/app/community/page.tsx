@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { communityApi } from '@/services/api/community.api'
 import type { Post } from '@/types'
 import AppShell from '../AppShell'
@@ -53,8 +54,10 @@ function Avatar({ name, size = 26 }: Readonly<{ name: string; size?: number }>) 
 }
 
 export default function CommunityPage() {
+  const { t } = useTranslation()
   const [posts,      setPosts]      = useState<Post[]>([])
   const [loading,    setLoading]    = useState(true)
+  const [loadError,  setLoadError]  = useState<string | null>(null)
   const [showForm,   setShowForm]   = useState(false)
   const [title,      setTitle]      = useState('')
   const [content,    setContent]    = useState('')
@@ -66,11 +69,15 @@ export default function CommunityPage() {
 
   const loadPosts = async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const result = await communityApi.getPosts()
       setPosts(result.data)
-    } catch { /* show empty state */ }
-    finally  { setLoading(false) }
+    } catch {
+      setLoadError(t('community.loadError'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -81,13 +88,13 @@ export default function CommunityPage() {
       const post = await communityApi.createPost({
         title,
         content,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
       })
       setPosts(prev => [post, ...prev])
       setTitle(''); setContent(''); setTags('')
       setShowForm(false)
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Failed to post')
+      setFormError(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setSubmitting(false)
     }
@@ -99,7 +106,7 @@ export default function CommunityPage() {
       setPosts(prev => prev.map(p =>
         p.id === postId ? { ...p, likeCount: result.count, isLikedByMe: result.liked } : p
       ))
-    } catch { /* silent */ }
+    } catch { /* silent — optimistic UI not needed, count stays as-is */ }
   }
 
   return (
@@ -109,9 +116,9 @@ export default function CommunityPage() {
         {/* ── Header ── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22, gap: 12 }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>Community</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('community.title')}</h1>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-              Share findings, ask questions, get advice
+              {t('community.subtitle')}
             </p>
           </div>
           <button
@@ -126,8 +133,8 @@ export default function CommunityPage() {
             }}
           >
             {showForm
-              ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel</>
-              : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Post</>
+              ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> {t('community.cancel')}</>
+              : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> {t('community.newPost')}</>
             }
           </button>
         </div>
@@ -138,23 +145,23 @@ export default function CommunityPage() {
             onSubmit={handleCreate}
             style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(34,211,238,0.14)', borderRadius: 16, padding: '20px 22px', marginBottom: 18 }}
           >
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#22d3ee', marginBottom: 16 }}>New Post</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#22d3ee', marginBottom: 16 }}>{t('community.formTitle')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input
-                placeholder="Title, what's it about?"
+                placeholder={t('community.titlePlaceholder')}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 required
               />
               <textarea
-                placeholder="Share your findings, ask a question, or describe what you noticed during inspection…"
+                placeholder={t('community.contentPlaceholder')}
                 value={content}
                 onChange={e => setContent(e.target.value)}
                 required
                 style={{ minHeight: 100 }}
               />
               <input
-                placeholder="Tags (comma-separated): e.g. BMW, rust, engine noise"
+                placeholder={t('community.tagsPlaceholder')}
                 value={tags}
                 onChange={e => setTags(e.target.value)}
               />
@@ -168,17 +175,24 @@ export default function CommunityPage() {
                   type="submit" disabled={submitting}
                   style={{ padding: '10px 22px', background: submitting ? 'rgba(34,211,238,0.5)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
                 >
-                  {submitting ? 'Posting…' : 'Post'}
+                  {submitting ? t('community.posting') : t('community.post')}
                 </button>
                 <button
                   type="button" onClick={() => setShowForm(false)}
                   style={{ padding: '10px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 9, fontSize: 13, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                 >
-                  Cancel
+                  {t('community.cancel')}
                 </button>
               </div>
             </div>
           </form>
+        )}
+
+        {/* ── Load error ── */}
+        {!loading && loadError && (
+          <div style={{ padding: '14px 18px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 12, fontSize: 13, color: '#f87171', marginBottom: 18 }}>
+            {loadError}
+          </div>
         )}
 
         {/* ── Post feed ── */}
@@ -190,7 +204,7 @@ export default function CommunityPage() {
           </div>
         )}
 
-        {!loading && posts.length === 0 && (
+        {!loading && !loadError && posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 24px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16 }}>
             <div style={{ width: 54, height: 54, borderRadius: 15, margin: '0 auto 18px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -198,8 +212,8 @@ export default function CommunityPage() {
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>No posts yet</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)' }}>Be the first to start a discussion.</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{t('community.noPostsYet')}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.28)' }}>{t('community.noPostsDesc')}</div>
           </div>
         )}
 

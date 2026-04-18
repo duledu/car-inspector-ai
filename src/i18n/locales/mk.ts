@@ -138,8 +138,8 @@ const mk = {
 
   // ─── Inspection page ──────────────────────────────────────────────────────────
   'inspection.photosCaptured':      '{{count}} од {{total}} снимени',
-  'inspection.analysisUnavailable': 'Анализата е недостапна',
-  'inspection.analysisError':       'Не може да се анализира сликата. Проверете ја врската и обидете се повторно.',
+  'inspection.analysisUnavailable': 'Не успеавме да ја анализираме оваа фотографија.',
+  'inspection.analysisError':       'Имавме проблем со анализата на оваа фотографија. Проверете ја врската и обидете се повторно.',
   'inspection.submitPhotos':        'Испрати фотографии',
   'inspection.submitting':          'Се испраќа…',
   'inspection.noVehicle':           'Не е избрано возило.',
@@ -371,7 +371,7 @@ const mk = {
   'report.recommendDiagnostic':      'Побарајте дијагностичко скенирање на возилото за проверка на грешки',
   'report.recommendBetterPhotos':    'Повторно снимете ги неуспешните фотографии при подобро осветлување за посеопфатна анализа',
   'report.premiumUnlock':            'Отклучете целосна историја на возилото',
-  'report.error.calculateFailed':    'Не успеа пресметката на оцената',
+  'report.error.calculateFailed':    'Оцената на извештајот тренутно не може да биде пресметана. Обидете се повторно.',
   'report.severity.critical':        'Критично',
   'report.severity.warning':         'Предупредување',
   'report.severity.info':            'Инфо',
@@ -651,7 +651,7 @@ const mk = {
   'inspection.analysisFailedTimeout': 'Анализата истече. Проверете ја врската и обидете се повторно.',
   'inspection.analysisFailedBusy':  'Сервисот е привремено зафатен. Обидете се повторно за момент.',
   'inspection.analysisRetakeAdvice':'Направете нова фотографија или обидете се со стабилна врска.',
-  'inspection.aiDidNotComplete':         'AI анализата не е завршена',
+  'inspection.aiDidNotComplete':         'Оваа фотографија не можеше целосно да биде анализирана.',
   'inspection.analysisCouldNotComplete': 'Не може да се анализира — снимете повторно за подобри резултати',
   'inspection.analyzedCount':            '{{count}} од {{total}} слики анализирани',
   'inspection.analysisFull':             'Целосна покриеност — сите {{total}} слики анализирани',
@@ -661,7 +661,7 @@ const mk = {
   'inspection.confidence.low':           'Ниска доверба',
   'inspection.retryImage':               'Снимете повторно за подобри резултати',
   'inspection.uploadClearerPhoto':       'Направете појасна, добро осветлена фотографија',
-  'inspection.analysisFailedForThisImage': 'Оваа слика не можеше да биде анализирана',
+  'inspection.analysisFailedForThisImage': 'Не успеавме да ја анализираме оваа фотографија — пробајте да ја снимите повторно.',
   'inspection.imgQuality.medium':        'Среден квалитет',
   'inspection.imgQuality.poor':          'Слаб квалитет',
   'inspection.imgQuality.unusable':      'Неупотребливо',
@@ -919,6 +919,25 @@ const mk = {
   'scroll.score.b0':               'Оценката ги мери одделно безбедноста, механиката и козметичките наоди',
   'scroll.score.b1':               'Секој ризик е поврзан со ставка од проверката или фотографија',
   'scroll.score.b2':               'Генерира делив PDF извештај за преговарање за цена',
+
+  // ─── Messages page ────────────────────────────────────────────────────────────
+  'messages.emptyTitle':           'Нема избрана конверзација',
+  'messages.emptyDesc':            'Изберете конверзација од листата или започнете нова од објава во заедницата.',
+
+  // ─── Community page ───────────────────────────────────────────────────────────
+  'community.title':               'Заедница',
+  'community.subtitle':            'Споделете наоди, поставувајте прашања, добивајте совети',
+  'community.newPost':             'Нова објава',
+  'community.cancel':              'Откажи',
+  'community.formTitle':           'Нова објава',
+  'community.titlePlaceholder':    'Наслов, за што станува збор?',
+  'community.contentPlaceholder':  'Споделете наоди, поставете прашање или опишете што сте забележале…',
+  'community.tagsPlaceholder':     'Ознаки (одделени со запирка): пр. BMW, рѓа, звук на мотор',
+  'community.post':                'Објави',
+  'community.posting':             'Се објавува…',
+  'community.noPostsYet':          'Сè уште нема објави',
+  'community.noPostsDesc':         'Бидете прв кој ќе започне дискусија.',
+  'community.loadError':           'Неуспешно вчитување на објавите. Проверете ја врската и обидете се повторно.',
 } as const
 
 export default mk

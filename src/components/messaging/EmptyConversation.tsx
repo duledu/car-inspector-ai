@@ -1,6 +1,9 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
+
 export function EmptyConversation() {
+  const { t } = useTranslation()
   return (
     <div
       style={{
@@ -30,10 +33,10 @@ export function EmptyConversation() {
         </svg>
       </div>
       <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-        No conversation selected
+        {t('messages.emptyTitle')}
       </div>
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', textAlign: 'center', maxWidth: 280, lineHeight: 1.6 }}>
-        Select a conversation from the list or start a new one from a community post.
+        {t('messages.emptyDesc')}
       </div>
     </div>
   )

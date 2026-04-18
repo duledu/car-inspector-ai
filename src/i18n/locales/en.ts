@@ -139,8 +139,8 @@ const en = {
 
   // ─── Inspection page ──────────────────────────────────────────────────────────
   'inspection.photosCaptured':      '{{count}} of {{total}} captured',
-  'inspection.analysisUnavailable': 'Photo could not be analysed',
-  'inspection.analysisError':       'Unable to analyse image. Check your connection and try again.',
+  'inspection.analysisUnavailable': 'We couldn\'t analyze this photo.',
+  'inspection.analysisError':       'We had trouble analyzing this photo. Check your connection and try again.',
   'inspection.submitPhotos':        'Submit photos for analysis',
   'inspection.submitting':          'Submitting…',
   'inspection.noVehicle':           'No vehicle selected.',
@@ -264,7 +264,7 @@ const en = {
   'inspection.analysisFailedTimeout': 'Analysis timed out. Check your connection and try again.',
   'inspection.analysisFailedBusy':    'Service temporarily busy. Please try again in a moment.',
   'inspection.analysisRetakeAdvice':  'Retake the photo or try again with a stable connection.',
-  'inspection.aiDidNotComplete':      'AI analysis did not complete',
+  'inspection.aiDidNotComplete':      'This photo could not be fully analyzed.',
   'inspection.analysisCouldNotComplete': 'Could not be analyzed — retake for better results',
   'inspection.analyzedCount':         '{{count}} of {{total}} images analyzed',
   'inspection.analysisFull':          'Full coverage — all {{total}} images analyzed',
@@ -274,7 +274,7 @@ const en = {
   'inspection.confidence.low':        'Low confidence',
   'inspection.retryImage':            'Retake for better results',
   'inspection.uploadClearerPhoto':    'Take a clearer, well-lit photo',
-  'inspection.analysisFailedForThisImage': 'This image could not be analyzed',
+  'inspection.analysisFailedForThisImage': 'We couldn\'t analyze this photo — try retaking it for a better result.',
   'inspection.imgQuality.medium':     'Limited visibility',
   'inspection.imgQuality.poor':       'Low quality',
   'inspection.imgQuality.unusable':   'Not inspectable',
@@ -284,7 +284,7 @@ const en = {
   'inspection.statusWarning':       'Warning',
   'inspection.statusIssue':         'Issue',
   'inspection.photoAnalysisSummary':'Photo Analysis Summary',
-  'inspection.noFlagsRaised':       'No visual anomalies detected across all photos',
+  'inspection.noFlagsRaised':       'No visible issues were detected across all photos.',
   'inspection.allPhasesComplete':   'All inspection sections complete. Your confidence report is ready to view.',
   'inspection.viewAIReport':        'View AI Confidence Report',
   'inspection.finishAndScore':      'Finish & Score',
@@ -414,7 +414,7 @@ const en = {
   'report.recommendDiagnostic':      'Request a vehicle diagnostic scan to check for any fault codes',
   'report.recommendBetterPhotos':    'Retake the failed photos in better lighting for a more complete analysis',
   'report.premiumUnlock':            'Unlock Full Vehicle History',
-  'report.error.calculateFailed':    'Failed to calculate score',
+  'report.error.calculateFailed':    'Your report score couldn\'t be calculated right now. Please try again.',
   'report.severity.critical':        'Critical',
   'report.severity.warning':         'Warning',
   'report.severity.info':            'Info',
@@ -424,7 +424,7 @@ const en = {
   'report.recommendation.BUY_WITH_CAUTION': 'Proceed only after the concerns above are resolved. Use the checklist findings to negotiate a fair price.',
   'report.recommendation.HIGH_RISK':        'This vehicle carries significant risk. Only proceed if the seller accepts a major price reduction or resolves the issues.',
   'report.recommendation.WALK_AWAY':        'Based on the evidence, walking away is the safest option. The likely repair risk is too high for the asking price.',
-  'report.dimExplanation.ai.clean':         'No anomalies detected across all submitted photos.',
+  'report.dimExplanation.ai.clean':         'No visible issues were found across all submitted photos.',
   'report.dimExplanation.ai.issues':        '{{count}} photo issue detected. Main concern: {{title}} ({{confidence}}% confidence).',
   'report.dimExplanation.checklist.notCompleted': 'This section of the checklist has not been completed.',
   'report.dimExplanation.checklist.notAssessed':  'No checklist items have been assessed yet.',
@@ -921,6 +921,25 @@ const en = {
   'scroll.score.b0':               'Score weights safety, mechanical, and cosmetic findings separately',
   'scroll.score.b1':               'Each risk flag is backed by the specific checklist item or photo',
   'scroll.score.b2':               'Generates a shareable PDF report for price negotiation leverage',
+
+  // ─── Messages page ────────────────────────────────────────────────────────────
+  'messages.emptyTitle':           'No conversation selected',
+  'messages.emptyDesc':            'Select a conversation from the list or start a new one from a community post.',
+
+  // ─── Community page ───────────────────────────────────────────────────────────
+  'community.title':               'Community',
+  'community.subtitle':            'Share findings, ask questions, get advice',
+  'community.newPost':             'New Post',
+  'community.cancel':              'Cancel',
+  'community.formTitle':           'New Post',
+  'community.titlePlaceholder':    "Title, what's it about?",
+  'community.contentPlaceholder':  'Share your findings, ask a question, or describe what you noticed during inspection…',
+  'community.tagsPlaceholder':     'Tags (comma-separated): e.g. BMW, rust, engine noise',
+  'community.post':                'Post',
+  'community.posting':             'Posting…',
+  'community.noPostsYet':          'No posts yet',
+  'community.noPostsDesc':         'Be the first to start a discussion.',
+  'community.loadError':           'Failed to load posts. Check your connection and try again.',
 } as const
 
 export default en

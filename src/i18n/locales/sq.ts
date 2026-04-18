@@ -138,8 +138,8 @@ const sq = {
 
   // ─── Inspection page ──────────────────────────────────────────────────────────
   'inspection.photosCaptured':      '{{count}} nga {{total}} të kapura',
-  'inspection.analysisUnavailable': 'Analiza e padisponueshme',
-  'inspection.analysisError':       'Nuk mund të analizohet imazhi. Kontrolloni lidhjen dhe provoni përsëri.',
+  'inspection.analysisUnavailable': 'Nuk arritëm të analizojmë këtë foto.',
+  'inspection.analysisError':       'Kemi pasur problem me analizimin e kësaj fotografie. Kontrolloni lidhjen dhe provoni përsëri.',
   'inspection.submitPhotos':        'Dërgo fotot',
   'inspection.submitting':          'Duke dërguar…',
   'inspection.noVehicle':           'Nuk është zgjedhur automjet.',
@@ -371,7 +371,7 @@ const sq = {
   'report.recommendDiagnostic':      'Kërkoni një skanim diagnostik të automjetit për të kontrolluar kodet e gabimeve',
   'report.recommendBetterPhotos':    'Rifotografoni fotot e dështuara në ndriçim më të mirë për analizë më të plotë',
   'report.premiumUnlock':            'Zhblloko historinë e plotë të automjetit',
-  'report.error.calculateFailed':    'Llogaritja e rezultatit dështoi',
+  'report.error.calculateFailed':    'Rezultati i raportit nuk mund të llogaritej tani. Provoni përsëri.',
   'report.severity.critical':        'Kritike',
   'report.severity.warning':         'Paralajmërim',
   'report.severity.info':            'Info',
@@ -651,7 +651,7 @@ const sq = {
   'inspection.analysisFailedTimeout': 'Analiza ka kaluar kohën. Kontrolloni lidhjen dhe provoni përsëri.',
   'inspection.analysisFailedBusy':  'Shërbimi është i zënë. Provoni përsëri për një moment.',
   'inspection.analysisRetakeAdvice':'Rifotografoni ose provoni me lidhje të qëndrueshme.',
-  'inspection.aiDidNotComplete':         'Analiza AI nuk u kompletua',
+  'inspection.aiDidNotComplete':         'Kjo fotografi nuk mund të analizohej plotësisht.',
   'inspection.analysisCouldNotComplete': 'Nuk mund të analizohet — rifotografoni për rezultate më të mira',
   'inspection.analyzedCount':            '{{count}} nga {{total}} imazhe të analizuara',
   'inspection.analysisFull':             'Mbulim i plotë — të gjitha {{total}} imazhet u analizuan',
@@ -661,7 +661,7 @@ const sq = {
   'inspection.confidence.low':           'Besueshmëri e ulët',
   'inspection.retryImage':               'Rifotografoni për rezultate më të mira',
   'inspection.uploadClearerPhoto':       'Bëni një foto më të qartë dhe të ndriçuar mirë',
-  'inspection.analysisFailedForThisImage': 'Ky imazh nuk mund të analizohej',
+  'inspection.analysisFailedForThisImage': 'Nuk arritëm të analizojmë këtë foto — provoni ta fotografoni sërish.',
   'inspection.imgQuality.medium':        'Cilësi mesatare',
   'inspection.imgQuality.poor':          'Cilësi e dobët',
   'inspection.imgQuality.unusable':      'E papërdorshme',
@@ -919,6 +919,25 @@ const sq = {
   'scroll.score.b0':               'Rezultati ndan sigurinë, mekanikën dhe gjetjet kozmetike',
   'scroll.score.b1':               'Çdo rrezik lidhet me një pikë kontrolli ose foto',
   'scroll.score.b2':               'Gjeneron raport PDF të ndajshëm për negociatën e çmimit',
+
+  // ─── Messages page ────────────────────────────────────────────────────────────
+  'messages.emptyTitle':           'Asnjë bisedë e zgjedhur',
+  'messages.emptyDesc':            'Zgjidhni një bisedë nga lista ose filloni një të re nga një postim i komunitetit.',
+
+  // ─── Community page ───────────────────────────────────────────────────────────
+  'community.title':               'Komuniteti',
+  'community.subtitle':            'Ndani gjetjet, bëni pyetje, merrni këshilla',
+  'community.newPost':             'Postim i ri',
+  'community.cancel':              'Anulo',
+  'community.formTitle':           'Postim i ri',
+  'community.titlePlaceholder':    'Titulli, çfarë ka të bëjë?',
+  'community.contentPlaceholder':  'Ndani gjetjet, bëni një pyetje ose përshkruani çfarë vutë re…',
+  'community.tagsPlaceholder':     'Etiketat (të ndara me presje): p.sh. BMW, ndryshk, zhurmë motori',
+  'community.post':                'Posto',
+  'community.posting':             'Duke postuar…',
+  'community.noPostsYet':          'Asnjë postim ende',
+  'community.noPostsDesc':         'Jini i pari që fillon një diskutim.',
+  'community.loadError':           'Nuk u ngarkuan postimet. Kontrolloni lidhjen dhe provoni përsëri.',
 } as const
 
 export default sq

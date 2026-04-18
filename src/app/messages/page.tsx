@@ -52,7 +52,7 @@ function MessagesPageContent() {
   return (
     <AppShell>
       {/* Full-bleed chat layout — override default page padding */}
-      <div style={{ margin: -24, height: 'calc(100vh - 52px)', display: 'flex' }}>
+      <div style={{ margin: -24, height: 'calc(100dvh - 52px - env(safe-area-inset-bottom, 0px))', display: 'flex' }}>
         <ConversationList
           conversations={conversations}
           activeId={activeConversationId}

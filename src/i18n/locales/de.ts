@@ -138,8 +138,8 @@ const de = {
 
   // ─── Inspection page ──────────────────────────────────────────────────────────
   'inspection.photosCaptured':      '{{count}} von {{total}} aufgenommen',
-  'inspection.analysisUnavailable': 'Analyse nicht verfügbar',
-  'inspection.analysisError':       'Bild konnte nicht analysiert werden. Verbindung prüfen und erneut versuchen.',
+  'inspection.analysisUnavailable': 'Dieses Foto konnte nicht analysiert werden.',
+  'inspection.analysisError':       'Es gab ein Problem beim Analysieren dieses Fotos. Verbindung prüfen und erneut versuchen.',
   'inspection.submitPhotos':        'Fotos senden',
   'inspection.submitting':          'Wird gesendet…',
   'inspection.noVehicle':           'Kein Fahrzeug ausgewählt.',
@@ -371,7 +371,7 @@ const de = {
   'report.recommendDiagnostic':      'Einen Fahrzeugdiagnosescan anfordern, um Fehlercodes zu prüfen',
   'report.recommendBetterPhotos':    'Fehlgeschlagene Fotos bei besserer Beleuchtung für eine vollständigere Analyse neu aufnehmen',
   'report.premiumUnlock':            'Vollständige Fahrzeughistorie freischalten',
-  'report.error.calculateFailed':    'Bewertung konnte nicht berechnet werden',
+  'report.error.calculateFailed':    'Die Berichtsbewertung konnte gerade nicht berechnet werden. Bitte erneut versuchen.',
   'report.severity.critical':        'Kritisch',
   'report.severity.warning':         'Warnung',
   'report.severity.info':            'Info',
@@ -651,7 +651,7 @@ const de = {
   'inspection.analysisFailedTimeout': 'Analyse hat das Zeitlimit überschritten. Verbindung prüfen und erneut versuchen.',
   'inspection.analysisFailedBusy':  'Dienst vorübergehend ausgelastet. Bitte in Kürze erneut versuchen.',
   'inspection.analysisRetakeAdvice':'Foto erneut aufnehmen oder mit stabiler Verbindung versuchen.',
-  'inspection.aiDidNotComplete':         'KI-Analyse nicht abgeschlossen',
+  'inspection.aiDidNotComplete':         'Dieses Foto konnte nicht vollständig analysiert werden.',
   'inspection.analysisCouldNotComplete': 'Konnte nicht analysiert werden — neu aufnehmen für bessere Ergebnisse',
   'inspection.analyzedCount':            '{{count}} von {{total}} Bildern analysiert',
   'inspection.analysisFull':             'Vollständige Abdeckung — alle {{total}} Bilder analysiert',
@@ -661,7 +661,7 @@ const de = {
   'inspection.confidence.low':           'Niedrige Konfidenz',
   'inspection.retryImage':               'Neu aufnehmen für bessere Ergebnisse',
   'inspection.uploadClearerPhoto':       'Ein klareres, gut beleuchtetes Foto aufnehmen',
-  'inspection.analysisFailedForThisImage': 'Dieses Bild konnte nicht analysiert werden',
+  'inspection.analysisFailedForThisImage': 'Dieses Foto konnte nicht analysiert werden — bitte neu aufnehmen.',
   'inspection.imgQuality.medium':        'Mittlere Qualität',
   'inspection.imgQuality.poor':          'Schlechte Qualität',
   'inspection.imgQuality.unusable':      'Unbrauchbar',
@@ -919,6 +919,25 @@ const de = {
   'scroll.score.b0':               'Score gewichtet Sicherheits-, Mechanik- und Karosseriefunde separat',
   'scroll.score.b1':               'Jedes Risiko ist mit einer Prüfposition oder einem Foto belegt',
   'scroll.score.b2':               'Erstellt einen teilbaren PDF-Bericht zur Preisverhandlung',
+
+  // ─── Messages page ────────────────────────────────────────────────────────────
+  'messages.emptyTitle':           'Kein Gespräch ausgewählt',
+  'messages.emptyDesc':            'Wählen Sie ein Gespräch aus der Liste oder starten Sie eines aus einem Community-Beitrag.',
+
+  // ─── Community page ───────────────────────────────────────────────────────────
+  'community.title':               'Community',
+  'community.subtitle':            'Befunde teilen, Fragen stellen, Ratschläge erhalten',
+  'community.newPost':             'Neuer Beitrag',
+  'community.cancel':              'Abbrechen',
+  'community.formTitle':           'Neuer Beitrag',
+  'community.titlePlaceholder':    'Titel, worum geht es?',
+  'community.contentPlaceholder':  'Befunde teilen, Frage stellen oder Beobachtungen beschreiben…',
+  'community.tagsPlaceholder':     'Tags (kommagetrennt): z. B. BMW, Rost, Motorgeräusch',
+  'community.post':                'Posten',
+  'community.posting':             'Wird gepostet…',
+  'community.noPostsYet':          'Noch keine Beiträge',
+  'community.noPostsDesc':         'Starten Sie als Erster eine Diskussion.',
+  'community.loadError':           'Beiträge konnten nicht geladen werden. Verbindung prüfen und erneut versuchen.',
 } as const
 
 export default de

@@ -539,7 +539,7 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
       ]),
       section(t('pdf.section.disclaimer'), [
         {
-          text: t('pdf.disclaimer.body'),
+          text: t('disclaimer.photoAnalysis'),
           style: 'body',
         },
       ]),

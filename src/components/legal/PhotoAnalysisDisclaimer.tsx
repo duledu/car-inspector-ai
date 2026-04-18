@@ -3,20 +3,12 @@
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const SERBIAN_PHOTO_ANALYSIS_DISCLAIMER =
-  'AI analiza fotografija je isključivo informativnog karaktera i ne garantuje stvarno stanje vozila. Korišćenjem napredne AI tehnologije nastojimo da korisnicima pružimo dodatni uvid i podršku u proceni vozila, ali rezultati mogu biti nepotpuni ili netačni. Na tačnost rezultata mogu uticati brojni faktori, uključujući tip i kvalitet kamere, osvetljenje, ugao snimanja i druge vizuelne uslove. Preporučujemo da sve nalaze uvek potvrdite kod kvalifikovanog stručnjaka pre donošenja konačne odluke o kupovini.'
-
 interface PhotoAnalysisDisclaimerProps {
   style?: CSSProperties
 }
 
 export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclaimerProps>) {
-  const { i18n, t } = useTranslation()
-  const language = (i18n.resolvedLanguage ?? i18n.language ?? '').split('-')[0]
-  const disclaimerText =
-    language === 'sr'
-      ? SERBIAN_PHOTO_ANALYSIS_DISCLAIMER
-      : t('disclaimer.photoAnalysis')
+  const { t } = useTranslation()
 
   return (
     <div
@@ -56,7 +48,7 @@ export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclai
           overflowWrap: 'anywhere',
         }}
       >
-        {disclaimerText}
+        {t('disclaimer.photoAnalysis')}
       </div>
     </div>
   )

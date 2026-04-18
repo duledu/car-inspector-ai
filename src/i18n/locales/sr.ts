@@ -139,8 +139,8 @@ const sr = {
 
   // ─── Inspection page ──────────────────────────────────────────────────────────
   'inspection.photosCaptured':      '{{count}} od {{total}} snimljeno',
-  'inspection.analysisUnavailable': 'Fotografija nije mogla biti analizirana',
-  'inspection.analysisError':       'Nije moguće analizirati sliku. Proverite vezu i pokušajte ponovo.',
+  'inspection.analysisUnavailable': 'Nismo mogli analizirati ovu fotografiju.',
+  'inspection.analysisError':       'Imali smo problema sa analizom ove fotografije. Proverite vezu i pokušajte ponovo.',
   'inspection.submitPhotos':        'Pošalji fotografije',
   'inspection.submitting':          'Slanje…',
   'inspection.noVehicle':           'Nije odabrano vozilo.',
@@ -372,7 +372,7 @@ const sr = {
   'report.recommendDiagnostic':      'Zatražite dijagnostičko skeniranje vozila radi provere grešaka',
   'report.recommendBetterPhotos':    'Ponovo snimite fotografije pri boljem osvetljenju za potpuniju analizu',
   'report.premiumUnlock':            'Otključajte potpunu istoriju vozila',
-  'report.error.calculateFailed':    'Izračunavanje ocene nije uspelo',
+  'report.error.calculateFailed':    'Ocena izveštaja trenutno nije mogla biti izračunata. Pokušajte ponovo.',
   'report.severity.critical':        'Kritično',
   'report.severity.warning':         'Upozorenje',
   'report.severity.info':            'Info',
@@ -550,7 +550,7 @@ const sr = {
   'inspection.analysisFailedTimeout': 'Analiza je istekla. Proverite vezu i pokušajte ponovo.',
   'inspection.analysisFailedBusy':  'Servis je trenutno zauzet. Pokušajte ponovo za trenutak.',
   'inspection.analysisRetakeAdvice':'Ponovo snimite fotografiju ili pokušajte sa stabilnom vezom.',
-  'inspection.aiDidNotComplete':         'AI analiza nije završena',
+  'inspection.aiDidNotComplete':         'Ova fotografija nije mogla biti potpuno analizirana.',
   'inspection.analysisCouldNotComplete': 'Nije moguće analizirati — ponovo snimite za bolje rezultate',
   'inspection.analyzedCount':            '{{count}} od {{total}} fotografija analizirano',
   'inspection.analysisFull':             'Potpuna pokrivenost — svih {{total}} fotografija analizirano',
@@ -560,7 +560,7 @@ const sr = {
   'inspection.confidence.low':           'Niska pouzdanost',
   'inspection.retryImage':               'Ponovo snimite za bolje rezultate',
   'inspection.uploadClearerPhoto':       'Snimite jasniju, dobro osvetljenu fotografiju',
-  'inspection.analysisFailedForThisImage': 'Ova fotografija nije mogla biti analizirana',
+  'inspection.analysisFailedForThisImage': 'Nismo mogli analizirati ovu fotografiju — pokušajte je ponovo snimiti.',
   'inspection.imgQuality.medium':        'Srednji kvalitet',
   'inspection.imgQuality.poor':          'Slab kvalitet',
   'inspection.imgQuality.unusable':      'Neupotrebljivo',
@@ -570,7 +570,7 @@ const sr = {
   'inspection.statusWarning':       'Upozorenje',
   'inspection.statusIssue':         'Problem',
   'inspection.photoAnalysisSummary':'Sažetak foto-analize',
-  'inspection.noFlagsRaised':       'Nisu otkrivene vizuelne anomalije ni na jednoj fotografiji',
+  'inspection.noFlagsRaised':       'Nisu uočeni vidljivi problemi ni na jednoj fotografiji.',
   'inspection.allPhasesComplete':   'Sve sekcije inspekcije su završene. Vaš izveštaj pouzdanosti je spreman.',
   'inspection.viewAIReport':        'Pogledaj AI izveštaj',
   'inspection.finishAndScore':      'Završi i oceni',
@@ -920,6 +920,25 @@ const sr = {
   'scroll.score.b0':               'Ocena odvojeno prati bezbednost, mehaniku i karoseriju',
   'scroll.score.b1':               'Svaki rizik je vezan za stavku provere ili fotografiju',
   'scroll.score.b2':               'Generiše PDF izveštaj za pregovaranje o ceni',
+
+  // ─── Messages page ────────────────────────────────────────────────────────────
+  'messages.emptyTitle':           'Nema izabrane konverzacije',
+  'messages.emptyDesc':            'Izaberite konverzaciju sa liste ili pokrenite novu iz objave zajednice.',
+
+  // ─── Community page ───────────────────────────────────────────────────────────
+  'community.title':               'Zajednica',
+  'community.subtitle':            'Podelite nalaze, postavljajte pitanja, dobijte savete',
+  'community.newPost':             'Nova objava',
+  'community.cancel':              'Otkaži',
+  'community.formTitle':           'Nova objava',
+  'community.titlePlaceholder':    'Naslov, o čemu se radi?',
+  'community.contentPlaceholder':  'Podelite nalaze, postavite pitanje ili opišite šta ste primetili…',
+  'community.tagsPlaceholder':     'Oznake (odvojene zarezom): npr. BMW, rđa, zvuk motora',
+  'community.post':                'Objavi',
+  'community.posting':             'Objavljujem…',
+  'community.noPostsYet':          'Još nema objava',
+  'community.noPostsDesc':         'Budite prvi koji počinje diskusiju.',
+  'community.loadError':           'Učitavanje nije uspelo. Proverite konekciju i pokušajte ponovo.',
 } as const
 
 export default sr
