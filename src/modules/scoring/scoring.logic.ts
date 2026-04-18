@@ -92,22 +92,20 @@ function calculateAIScore(findings: AIFinding[]): ScoreDimension {
     }
   }
 
-  const criticalCount = safeFindings.filter((f) => f.severity === 'critical').length
-  const warningCount  = safeFindings.filter((f) => f.severity === 'warning').length
-
   let score = 100
-  score -= criticalCount * 15
-  score -= warningCount  * 7
+  safeFindings.forEach((finding) => {
+    logInvalidNumber('ai.confidence', finding.confidence, 55)
+    const confidence = clampScore(finding.confidence, 0, 100, 55)
+    if (finding.severity === 'info' || confidence < 45) return
 
-  // Guard: confidence may be undefined/null if stored before this field was added.
-  // safeNumber coerces to 80 (neutral default) when the value is missing or NaN.
-  const avgConfidence =
-    safeFindings.reduce((sum, f) => {
-      logInvalidNumber('ai.confidence', f.confidence, 80)
-      return sum + clampScore(f.confidence, 0, 100, 80)
-    }, 0) / safeFindings.length
-  const confidenceModifier = (avgConfidence - 50) / 200
-  score = score + score * confidenceModifier
+    const basePenalty = finding.severity === 'critical' ? 14 : 5
+    const confidenceFactor =
+      confidence >= 90 ? 1.1 :
+      confidence >= 70 ? 1 :
+      confidence >= 55 ? 0.65 :
+      0.35
+    score -= basePenalty * confidenceFactor
+  })
 
   const clampedScore = clampScore(score, 10, 100, 50)
 

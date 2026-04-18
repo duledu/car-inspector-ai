@@ -76,7 +76,7 @@ export default function AppShell({ children }: AppShellProps) {
     <>
       {/* ── Desktop layout (768px+) ── */}
       <div
-        className="desktop-only"
+        className="desktop-only app-readability"
         style={{ height: '100vh', overflow: 'hidden', background: '#080c14', position: 'relative', isolation: 'isolate' }}
       >
         <AmbientBackground variant="desktop" context={backgroundContext} />
@@ -93,7 +93,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* ── Mobile layout (<768px) ── */}
       <div
-        className="mobile-only"
+        className="mobile-only app-readability"
         style={{ flexDirection: 'column', height: '100dvh', minHeight: '100svh', background: '#080c14', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}
       >
         <AmbientBackground variant="mobile" context={backgroundContext} />

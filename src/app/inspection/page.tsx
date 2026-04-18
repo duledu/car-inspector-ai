@@ -124,6 +124,16 @@ function loadPhotoDrafts(vehicleId: string): PhotoDraft[] {
   } catch { return [] }
 }
 
+function scrollElementToTop(el: HTMLElement | null) {
+  if (!el) return
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  el.scrollIntoView({
+    block: 'start',
+    inline: 'nearest',
+    behavior: prefersReducedMotion ? 'auto' : 'smooth',
+  })
+}
+
 function savePhotoDraft(draft: PhotoDraft) {
   try {
     const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
@@ -1087,18 +1097,37 @@ export default function InspectionPage() {
   const [photos, setPhotos]             = useState<PhotoEntry[]>([])
   const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string; shotNumber: number } | null>(null)
   const [findingsSaved, setFindingsSaved] = useState(false)
+  const phaseCardRef = useRef<HTMLDivElement>(null)
+  const previousPhaseRef = useRef<InspectionPhase | null>(null)
+  const previousVehicleIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (activeVehicle?.id && !session) initSession(activeVehicle.id)
+    if (!activeVehicle?.id) return
+    const previousVehicleId = previousVehicleIdRef.current
+    const isDifferentVehicle =
+      (previousVehicleId !== null && previousVehicleId !== activeVehicle.id) ||
+      (session?.vehicleId !== undefined && session.vehicleId !== activeVehicle.id)
+
+    if (isDifferentVehicle) {
+      setPhotos([])
+      setFindingsSaved(false)
+      setCameraTarget(null)
+    }
+    previousVehicleIdRef.current = activeVehicle.id
+    if (session?.vehicleId !== activeVehicle.id) initSession(activeVehicle.id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeVehicle?.id])
+  }, [activeVehicle?.id, session?.vehicleId])
 
   // Restore photo drafts when a persisted session is loaded (survives refresh / reopen)
   useEffect(() => {
     const vehicleId = session?.vehicleId
     if (!vehicleId) return
     const drafts = loadPhotoDrafts(vehicleId)
-    if (drafts.length === 0) return
+    if (drafts.length === 0) {
+      setPhotos([])
+      setFindingsSaved(false)
+      return
+    }
     setPhotos(drafts.map(d => ({
       key:       d.key,
       label:     d.label,
@@ -1107,8 +1136,16 @@ export default function InspectionPage() {
       aiPending: false,
       aiResult:  d.aiResult,
     })))
+    setFindingsSaved(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.vehicleId])
+
+  useEffect(() => {
+    if (previousPhaseRef.current && previousPhaseRef.current !== currentPhase) {
+      window.requestAnimationFrame(() => scrollElementToTop(phaseCardRef.current))
+    }
+    previousPhaseRef.current = currentPhase
+  }, [currentPhase])
 
   // When the user reaches the RISK_ANALYSIS phase, persist all photo AI findings
   // to the DB so the scoring service can factor them in, and push into the store
@@ -1375,7 +1412,7 @@ export default function InspectionPage() {
         </div>
 
         {/* Phase card */}
-        <div style={{
+        <div ref={phaseCardRef} style={{
           background: currentPhase === 'AI_PHOTOS' ? 'transparent' : 'rgba(255,255,255,0.02)',
           border: currentPhase === 'AI_PHOTOS' ? '1px solid transparent' : '1px solid rgba(255,255,255,0.07)',
           borderRadius: 18,

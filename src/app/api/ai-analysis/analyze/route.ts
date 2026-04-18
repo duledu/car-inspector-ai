@@ -26,9 +26,10 @@ const bodySchema = z.object({
   photoResults: z.array(photoResultSchema).min(1),
 })
 
-function mapSeverity(s: 'ok' | 'warn' | 'flag'): 'critical' | 'warning' | 'info' {
-  if (s === 'flag') return 'critical'
-  if (s === 'warn') return 'warning'
+function mapSeverity(s: 'ok' | 'warn' | 'flag', confidence: number): 'critical' | 'warning' | 'info' {
+  if (confidence < 45) return 'info'
+  if (s === 'flag') return confidence >= 78 ? 'critical' : 'warning'
+  if (s === 'warn') return confidence >= 55 ? 'warning' : 'info'
   return 'info'
 }
 
@@ -68,21 +69,24 @@ export async function POST(req: NextRequest) {
 
   // Convert per-photo results → AIFinding[] (skip "ok" ones to reduce noise)
   const findings = photoResults
-    .filter(r => r.severity !== 'ok')
+    .filter(r => r.severity !== 'ok' && r.confidence >= 45)
     .map((r, i) => ({
       id:             `${r.angle}-${i}`,
       area:           r.label,
       title:          r.signal,
       description:    r.detail,
-      severity:       mapSeverity(r.severity),
+      severity:       mapSeverity(r.severity, r.confidence),
       confidence:     clampScore(r.confidence, 0, 100, 80),
       recommendation: r.recommendation ?? '',
     }))
+    .filter(f => f.severity !== 'info')
 
-  // Score: start at 100, deduct per finding (critical = 20pts, warning = 8pts)
-  const critical = findings.filter(f => f.severity === 'critical').length
-  const warnings = findings.filter(f => f.severity === 'warning').length
-  const overallScore = clampScore(100 - critical * 20 - warnings * 8, 0, 100, 100)
+  const overallPenalty = findings.reduce((sum, finding) => {
+    const confidenceFactor = clampScore(finding.confidence, 0, 100, 0) / 100
+    const basePenalty = finding.severity === 'critical' ? 16 : 5
+    return sum + basePenalty * Math.max(0.45, confidenceFactor)
+  }, 0)
+  const overallScore = clampScore(100 - overallPenalty, 0, 100, 100)
 
   try {
     const result = await prisma.aIResult.create({

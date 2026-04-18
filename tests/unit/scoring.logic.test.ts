@@ -61,12 +61,21 @@ describe('calculateRiskScore', () => {
     expect(result.buyScore).toBeLessThan(70)
   })
 
-  test('multiple critical findings → walk away verdict', () => {
+  test('low-confidence photo warnings have limited score impact', () => {
+    const cleanResult = calculateRiskScore('v1', emptyInput)
+    const lowConfidenceResult = calculateRiskScore('v1', {
+      ...emptyInput,
+      aiFindings: [makeAIFinding({ severity: 'warning', confidence: 35 })],
+    })
+    expect(cleanResult.buyScore - lowConfidenceResult.buyScore).toBeLessThanOrEqual(2)
+  })
+
+  test('multiple critical photo findings keep the result in high-risk territory', () => {
     const findings = Array.from({ length: 5 }, (_, i) =>
       makeAIFinding({ id: `f${i}`, severity: 'critical', confidence: 85 })
     )
     const result = calculateRiskScore('v1', { ...emptyInput, aiFindings: findings })
-    expect(result.verdict).toBe('WALK_AWAY')
+    expect(result.verdict).toBe('HIGH_RISK')
   })
 
   test('problem checklist items reduce score', () => {

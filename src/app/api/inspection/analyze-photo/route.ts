@@ -332,9 +332,41 @@ function normalizeIssues(value: unknown): PhotoIssue[] {
     }))
 }
 
+function capIssueSeverity(severity: IssueSeverity, max: IssueSeverity): IssueSeverity {
+  const rank: Record<IssueSeverity, number> = { minor: 1, moderate: 2, serious: 3 }
+  return rank[severity] > rank[max] ? max : severity
+}
+
+function calibrateAnalysis(analysis: StructuredPhotoAnalysis): StructuredPhotoAnalysis {
+  const detectedIssues: PhotoIssue[] = []
+  const possibleIssues: PhotoIssue[] = []
+
+  analysis.detectedIssues.forEach((issue) => {
+    if (issue.confidence < 55) {
+      possibleIssues.push({ ...issue, severity: capIssueSeverity(issue.severity, 'minor') })
+      return
+    }
+    if (issue.severity === 'serious' && issue.confidence < 78) {
+      detectedIssues.push({ ...issue, severity: 'moderate' })
+      return
+    }
+    detectedIssues.push(issue)
+  })
+
+  analysis.possibleIssues.forEach((issue) => {
+    possibleIssues.push({ ...issue, severity: capIssueSeverity(issue.severity, 'moderate') })
+  })
+
+  return {
+    ...analysis,
+    detectedIssues: detectedIssues.slice(0, 6),
+    possibleIssues: possibleIssues.slice(0, 6),
+  }
+}
+
 function normalizeAnalysis(value: unknown): StructuredPhotoAnalysis {
   const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {}
-  return {
+  return calibrateAnalysis({
     imageQuality: asImageQuality(raw.imageQuality),
     visibleAreas: asStringArray(raw.visibleAreas),
     detectedIssues: normalizeIssues(raw.detectedIssues),
@@ -347,13 +379,19 @@ function normalizeAnalysis(value: unknown): StructuredPhotoAnalysis {
     summary: typeof raw.summary === 'string' && raw.summary.trim()
       ? raw.summary.trim()
       : 'The image was reviewed, but the model returned limited detail.',
-  }
+  })
 }
 
 function legacySeverity(analysis: StructuredPhotoAnalysis): LegacySeverity {
   if (analysis.imageQuality === 'unusable') return 'warn'
-  if (analysis.detectedIssues.some(issue => issue.severity === 'serious')) return 'flag'
-  if (analysis.detectedIssues.length > 0 || analysis.possibleIssues.length > 0 || analysis.imageQuality === 'poor') return 'warn'
+  const hasHighConfidenceSerious = analysis.detectedIssues.some(issue => issue.severity === 'serious' && issue.confidence >= 78)
+  if (hasHighConfidenceSerious && analysis.imageQuality !== 'poor') return 'flag'
+  const hasActionableIssue = analysis.detectedIssues.some(issue => {
+    if (issue.severity === 'minor') return issue.confidence >= 70
+    return issue.confidence >= 55
+  })
+  const hasStrongPossibleIssue = analysis.possibleIssues.some(issue => issue.confidence >= 75 && issue.severity !== 'minor')
+  if (hasActionableIssue || hasStrongPossibleIssue) return 'warn'
   return 'ok'
 }
 
@@ -429,6 +467,12 @@ Separate findings into:
 - detectedIssues: high-confidence visual findings supported by clear evidence.
 - possibleIssues: plausible concerns where the evidence is partial, affected by reflections, angle, distance, or lighting.
 - uncertainAreas: important areas that are cropped, obscured, too dark, blurred, reflective, or not visible.
+
+Calibration rules:
+- Do not mark a concern as serious unless the visible evidence is clear, direct, and high confidence.
+- Put reflection, shadow, dirt, distance, crop, or angle-limited concerns in possibleIssues, not detectedIssues.
+- Minor cosmetic marks, small alignment doubts, and uncertain paint-tone differences should be minor or moderate, not serious.
+- If evidence is weak, lower the confidence and explain what would need a better retake.
 
 Image quality rules:
 - good: enough detail for a meaningful inspection of the requested area.

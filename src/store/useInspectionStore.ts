@@ -70,8 +70,14 @@ export const useInspectionStore = create<InspectionStore>()(
       initSession: async (vehicleId) => {
         set((state) => { state.isLoadingChecklist = true; state.error = null })
         try {
+          const previousVehicleId = get().session?.vehicleId
           const session = await inspectionApi.getOrCreateSession(vehicleId)
           set((state) => {
+            if (previousVehicleId && previousVehicleId !== session.vehicleId) {
+              state.aiResults = []
+              state.testDriveRatings = {}
+              state.activeChecklistTab = 'EXTERIOR'
+            }
             state.session = session
             state.checklistItems = session.checklistItems
             state.currentPhase = session.phase

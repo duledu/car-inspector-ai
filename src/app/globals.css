@@ -42,9 +42,9 @@ html, body {
   --danger:         #ef4444;
 
   --text:           #f1f5f9;
-  --text-sub:       rgba(241,245,249,0.55);
-  --text-muted:     rgba(241,245,249,0.32);
-  --text-faint:     rgba(241,245,249,0.35);
+  --text-sub:       rgba(241,245,249,0.72);
+  --text-muted:     rgba(241,245,249,0.58);
+  --text-faint:     rgba(241,245,249,0.48);
 
   --border:         rgba(255,255,255,0.07);
   --border-hi:      rgba(255,255,255,0.12);
@@ -74,7 +74,51 @@ html, body {
 ::selection { background: rgba(34,211,238,0.7); color: #050810; }
 
 /* ─── Placeholder ────────────────────────────────────────────── */
-::placeholder { color: rgba(255,255,255,0.2) !important; }
+::placeholder { color: rgba(241,245,249,0.46) !important; }
+
+/* Readability pass for app screens with inline styles.
+   Keeps the dark premium hierarchy while lifting overly faint helper/body text. */
+.app-readability [style*="color: rgba(255,255,255,0.2"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.2"] {
+  color: rgba(241,245,249,0.50) !important;
+}
+.app-readability [style*="color: rgba(255,255,255,0.25"],
+.app-readability [style*="color: rgba(255,255,255,0.28"],
+.app-readability [style*="color: rgba(255,255,255,0.3"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.25"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.28"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.3"] {
+  color: rgba(241,245,249,0.58) !important;
+}
+.app-readability [style*="color: rgba(255,255,255,0.35"],
+.app-readability [style*="color: rgba(255,255,255,0.38"],
+.app-readability [style*="color: rgba(255,255,255,0.4"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.35"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.38"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.4"] {
+  color: rgba(241,245,249,0.66) !important;
+}
+.app-readability [style*="color: rgba(255,255,255,0.45"],
+.app-readability [style*="color: rgba(255,255,255,0.48"],
+.app-readability [style*="color: rgba(255,255,255,0.5"],
+.app-readability [style*="color: rgba(255,255,255,0.55"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.45"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.48"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.5"],
+.app-readability [style*="color: rgba(255, 255, 255, 0.55"] {
+  color: rgba(241,245,249,0.76) !important;
+}
+.app-readability [style*="color: rgba(241,245,249,0.2"],
+.app-readability [style*="color: rgba(241,245,249,0.3"],
+.app-readability [style*="color: rgba(241,245,249,0.4"],
+.app-readability [style*="color: rgba(241,245,249,0.5"] {
+  color: rgba(241,245,249,0.68) !important;
+}
+.app-readability input,
+.app-readability textarea,
+.app-readability select {
+  color: #f8fafc;
+}
 
 /* ─── Autofill ───────────────────────────────────────────────── */
 input:-webkit-autofill,
