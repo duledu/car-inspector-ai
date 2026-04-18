@@ -51,7 +51,7 @@ export function PhotoAnalysisDisclaimer({ style }: Readonly<PhotoAnalysisDisclai
       <div
         style={{
           fontSize: 11,
-          color: 'rgba(255,255,255,0.5)',
+          color: 'rgba(248,250,252,0.78)',
           lineHeight: 1.6,
           overflowWrap: 'anywhere',
         }}

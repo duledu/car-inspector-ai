@@ -523,7 +523,7 @@ function ConfidenceBadge({ confidence }: Readonly<{ confidence: 'high' | 'medium
   const cfg = {
     high:   { labelKey: 'research.confidenceAiLive',        color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',   border: 'rgba(34,211,238,0.22)'  },
     medium: { labelKey: 'research.confidenceKnowledgeBase', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.22)'  },
-    low:    { labelKey: 'research.confidenceGenericGuide',  color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.22)' },
+    low:    { labelKey: 'research.confidenceGenericGuide',  color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.24)' },
   }[confidence]
 
   return (
@@ -548,7 +548,7 @@ const EVAL_CFG = {
 const CONFIDENCE_CFG = {
   high:   { labelKey: 'research.confidenceHigh',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.2)'   },
   medium: { labelKey: 'research.confidenceMedium', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-  low:    { labelKey: 'research.confidenceLow',    color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.2)' },
+  low:    { labelKey: 'research.confidenceLow',    color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.24)' },
 }
 
 function PriceContextCard({ pc }: Readonly<{ pc: PriceContext }>) {

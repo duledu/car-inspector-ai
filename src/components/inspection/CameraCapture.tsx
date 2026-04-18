@@ -245,8 +245,8 @@ export function CameraCapture({
         WebkitOverflowScrolling: 'touch',
       }}>
 
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
-      <div style={{
+      {/* ── Header (choose + preview only — camera uses a floating overlay) ──── */}
+      {mode !== 'camera' && <div style={{
         background: 'rgba(8,12,20,0.97)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
         backdropFilter: 'blur(20px)',
@@ -324,7 +324,7 @@ export function CameraCapture({
             />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Body ──────────────────────────────────────────────────────────────── */}
       <div style={{
@@ -493,7 +493,7 @@ export function CameraCapture({
             {/* Viewfinder frame */}
             <div style={{
               position: 'absolute',
-              top: '9%', left: '7%', right: '7%',
+              top: 'calc(76px + env(safe-area-inset-top, 0px))', left: '7%', right: '7%',
               bottom: 'calc(136px + env(safe-area-inset-bottom, 0px))',
               pointerEvents: 'none',
             }}>
@@ -521,23 +521,82 @@ export function CameraCapture({
               }} />
             </div>
 
-            {/* Angle label pill */}
+            {/* Camera overlay top bar — back button + centred angle label */}
             <div style={{
-              position: 'absolute', top: 16, left: 0, right: 0,
-              textAlign: 'center', pointerEvents: 'none',
+              position: 'absolute',
+              top: 0, left: 0, right: 0,
+              paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+              paddingLeft: 14, paddingRight: 14, paddingBottom: 10,
+              zIndex: 15,
+              display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <span style={{
-                display: 'inline-block', padding: '5px 16px',
-                background: 'rgba(34,211,238,0.14)',
-                border: '1px solid rgba(34,211,238,0.28)',
-                borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#22d3ee',
-                letterSpacing: '-0.1px',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
+              <button
+                type="button"
+                onClick={handleClose}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  background: 'rgba(5,8,14,0.55)',
+                  backdropFilter: 'blur(14px)',
+                  WebkitBackdropFilter: 'blur(14px)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 22, cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.82)', fontSize: 13,
+                  fontFamily: 'var(--font-sans)',
+                  padding: '7px 13px 7px 9px',
+                  letterSpacing: '-0.1px',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                {t('common.cancel')}
+              </button>
+
+              <div style={{
+                flex: 1,
+                display: 'flex', justifyContent: 'center',
+                opacity: titleVisible ? 1 : 0,
+                transition: 'opacity 0.22s ease',
+                minWidth: 0,
               }}>
-                {translatedLabel}
-              </span>
+                <span style={{
+                  padding: '6px 16px',
+                  background: 'rgba(34,211,238,0.13)',
+                  border: '1px solid rgba(34,211,238,0.25)',
+                  borderRadius: 22, fontSize: 12, fontWeight: 700, color: '#22d3ee',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  letterSpacing: '-0.1px',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  maxWidth: '100%',
+                }}>
+                  {translatedLabel}
+                </span>
+              </div>
+
+              {/* Right spacer — mirrors the cancel button so the label stays centred */}
+              <div style={{ flexShrink: 0, width: 78 }} />
             </div>
+
+            {/* Progress strip overlay — sits just below the top bar */}
+            {showProgress && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(58px + env(safe-area-inset-top, 0px))',
+                left: 0, right: 0,
+                zIndex: 14,
+                display: 'flex', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+                <ShotProgressStrip
+                  allAngles={allAngles!}
+                  currentKey={angleKey}
+                  completedKeys={completedKeys}
+                />
+              </div>
+            )}
 
             {/* Single-line hint pill — sits just above the controls, never wraps */}
             {contextHint && (

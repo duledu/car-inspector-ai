@@ -17,6 +17,7 @@ import type {
 } from '@/types'
 import { inspectionApi } from '@/services/api/inspection.api'
 import { aiApi } from '@/services/api/ai.api'
+import { normalizeChecklistItems } from '@/lib/inspection/checklist'
 
 interface TestDriveRating {
   category: string
@@ -79,7 +80,7 @@ export const useInspectionStore = create<InspectionStore>()(
               state.activeChecklistTab = 'EXTERIOR'
             }
             state.session = session
-            state.checklistItems = session.checklistItems
+            state.checklistItems = normalizeChecklistItems(session.checklistItems)
             state.currentPhase = session.phase
             state.isLoadingChecklist = false
           })
@@ -119,7 +120,7 @@ export const useInspectionStore = create<InspectionStore>()(
           const sessionId = get().session?.id
           if (sessionId) {
             const session = await inspectionApi.getSession(sessionId)
-            set((state) => { state.checklistItems = session.checklistItems })
+            set((state) => { state.checklistItems = normalizeChecklistItems(session.checklistItems) })
           }
           throw err
         }
@@ -152,7 +153,7 @@ export const useInspectionStore = create<InspectionStore>()(
       },
 
       getItemsByCategory: (category) => {
-        return get().checklistItems.filter((i) => i.category === category)
+        return normalizeChecklistItems(get().checklistItems).filter((i) => i.category === category)
       },
 
       getAllFindings: () => {
@@ -190,10 +191,18 @@ export const useInspectionStore = create<InspectionStore>()(
         session: state.session,
         currentPhase: state.currentPhase,
         activeChecklistTab: state.activeChecklistTab,
-        checklistItems: state.checklistItems,
+        checklistItems: normalizeChecklistItems(state.checklistItems),
         aiResults: state.aiResults,
         testDriveRatings: state.testDriveRatings,
       }),
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<InspectionState>
+        return {
+          ...current,
+          ...persistedState,
+          checklistItems: normalizeChecklistItems(persistedState.checklistItems ?? []),
+        }
+      },
     }
   )
 )

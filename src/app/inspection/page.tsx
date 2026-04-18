@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore } from '@/store'
@@ -8,6 +8,7 @@ import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
+import { getChecklistDiagnostics } from '@/lib/inspection/checklist'
 import AppShell from '../AppShell'
 
 // ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
@@ -256,26 +257,6 @@ async function prepareImageForAI(file: File): Promise<PreparedAIImage> {
     height,
     size: blob.size,
   }
-}
-
-// ─── Interior questionnaire ───────────────────────────────────────────────────
-type InteriorKey = 'seats' | 'damage' | 'odor' | 'controls'
-type InteriorAnswers = Record<InteriorKey, ItemStatus>
-const INTERIOR_QUESTIONS: InteriorKey[] = ['seats', 'damage', 'odor', 'controls']
-const INTERIOR_STORAGE_PREFIX = 'uci-interior-'
-
-function loadInteriorAnswers(vehicleId: string): InteriorAnswers {
-  try {
-    const raw = localStorage.getItem(`${INTERIOR_STORAGE_PREFIX}${vehicleId}`)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return { seats: 'PENDING', damage: 'PENDING', odor: 'PENDING', controls: 'PENDING' }
-}
-
-function saveInteriorAnswers(vehicleId: string, answers: InteriorAnswers) {
-  try {
-    localStorage.setItem(`${INTERIOR_STORAGE_PREFIX}${vehicleId}`, JSON.stringify(answers))
-  } catch { /* quota — skip */ }
 }
 
 function getAuthHeader(): string {
@@ -679,107 +660,6 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
   )
 }
 
-// ─── Interior Questionnaire ───────────────────────────────────────────────────
-function InteriorQuestionnaire({ vehicleId }: Readonly<{ vehicleId: string }>) {
-  const { t } = useTranslation()
-  const [answers, setAnswers] = useState<InteriorAnswers>(() => loadInteriorAnswers(vehicleId))
-
-  const handleAnswer = (key: InteriorKey, status: ItemStatus) => {
-    setAnswers(prev => {
-      const next = { ...prev, [key]: status }
-      saveInteriorAnswers(vehicleId, next)
-      return next
-    })
-  }
-
-  const statusCfg = {
-    OK:      { bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.3)',   text: '#22c55e', icon: '✓' },
-    WARNING: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.3)',  text: '#f59e0b', icon: '!' },
-    PROBLEM: { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',   text: '#ef4444', icon: '✕' },
-  }
-
-  return (
-    <div style={{
-      marginTop: 20,
-      padding: '14px 14px 12px',
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: 14,
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-          background: 'rgba(129,140,248,0.1)', border: '1px solid rgba(129,140,248,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/>
-          </svg>
-        </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 2 }}>
-            {t('inspection.interiorAssessment')}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>
-            {t('inspection.interiorAssessmentDesc')}
-          </div>
-        </div>
-      </div>
-
-      {/* Questions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {INTERIOR_QUESTIONS.map(key => {
-          const status = answers[key]
-          const cfg    = status !== 'PENDING' ? statusCfg[status] : null
-          return (
-            <div key={key} style={{
-              padding: '11px 12px',
-              background: cfg ? cfg.bg : 'transparent',
-              border: `1px solid ${cfg ? cfg.border : 'rgba(255,255,255,0.06)'}`,
-              borderRadius: 10,
-              transition: 'background 0.15s, border-color 0.15s',
-            }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>
-                {t(`interiorQ.${key}`)}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5, marginBottom: 9 }}>
-                {t(`interiorQ.${key}Helper`)}
-              </div>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {(['OK', 'WARNING', 'PROBLEM'] as const).map(st => {
-                  const s   = statusCfg[st]
-                  const sel = status === st
-                  const labels: Record<string, string> = { OK: t('inspection.statusOK'), WARNING: t('inspection.statusWarning'), PROBLEM: t('inspection.statusIssue') }
-                  return (
-                    <button
-                      key={st}
-                      onClick={() => handleAnswer(key, sel ? 'PENDING' : st)}
-                      style={{
-                        flex: 1, padding: '8px 4px', borderRadius: 8,
-                        border: `1px solid ${sel ? s.border : 'rgba(255,255,255,0.07)'}`,
-                        background: sel ? s.bg : 'rgba(255,255,255,0.02)',
-                        color: sel ? s.text : 'rgba(255,255,255,0.28)',
-                        fontSize: 11.5, fontWeight: sel ? 700 : 400,
-                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                        transition: 'all 0.15s ease',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                      }}
-                    >
-                      {sel && <span style={{ fontSize: 9, fontWeight: 900 }}>{s.icon}</span>}
-                      {labels[st]}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ─── Checklist Phase ──────────────────────────────────────────────────────────
 function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
   items: ChecklistRow[]
@@ -1112,6 +992,7 @@ export default function InspectionPage() {
       setPhotos([])
       setFindingsSaved(false)
       setCameraTarget(null)
+      setPhase('PRE_SCREENING')
     }
     previousVehicleIdRef.current = activeVehicle.id
     if (session?.vehicleId !== activeVehicle.id) initSession(activeVehicle.id)
@@ -1192,6 +1073,12 @@ export default function InspectionPage() {
   const checked   = checklistItems.filter(i => i.status !== 'PENDING').length
   const total     = checklistItems.length
   const progress  = total > 0 ? Math.round((checked / total) * 100) : 0
+  const checklistDiagnostics = useMemo(() => getChecklistDiagnostics(checklistItems), [checklistItems])
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return
+    console.info('[inspection/checklist] final checklist before render', checklistDiagnostics)
+  }, [checklistDiagnostics])
 
   const goNext = () => { const n = PHASES[phaseIdx + 1]; if (n) setPhase(n.phase) }
   const goPrev = () => { const p = PHASES[phaseIdx - 1]; if (p) setPhase(p.phase) }
@@ -1513,9 +1400,6 @@ export default function InspectionPage() {
           {/* All checklist phases */}
           {currentPhase !== 'AI_PHOTOS' && currentPhase !== 'RISK_ANALYSIS' && currentPhase !== 'PRE_SCREENING' && (
             <>
-              {currentPhase === 'INTERIOR' && session?.vehicleId && (
-                <InteriorQuestionnaire vehicleId={session.vehicleId} />
-              )}
               <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} onNotes={handleNotes} />
             </>
           )}

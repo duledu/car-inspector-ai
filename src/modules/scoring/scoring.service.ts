@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/config/prisma'
+import { normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { calculateRiskScore, clampScore } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
 import type { AIResult, ChecklistItem } from '.prisma/client'
@@ -68,7 +69,7 @@ export class ScoringService {
     const hasPremium = !!purchase
     const input: ScoreCalculationInput = {
       aiFindings,
-      checklistItems: (session?.checklistItems ?? []).map((item: ChecklistItem) => ({
+      checklistItems: normalizeChecklistItems((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
         id: item.id,
         sessionId: item.sessionId,
         category: item.category as any,
@@ -77,7 +78,7 @@ export class ScoringService {
         status: item.status as any,
         notes: item.notes,
         photoUrl: item.photoUrl,
-      })),
+      }))),
       vinData: hasPremium && vinHistory ? (vinHistory.normalizedData as any) : null,
       testDriveRatings: {},
       hasPremiumHistory: hasPremium,

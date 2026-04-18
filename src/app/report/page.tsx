@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
+import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import type { RiskScore } from '@/types'
 import AppShell from '../AppShell'
@@ -33,6 +34,21 @@ const SVC_HISTORY_CFG: Record<string, { labelKey: string; color: string }> = {
 
 const SEV_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', info: '#22d3ee' }
 type Translate = (key: string, options?: Record<string, unknown>) => string
+const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
+
+function loadReportPhotoDrafts(vehicleId: string): ReportPhotoDraft[] {
+  try {
+    const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
+    if (!raw) return []
+    return (JSON.parse(raw) as Array<ReportPhotoDraft & { vehicleId: string }>)
+      .filter(d => d.vehicleId === vehicleId)
+      .filter(d => /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(d.thumbUrl))
+      .slice(0, 8)
+      .map(({ key, label, thumbUrl }) => ({ key, label, thumbUrl }))
+  } catch {
+    return []
+  }
+}
 
 function translateDimensionExplanation(key: string, text: string | undefined, t: Translate): string | undefined {
   if (!text) return undefined
@@ -282,7 +298,7 @@ function deriveNextSteps(
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ReportPage() {
-  const { t }                          = useTranslation()
+  const { t, i18n }                    = useTranslation()
   const { activeVehicle }              = useVehicleStore()
   const { aiResults }                  = useInspectionStore()
   const { hasAccess }                  = usePaymentStore()
@@ -291,6 +307,8 @@ export default function ReportPage() {
   const [loading,     setLoading]     = useState(false)
   const [calculating, setCalculating] = useState(false)
   const [calcError,   setCalcError]   = useState<string | null>(null)
+  const [pdfLoading,  setPdfLoading]  = useState(false)
+  const [pdfError,    setPdfError]    = useState<string | null>(null)
 
   const vehicleId  = activeVehicle?.id ?? ''
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
@@ -314,6 +332,30 @@ export default function ReportPage() {
       setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
     } finally {
       setCalculating(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!vehicleId || pdfLoading) return
+    setPdfLoading(true)
+    setPdfError(null)
+    try {
+      const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
+      const photos = loadReportPhotoDrafts(vehicleId)
+      const { blob, filename } = await reportApi.downloadPdfReport(vehicleId, locale, photos)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.rel = 'noopener'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 2500)
+    } catch (err: unknown) {
+      setPdfError((err as { message?: string })?.message ?? t('report.pdf.error'))
+    } finally {
+      setPdfLoading(false)
     }
   }
 
@@ -429,13 +471,25 @@ export default function ReportPage() {
                   </div>
                 </div>
 
-                {/* Recalculate button */}
-                <button onClick={handleCalculate} disabled={calculating}
-                  style={{ flexShrink: 0, padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, fontSize: 12, color: 'rgba(255,255,255,0.4)', cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
-                  {calculating ? t('report.recalculating') : t('report.recalculate')}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, minWidth: 190 }}>
+                  <button onClick={handleDownloadPdf} disabled={pdfLoading}
+                    style={{ minHeight: 44, padding: '10px 15px', background: pdfLoading ? 'rgba(34,211,238,0.55)' : 'linear-gradient(135deg, #67e8f9, #22d3ee)', border: '1px solid rgba(103,232,249,0.42)', borderRadius: 9, fontSize: 12, fontWeight: 800, color: '#041014', cursor: pdfLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 12px 28px rgba(34,211,238,0.16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, whiteSpace: 'normal', lineHeight: 1.18 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    {pdfLoading ? t('report.pdf.loading') : t('report.pdf.cta')}
+                  </button>
+                  <button onClick={handleCalculate} disabled={calculating}
+                    style={{ minHeight: 38, padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, fontSize: 12, color: 'rgba(255,255,255,0.56)', cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    {calculating ? t('report.recalculating') : t('report.recalculate')}
+                  </button>
+                </div>
               </div>
             </div>
+
+            {pdfError && (
+              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 9, fontSize: 13, color: '#f87171' }}>
+                {pdfError}
+              </div>
+            )}
 
             {/* ══════════════════════════════════════════════════════════
                 2. RISK FLAGS — one card per active flag
