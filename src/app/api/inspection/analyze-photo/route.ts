@@ -55,84 +55,6 @@ const schema = z.object({
   }).optional(),
 })
 
-const issueSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['area', 'issue', 'severity', 'confidence'],
-  properties: {
-    area: {
-      type: 'string',
-      description: 'Visible vehicle area where the issue appears, or "unknown" if unclear.',
-    },
-    issue: {
-      type: 'string',
-      description: 'Specific visual observation grounded in visible evidence.',
-    },
-    severity: {
-      type: 'string',
-      enum: ['minor', 'moderate', 'serious'],
-    },
-    confidence: {
-      type: 'number',
-      description: '0-100 confidence for this individual issue.',
-    },
-  },
-} as const
-
-const responseSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: [
-    'imageQuality',
-    'visibleAreas',
-    'detectedIssues',
-    'possibleIssues',
-    'uncertainAreas',
-    'confidenceScore',
-    'recommendation',
-    'summary',
-  ],
-  properties: {
-    imageQuality: {
-      type: 'string',
-      enum: ['good', 'medium', 'poor', 'unusable'],
-      description: 'good = detailed inspection possible, medium = usable with limitations, poor = usable only for broad comments, unusable = cannot inspect vehicle content.',
-    },
-    visibleAreas: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Concrete visible vehicle parts, e.g. front bumper, left headlight, hood gap.',
-    },
-    detectedIssues: {
-      type: 'array',
-      items: issueSchema,
-      description: 'High-confidence visible issues only.',
-    },
-    possibleIssues: {
-      type: 'array',
-      items: issueSchema,
-      description: 'Suspected issues where the image suggests a concern but evidence is incomplete.',
-    },
-    uncertainAreas: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Areas that are obscured, too dark, too blurry, cropped out, or not visible enough.',
-    },
-    confidenceScore: {
-      type: 'number',
-      description: '0-100 overall confidence in the inspection result.',
-    },
-    recommendation: {
-      type: 'string',
-      description: 'Actionable next step for the user, including retake guidance when needed.',
-    },
-    summary: {
-      type: 'string',
-      description: 'Professional 1-2 sentence summary based only on visible evidence.',
-    },
-  },
-} as const
-
 // ─── Prompt per angle ────────────────────────────────────────────────────────
 
 function localeInstruction(locale: string): string {
@@ -512,7 +434,18 @@ Image quality rules:
 
 If imageQuality is poor but usable, still fill visibleAreas and possibleIssues or detectedIssues when evidence exists. Use recommendation to request a better retake only when it would materially improve confidence.
 
-Return only valid JSON matching the required schema.`
+Return only valid JSON with exactly these top-level keys:
+{
+  "imageQuality": "good"|"medium"|"poor"|"unusable",
+  "visibleAreas": [strings],
+  "detectedIssues": [{"area":string,"issue":string,"severity":"minor"|"moderate"|"serious","confidence":0-100}],
+  "possibleIssues": [same shape as detectedIssues],
+  "uncertainAreas": [strings],
+  "confidenceScore": 0-100,
+  "recommendation": string,
+  "summary": string
+}
+No extra keys. No markdown fences. No prose outside the JSON.`
 
 }
 
@@ -631,16 +564,15 @@ export async function POST(req: NextRequest) {
     }
 
     // callOpenAIWithRetry now throws on any non-ok response — no need to check response.ok here.
+    // Use json_object mode (universally supported across all tiers) rather than json_schema strict
+    // mode, which requires gpt-4o-2024-08-06+ and higher account tier and returns 400 otherwise.
     const response = await callOpenAIWithRetry(apiKey, {
       model: 'gpt-4o',
       max_tokens: 800,
       temperature: 0.2,
-      response_format: {
-        type: 'json_schema',
-        json_schema: { name: 'car_photo_inspection', strict: true, schema: responseSchema },
-      },
+      response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON.' },
+        { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON matching the schema exactly.' },
         { role: 'user', content: [imageContent, { type: 'text', text: buildPrompt(angle, angleLabel, locale) }] },
       ],
     }, angle)
@@ -673,10 +605,7 @@ export async function POST(req: NextRequest) {
           model: 'gpt-4o',
           max_tokens: 1200,
           temperature: 0.2,
-          response_format: {
-            type: 'json_schema',
-            json_schema: { name: 'car_photo_inspection', strict: true, schema: responseSchema },
-          },
+          response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON. Be concise.' },
             { role: 'user', content: [imageContent, { type: 'text', text: buildCondensedPrompt(angleLabel, locale) }] },

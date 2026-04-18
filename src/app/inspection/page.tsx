@@ -74,15 +74,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function isRetriableAIStatus(status: number): boolean {
-  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500
-}
 
 function friendlyAIDetail(fallbackDetail: string, reason: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   if (reason === 'IMAGE_VALIDATION') return t('inspection.analysisFailedImage',   { defaultValue: fallbackDetail })
   if (reason === 'TIMEOUT')          return t('inspection.analysisFailedTimeout', { defaultValue: fallbackDetail })
+  // Only actual 429 rate-limit bursts should show "busy" — outages, config errors, and
+  // unknown failures use the generic error message which is more accurate.
   if (reason === 'RATE_LIMIT')       return t('inspection.analysisFailedBusy',    { defaultValue: fallbackDetail })
-  if (reason === 'PROVIDER_OUTAGE')  return t('inspection.analysisFailedBusy',    { defaultValue: fallbackDetail })
   return fallbackDetail
 }
 
