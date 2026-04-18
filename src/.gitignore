@@ -67,3 +67,11 @@ Thumbs.db
 # ========================
 tsc_out.txt
 *.log
+
+# build cache
+*.tsbuildinfo
+
+# debug / test scripts
+test_*.mts
+
+.claude/

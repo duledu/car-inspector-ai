@@ -171,17 +171,53 @@ export async function POST(req: NextRequest) {
     })
 
     // ── Step 5: build PDF ────────────────────────────────────────────────────
-    console.log('[pdf] step:build')
-    const pdf = await buildInspectionReportPdf({
-      vehicle,
-      score,
-      research,
-      findings: sanitizeFindings(aiResults),
-      checklistItems: toChecklistDto(session?.checklistItems ?? []),
-      photos,
-      generatedAt: new Date(),
-      locale,
+    const findings = sanitizeFindings(aiResults)
+    const checklistItems = toChecklistDto(session?.checklistItems ?? [])
+    console.log('[pdf] step:build', {
+      vehicle: { make: vehicle.make, model: vehicle.model, year: vehicle.year, hasVin: !!vehicle.vin },
+      score: {
+        buyScore: score.buyScore,
+        verdict: score.verdict,
+        dimensions: Object.fromEntries(
+          Object.entries(score.dimensions).map(([k, v]) => [k, (v as any)?.score])
+        ),
+        reasonsFor: score.reasonsFor?.length ?? 0,
+        reasonsAgainst: score.reasonsAgainst?.length ?? 0,
+        negotiationHints: score.negotiationHints?.length ?? 0,
+      },
+      research: {
+        hasResearch: !!research,
+        hasSummary: !!research?.summary,
+        hasPriceContext: !!research?.priceContext,
+        sectionItemCounts: Object.fromEntries(
+          Object.entries(research?.sections ?? {}).map(([k, s]) => [k, Array.isArray((s as any)?.items) ? (s as any).items.length : 'MISSING'])
+        ),
+      },
+      findings: findings.length,
+      checklist: checklistItems.length,
+      photos: photos.length,
     })
+
+    let pdf: Buffer
+    try {
+      pdf = await buildInspectionReportPdf({
+        vehicle,
+        score,
+        research,
+        findings,
+        checklistItems,
+        photos,
+        generatedAt: new Date(),
+        locale,
+      })
+    } catch (buildErr: any) {
+      console.error('[pdf] buildInspectionReportPdf threw:', {
+        message: buildErr?.message,
+        stack: buildErr?.stack,
+        name: buildErr?.name,
+      })
+      throw buildErr
+    }
     console.log('[pdf] step:done', { bytes: pdf?.byteLength })
 
     return new NextResponse(new Uint8Array(pdf), {
@@ -196,6 +232,7 @@ export async function POST(req: NextRequest) {
     if (err?.message === 'VEHICLE_NOT_FOUND') {
       return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
     }
+    console.error('[pdf] unhandled error:', { message: err?.message, stack: err?.stack, name: err?.name })
     logApiError('report/pdf', 'generate', err, { vehicleId })
     return apiError('Report generation failed, try again', { status: 500, code: 'INTERNAL_ERROR' })
   }

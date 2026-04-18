@@ -538,18 +538,18 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
           : { text: t('pdf.empty.findings'), style: 'body' },
       ]),
       section(t('pdf.section.knownIssues'), [
-        { text: research.summary, style: 'body', margin: [0, 0, 0, 8] },
+        { text: text(research.summary, t('pdf.empty.summary')), style: 'body', margin: [0, 0, 0, 8] },
         ...issueRows(knownIssues, t, 8),
       ]),
       section(t('pdf.section.priorityChecks'), [
         bulletList(priorityChecks, t('pdf.empty.priorityChecks')),
       ]),
       section(t('pdf.section.priceInsights'), [
-        research.priceContext
+        research.priceContext && (research.priceContext.evaluationLabel || research.priceContext.summary)
           ? {
               stack: [
-                { text: research.priceContext.evaluationLabel, style: 'itemTitle', color: '#0f172a' },
-                { text: research.priceContext.summary, style: 'body', margin: [0, 3, 0, 0] },
+                { text: text(research.priceContext.evaluationLabel, ''), style: 'itemTitle', color: '#0f172a' },
+                { text: text(research.priceContext.summary, ''), style: 'body', margin: [0, 3, 0, 0] },
               ],
             }
           : { text: t('pdf.empty.priceInsights'), style: 'body' },
