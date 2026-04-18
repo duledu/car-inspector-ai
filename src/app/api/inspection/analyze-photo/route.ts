@@ -240,15 +240,21 @@ function failureFromError(error: unknown): AIProviderFailure {
     const status = Number(message.slice(5))
     return Number.isFinite(status) ? failureFromStatus(status) : 'UNKNOWN'
   }
-  if (message.includes('parse') || message.includes('JSON')) return 'PROVIDER_RESPONSE'
+  if (message.includes('parse') || message.includes('JSON') || message.includes('PROVIDER_RESPONSE_TRUNCATED')) return 'PROVIDER_RESPONSE'
   return 'UNKNOWN'
 }
 
+// Per-attempt timeout kept under the client's 35s window.
+// Only retry on 429 rate-limit — timeout and 5xx are returned immediately
+// so the client can decide whether to retry rather than burning the full window.
+const OPENAI_ATTEMPT_TIMEOUT_MS = 28_000
+const OPENAI_MAX_ATTEMPTS = 2
+
 async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: string): Promise<Response> {
   let lastStatus = 0
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30_000)
+    const timeout = setTimeout(() => controller.abort(), OPENAI_ATTEMPT_TIMEOUT_MS)
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -260,40 +266,40 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
         body: JSON.stringify(payload),
       })
       lastStatus = response.status
-      if (response.ok || !isRetriableStatus(response.status) || attempt === 3) {
+      // Only retry on rate-limit (429), and only if we have attempts remaining
+      if (response.ok || response.status !== 429 || attempt === OPENAI_MAX_ATTEMPTS) {
         return response
       }
-      console.warn('[analyze-photo] OpenAI retry scheduled', {
-        angle,
-        attempt,
-        status: response.status,
-        failureType: failureFromStatus(response.status),
-      })
+      console.warn('[analyze-photo] OpenAI rate-limit — retrying', { angle, attempt })
     } catch (error) {
-      const failureType = failureFromError(error)
-      if (attempt === 3 || failureType !== 'TIMEOUT') {
-        throw error
-      }
-      console.warn('[analyze-photo] OpenAI retry scheduled', { angle, attempt, failureType })
+      // Do not retry on timeout — return immediately so the client can handle it
+      throw error
     } finally {
       clearTimeout(timeout)
     }
-    await sleep(1200 * attempt)
+    await sleep(1500)
   }
   throw new Error(`HTTP_${lastStatus || 503}`)
 }
 
 function extractJsonObject(text: string): string {
   const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-  if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned
 
+  // Fast path: well-formed JSON object
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+    // Verify it actually parses before returning (catches structurally-complete but internally broken JSON)
+    try { JSON.parse(cleaned); return cleaned } catch { /* fall through to recovery */ }
+  }
+
+  // Slice from first '{' to last '}' — handles leading/trailing commentary
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
   if (start >= 0 && end > start) {
-    return cleaned.slice(start, end + 1)
+    const candidate = cleaned.slice(start, end + 1)
+    try { JSON.parse(candidate); return candidate } catch { /* fall through */ }
   }
 
-  throw new Error('AI response did not contain a JSON object')
+  throw new Error('AI response did not contain a parseable JSON object')
 }
 
 function asImageQuality(value: unknown): ImageQuality {
@@ -375,6 +381,15 @@ function legacyDetail(analysis: StructuredPhotoAnalysis): string {
   return parts.join(' ')
 }
 
+// Condensed prompt used as one-shot recovery when the full response is truncated.
+// Instructs the model to return the same schema but with shorter string values.
+function buildCondensedPrompt(angleLabel: string, locale: string): string {
+  return `You are a professional car inspector. Analyse the ${angleLabel} photo.
+Be concise: max 8 words per issue description, max 1 sentence for summary, max 1 sentence for recommendation. Limit detectedIssues and possibleIssues to 2 items each.
+Write in ${localeInstruction(locale)}.
+Return valid JSON only.`
+}
+
 function buildPrompt(angle: string, angleLabel: string, locale: string): string {
   const areaGuide: Record<string, string> = {
     FRONT:       'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
@@ -424,6 +439,58 @@ Return only valid JSON matching the required schema.`
 
 }
 
+// Single-attempt OpenAI call — no retry logic. Used for the condensed recovery
+// path so we don't compound retries on top of an already-failed attempt.
+async function callOpenAIOnce(
+  apiKey: string,
+  payload: unknown,
+  angle: string,
+  timeoutMs = OPENAI_ATTEMPT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(payload),
+    })
+  } finally {
+    clearTimeout(timer)
+    console.log('[analyze-photo] callOpenAIOnce finished', { angle })
+  }
+}
+
+// Parse a raw AI response text string into a normalized analysis.
+// Returns null if the text cannot be extracted or parsed.
+function parseAIText(text: string): StructuredPhotoAnalysis | null {
+  try {
+    const jsonStr = extractJsonObject(text)
+    const raw = JSON.parse(jsonStr)
+    return normalizeAnalysis(raw)
+  } catch {
+    return null
+  }
+}
+
+// Build the success response payload from a normalized analysis.
+function buildSuccessPayload(analysis: StructuredPhotoAnalysis) {
+  return {
+    signal:         legacySignal(analysis),
+    severity:       legacySeverity(analysis),
+    detail:         legacyDetail(analysis),
+    confidence:     analysis.confidenceScore,
+    imageQuality:   analysis.imageQuality,
+    visibleAreas:   analysis.visibleAreas,
+    detectedIssues: analysis.detectedIssues,
+    possibleIssues: analysis.possibleIssues,
+    uncertainAreas: analysis.uncertainAreas,
+    confidenceScore: analysis.confidenceScore,
+    recommendation: analysis.recommendation,
+  }
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -471,46 +538,25 @@ export async function POST(req: NextRequest) {
 
   try {
     const requestBytes = Math.round((imageBase64.length * 3) / 4)
-    console.log('[analyze-photo] request received', {
-      angle,
-      mimeType,
-      requestBytes,
-      imageMeta,
-    })
+    console.log('[analyze-photo] request received', { angle, mimeType, requestBytes, imageMeta })
+
+    // ── Shared image content block (reused in condensed retry) ────────────────
+    const imageContent = {
+      type: 'image_url' as const,
+      image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'auto' as const },
+    }
 
     const response = await callOpenAIWithRetry(apiKey, {
       model: 'gpt-4o',
-      max_tokens: 300,
+      max_tokens: 800,
       temperature: 0.2,
       response_format: {
         type: 'json_schema',
-        json_schema: {
-          name: 'car_photo_inspection',
-          strict: true,
-          schema: responseSchema,
-        },
+        json_schema: { name: 'car_photo_inspection', strict: true, schema: responseSchema },
       },
       messages: [
-        {
-          role: 'system',
-          content: 'You are a professional car inspector. Respond only with valid JSON.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${imageBase64}`,
-                detail: 'auto',
-              },
-            },
-            {
-              type: 'text',
-              text: buildPrompt(angle, angleLabel, locale),
-            },
-          ],
-        },
+        { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON.' },
+        { role: 'user', content: [imageContent, { type: 'text', text: buildPrompt(angle, angleLabel, locale) }] },
       ],
     }, angle)
 
@@ -522,31 +568,69 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await response.json()
-    const text: string = result.choices?.[0]?.message?.content ?? ''
-    console.log('[analyze-photo] OpenAI response received', {
-      angle,
-      finishReason: result.choices?.[0]?.finish_reason,
-      contentLength: text.length,
-    })
-    const jsonStr = extractJsonObject(text)
+    const finishReason: string = result.choices?.[0]?.finish_reason ?? 'unknown'
+    const rawText: string = result.choices?.[0]?.message?.content ?? ''
+    console.log('[analyze-photo] OpenAI response received', { angle, finishReason, contentLength: rawText.length })
 
-    let rawAnalysis: unknown
-    try {
-      rawAnalysis = JSON.parse(jsonStr)
-    } catch (err) {
-      console.error('[analyze-photo] parse failed', { angle, text })
-      throw new Error(`Failed to parse AI response: ${err instanceof Error ? err.message : String(err)}`)
+    // ── Truncation recovery ──────────────────────────────────────────────────
+    // If the model hit the token limit, attempt one condensed retry before giving up.
+    // This avoids silent degradation when 800 tokens is not enough for a verbose result.
+    if (finishReason === 'length') {
+      console.warn('[analyze-photo] truncation detected — attempting condensed recovery', {
+        angle,
+        mimeType,
+        contentLength: rawText.length,
+        // Attempt to count issues in the truncated text for diagnostics
+        partialDetectedCount: (rawText.match(/"severity"/g) ?? []).length,
+      })
+      try {
+        const condensedRes = await callOpenAIOnce(apiKey, {
+          model: 'gpt-4o',
+          max_tokens: 1200,
+          temperature: 0.2,
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'car_photo_inspection', strict: true, schema: responseSchema },
+          },
+          messages: [
+            { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON. Be concise.' },
+            { role: 'user', content: [imageContent, { type: 'text', text: buildCondensedPrompt(angleLabel, locale) }] },
+          ],
+        }, angle)
+
+        if (condensedRes.ok) {
+          const condensedResult = await condensedRes.json()
+          const condensedFinish: string = condensedResult.choices?.[0]?.finish_reason ?? 'unknown'
+          const condensedText: string = condensedResult.choices?.[0]?.message?.content ?? ''
+          if (condensedFinish !== 'length' && condensedText) {
+            const recovered = parseAIText(condensedText)
+            if (recovered) {
+              console.log('[analyze-photo] condensed recovery succeeded', { angle, imageQuality: recovered.imageQuality })
+              return NextResponse.json({ data: buildSuccessPayload(recovered) })
+            }
+          }
+        }
+      } catch (condensedErr) {
+        console.warn('[analyze-photo] condensed recovery failed', {
+          angle,
+          reason: condensedErr instanceof Error ? condensedErr.message : String(condensedErr),
+        })
+      }
+      // Both attempts truncated or condensed call failed — surface as parse failure
+      throw new Error('PROVIDER_RESPONSE_TRUNCATED')
     }
 
-    const analysis = normalizeAnalysis(rawAnalysis)
-    const sev = legacySeverity(analysis)
-    const signal = legacySignal(analysis)
-    const detail = legacyDetail(analysis)
+    // ── Normal parse path ────────────────────────────────────────────────────
+    const analysis = parseAIText(rawText)
+    if (!analysis) {
+      console.error('[analyze-photo] parse failed', { angle, rawText: rawText.slice(0, 200) })
+      throw new Error('Failed to parse AI response JSON')
+    }
 
     console.log('[analyze-photo] parsed result', {
       angle,
-      severity: sev,
-      signal,
+      severity: legacySeverity(analysis),
+      signal: legacySignal(analysis),
       imageQuality: analysis.imageQuality,
       confidenceScore: analysis.confidenceScore,
       detectedIssues: analysis.detectedIssues.length,
@@ -554,21 +638,7 @@ export async function POST(req: NextRequest) {
       uncertainAreas: analysis.uncertainAreas.length,
     })
 
-    return NextResponse.json({
-      data: {
-        signal,
-        severity: sev,
-        detail,
-        confidence: analysis.confidenceScore,
-        imageQuality: analysis.imageQuality,
-        visibleAreas: analysis.visibleAreas,
-        detectedIssues: analysis.detectedIssues,
-        possibleIssues: analysis.possibleIssues,
-        uncertainAreas: analysis.uncertainAreas,
-        confidenceScore: analysis.confidenceScore,
-        recommendation: analysis.recommendation,
-      },
-    })
+    return NextResponse.json({ data: buildSuccessPayload(analysis) })
   } catch (error) {
     const failureType = failureFromError(error)
     const reason = error instanceof Error ? error.message : String(error)

@@ -129,13 +129,20 @@ export const useUserStore = create<UserStore>()(
             state.session = refreshed
             state.user = refreshed.user
           })
-        } catch {
-          // Refresh failed — force logout
-          set((state) => {
-            state.user = null
-            state.session = null
-            state.isAuthenticated = false
-          })
+        } catch (err: any) {
+          // Only force-logout on definitive auth rejection (401/403).
+          // Network errors (no connection, timeout, device wake) are transient —
+          // clearing the session on a brief mobile network hiccup forces users to
+          // re-login unnecessarily.
+          const status = err?.statusCode ?? err?.response?.status ?? 0
+          if (status === 401 || status === 403) {
+            set((state) => {
+              state.user = null
+              state.session = null
+              state.isAuthenticated = false
+            })
+          }
+          // Otherwise, keep existing session in place and let the user continue.
         }
       },
 

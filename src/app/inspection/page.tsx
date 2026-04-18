@@ -79,9 +79,10 @@ function isRetriableAIStatus(status: number): boolean {
 }
 
 function friendlyAIDetail(fallbackDetail: string, reason: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
-  if (reason === 'IMAGE_VALIDATION') return t('inspection.analysisFailedImage', { defaultValue: fallbackDetail })
+  if (reason === 'IMAGE_VALIDATION') return t('inspection.analysisFailedImage',   { defaultValue: fallbackDetail })
   if (reason === 'TIMEOUT')          return t('inspection.analysisFailedTimeout', { defaultValue: fallbackDetail })
-  if (reason === 'RATE_LIMIT')       return t('inspection.analysisFailedBusy', { defaultValue: fallbackDetail })
+  if (reason === 'RATE_LIMIT')       return t('inspection.analysisFailedBusy',    { defaultValue: fallbackDetail })
+  if (reason === 'PROVIDER_OUTAGE')  return t('inspection.analysisFailedBusy',    { defaultValue: fallbackDetail })
   return fallbackDetail
 }
 
@@ -247,6 +248,9 @@ function getAuthHeader(): string {
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string
 
+// Failure reasons from the server that are worth retrying on the client
+const RETRIABLE_SERVER_FAILURES = new Set(['RATE_LIMIT', 'TIMEOUT', 'PROVIDER_OUTAGE'])
+
 async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn): Promise<MockAIResult> {
   const startedAt = Date.now()
   try {
@@ -276,13 +280,14 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       },
     }
 
-    const res = await enqueueAIAnalysis(async () => {
-      let lastStatus = 0
-      for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt += 1) {
+    // Outer retry loop — handles transient server-side failures (RATE_LIMIT, TIMEOUT)
+    // that the server returns as HTTP 200 with failureReason in the response body.
+    for (let clientAttempt = 1; clientAttempt <= AI_MAX_ATTEMPTS; clientAttempt += 1) {
+      const res = await enqueueAIAnalysis(async () => {
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS)
         try {
-          logPhotoFlow('ai_request_sent', { key, label, attempt })
+          logPhotoFlow('ai_request_sent', { key, label, clientAttempt })
           const response = await fetch('/api/inspection/analyze-photo', {
             method: 'POST',
             signal: controller.signal,
@@ -292,51 +297,56 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
             },
             body: JSON.stringify(requestBody),
           })
-          lastStatus = response.status
-          if (response.ok || !isRetriableAIStatus(response.status) || attempt === AI_MAX_ATTEMPTS) {
-            return response
-          }
-          logPhotoFlow('ai_request_retry_scheduled', { key, attempt, status: response.status })
+          return response
         } catch (err) {
           const timedOut = err instanceof DOMException && err.name === 'AbortError'
-          if (attempt === AI_MAX_ATTEMPTS) {
-            throw new Error(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR')
-          }
-          logPhotoFlow('ai_request_retry_scheduled', {
-            key,
-            attempt,
-            reason: timedOut ? 'timeout' : err instanceof Error ? err.message : String(err),
-          })
+          throw new Error(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR')
         } finally {
           window.clearTimeout(timeout)
         }
-        await sleep(700 * attempt)
-      }
-      throw new Error(lastStatus === 429 ? 'RATE_LIMIT' : 'NETWORK_ERROR')
-    })
-
-    const raw = await res.text()
-    let json: { data?: MockAIResult; message?: string; error?: string } | null = null
-    try {
-      json = raw ? JSON.parse(raw) : null
-    } catch {
-      throw new Error(`AI response was not JSON (${res.status})`)
-    }
-
-    logPhotoFlow('ai_response_received', { key, status: res.status, elapsedMs: Date.now() - startedAt, hasData: !!json?.data })
-    if (json?.data) {
-      logPhotoFlow('ai_parse_result', {
-        key,
-        severity: json.data.severity,
-        imageQuality: json.data.imageQuality,
-        confidenceScore: json.data.confidenceScore,
-        detectedIssues: json.data.detectedIssues?.length ?? 0,
-        possibleIssues: json.data.possibleIssues?.length ?? 0,
       })
-      return json.data
+
+      const raw = await res.text()
+      let json: { data?: MockAIResult; message?: string; error?: string } | null = null
+      try {
+        json = raw ? JSON.parse(raw) : null
+      } catch {
+        throw new Error(`AI response was not JSON (${res.status})`)
+      }
+
+      logPhotoFlow('ai_response_received', {
+        key, status: res.status, clientAttempt,
+        elapsedMs: Date.now() - startedAt, hasData: !!json?.data,
+        failureReason: json?.data?.failureReason,
+      })
+
+      if (json?.data) {
+        const failureReason = json.data.failureReason
+        // Retry silently on transient server failures if we have remaining attempts.
+        // Jitter prevents multiple images from retrying in lockstep after a rate-limit event.
+        if (failureReason && RETRIABLE_SERVER_FAILURES.has(failureReason) && clientAttempt < AI_MAX_ATTEMPTS) {
+          const delay = 700 + Math.floor(Math.random() * 400) // 700–1100 ms
+          logPhotoFlow('ai_client_retry_on_transient', { key, clientAttempt, failureReason, delayMs: delay })
+          await sleep(delay)
+          continue
+        }
+        logPhotoFlow('ai_parse_result', {
+          key,
+          severity: json.data.severity,
+          imageQuality: json.data.imageQuality,
+          confidenceScore: json.data.confidenceScore,
+          detectedIssues: json.data.detectedIssues?.length ?? 0,
+          possibleIssues: json.data.possibleIssues?.length ?? 0,
+          failureReason,
+        })
+        return json.data
+      }
+      if (res.status === 429) throw new Error('RATE_LIMIT')
+      throw new Error(json?.message ?? json?.error ?? `HTTP_${res.status}`)
     }
-    if (res.status === 429) throw new Error('RATE_LIMIT')
-    throw new Error(json?.message ?? json?.error ?? `HTTP_${res.status}`)
+
+    // Exhausted all client attempts — should not reach here in practice
+    throw new Error('RATE_LIMIT')
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
     logPhotoFlow('ai_failure', { key, reason, elapsedMs: Date.now() - startedAt })
@@ -1229,8 +1239,8 @@ export default function InspectionPage() {
                   </div>
                 </div>
               </div>
-              <PhotoAnalysisDisclaimer style={{ marginBottom: 14 }} />
               <PhotoGrid photos={photos} onAdd={handleOpenCamera} />
+              <PhotoAnalysisDisclaimer style={{ marginTop: 14 }} />
             </div>
           )}
 
