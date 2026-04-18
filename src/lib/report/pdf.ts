@@ -335,6 +335,18 @@ function severityDistribution(findings: AIFinding[], t: PdfTranslate): Content {
   }
 }
 
+const VALID_VERDICTS = new Set(['STRONG_BUY', 'BUY_WITH_CAUTION', 'HIGH_RISK', 'WALK_AWAY'])
+
+function safeItems(section: { items?: unknown[] } | null | undefined): import('@/types').ResearchIssue[] {
+  if (!section || !Array.isArray(section.items)) return []
+  return section.items.filter((i): i is import('@/types').ResearchIssue =>
+    !!i &&
+    typeof (i as any).title === 'string' &&
+    typeof (i as any).description === 'string' &&
+    ['high', 'medium', 'low'].includes((i as any).severity)
+  )
+}
+
 function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
   const { vehicle, score, research, checklistItems, photos, generatedAt, locale } = input
   const lang = normalizePdfLocale(locale)
@@ -342,23 +354,28 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
   const findings = meaningfulFindings(input.findings)
   const mainPhoto = safePhotoImages(photos)[0] ?? null
   const embeddedPhotoGrid = photoGrid(photos)
+
+  // Guard verdict — legacy data or null in DB would otherwise make verdictColor[verdict] undefined
+  const verdict = VALID_VERDICTS.has(score.verdict) ? score.verdict : 'HIGH_RISK' as const
+
+  const sections = research.sections ?? {}
   const knownIssues = [
-    ...research.sections.commonProblems.items,
-    ...research.sections.mechanicalWatchouts.items,
-    ...research.sections.visualAttention.items,
+    ...safeItems(sections.commonProblems),
+    ...safeItems(sections.mechanicalWatchouts),
+    ...safeItems(sections.visualAttention),
   ]
   const priorityChecks = uniqueStrings([
-    ...research.sections.highPriorityChecks.items.map(i => `${i.title}: ${i.description}`),
-    ...research.sections.testDriveFocus.items.map(i => `${i.title}: ${i.description}`),
+    ...safeItems(sections.highPriorityChecks).map(i => `${i.title}: ${i.description}`),
+    ...safeItems(sections.testDriveFocus).map(i => `${i.title}: ${i.description}`),
     ...checklistItems
       .filter(i => i.status === 'WARNING' || i.status === 'PROBLEM')
       .map(i => `${i.itemLabel}${i.notes ? `: ${i.notes}` : ''}`),
-    ...score.negotiationHints,
+    ...(Array.isArray(score.negotiationHints) ? score.negotiationHints : []),
   ], 9)
   const summary = uniqueStrings([
     research.summary,
-    ...score.reasonsAgainst,
-    ...score.reasonsFor,
+    ...(Array.isArray(score.reasonsAgainst) ? score.reasonsAgainst : []),
+    ...(Array.isArray(score.reasonsFor) ? score.reasonsFor : []),
   ], 4)
 
   return {
@@ -380,7 +397,7 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
       coverTitle: { fontSize: 29, bold: true, color: BRAND.ink, lineHeight: 1.08 },
       coverSubtitle: { fontSize: 11, color: '#64748b', characterSpacing: 1.2 },
       sectionTitle: { fontSize: 13, bold: true, color: BRAND.ink, margin: [0, 0, 0, 9] },
-      score: { fontSize: 40, bold: true, color: verdictColor[score.verdict] },
+      score: { fontSize: 40, bold: true, color: verdictColor[verdict] },
       badge: { fontSize: 8, bold: true, characterSpacing: 0.7 },
       pill: { fontSize: 8, bold: true, characterSpacing: 0.4, alignment: 'center' },
       itemTitle: { fontSize: 10.5, bold: true, color: '#111827' },
@@ -467,9 +484,9 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
           {
             width: '*',
             stack: [
-              { text: t(`pdf.risk.${score.verdict}`), fontSize: 17, bold: true, color: verdictColor[score.verdict] },
+              { text: t(`pdf.risk.${verdict}`), fontSize: 17, bold: true, color: verdictColor[verdict] },
               { text: summary.join(' '), style: 'body', margin: [0, 7, 0, 0] },
-              { stack: [scoreGauge(score.buyScore, verdictColor[score.verdict])], margin: [0, 13, 0, 0] },
+              { stack: [scoreGauge(score.buyScore, verdictColor[verdict])], margin: [0, 13, 0, 0] },
             ],
           },
         ],
