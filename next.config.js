@@ -2,7 +2,7 @@
 const nextConfig = {
   // In Next.js 14.2, serverComponentsExternalPackages is still under experimental
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken', 'stripe'],
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken', 'stripe', 'resend'],
   },
 
   images: {

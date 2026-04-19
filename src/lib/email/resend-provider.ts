@@ -6,8 +6,8 @@ import { Resend } from 'resend'
 import type { EmailProvider, SendEmailOptions, SendEmailResult } from './provider'
 
 export class ResendEmailProvider implements EmailProvider {
-  private client: Resend
-  private from: string
+  private readonly client: Resend
+  private readonly from: string
 
   constructor() {
     const apiKey = process.env.RESEND_API_KEY
@@ -16,9 +16,11 @@ export class ResendEmailProvider implements EmailProvider {
     }
     this.from = process.env.EMAIL_FROM ?? 'Used Cars Doctor <noreply@mail.usedcarsdoctor.com>'
     this.client = new Resend(apiKey)
+    console.log(`[email] ResendEmailProvider ready (key=${apiKey.slice(0, 7)}*** from="${this.from}")`)
   }
 
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
+    console.log(`[email] sending subject="${options.subject}" to="${options.to}"`)
     try {
       const { data, error } = await this.client.emails.send({
         from:    this.from,
@@ -30,10 +32,11 @@ export class ResendEmailProvider implements EmailProvider {
       })
 
       if (error) {
-        console.error('[email] Resend send error:', error)
+        console.error('[email] Resend API error:', JSON.stringify(error))
         return { success: false, error: error.message }
       }
 
+      console.log(`[email] Resend accepted: messageId=${data?.id}`)
       return { success: true, messageId: data?.id }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

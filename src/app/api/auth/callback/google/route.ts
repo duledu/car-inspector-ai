@@ -101,12 +101,13 @@ async function upsertGoogleUser(googleUser: GoogleUserInfo) {
 
   const created = await prisma.user.create({
     data: {
-      googleId:      googleUser.sub,
-      email:         googleUser.email,
-      name:          googleUser.name || googleUser.email.split('@')[0],
-      avatarUrl:     googleUser.picture ?? null,
-      emailVerified: new Date(),
-      role:          'USER',
+      googleId:         googleUser.sub,
+      email:            googleUser.email,
+      name:             googleUser.name || googleUser.email.split('@')[0],
+      avatarUrl:        googleUser.picture ?? null,
+      emailVerified:    new Date(),
+      role:             'USER',
+      preferredLanguage: 'en',
     },
   })
   return { user: created, action: 'created' as const }
@@ -252,12 +253,13 @@ export async function GET(req: NextRequest) {
           refreshToken,
           expiresAt,
           user: {
-            id:        user.id,
-            email:     user.email,
-            name:      user.name,
-            avatarUrl: user.avatarUrl,
-            role:      user.role,
-            createdAt: user.createdAt.toISOString(),
+            id:                user.id,
+            email:             user.email,
+            name:              user.name,
+            avatarUrl:         user.avatarUrl,
+            role:              user.role,
+            preferredLanguage: user.preferredLanguage ?? 'en',
+            createdAt:         user.createdAt.toISOString(),
           },
         },
         isAuthenticated: true,

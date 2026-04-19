@@ -179,7 +179,10 @@ async function handleRegister(body: unknown) {
 
   // Fire-and-forget — never block registration on email delivery
   sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
-    .catch(err => console.error('[register] verification email failed:', err))
+    .then(result => {
+      if (!result.success) console.error('[auth/register] verification email failed:', result.error)
+    })
+    .catch(err => console.error('[auth/register] verification email unexpected error:', err))
 
   return NextResponse.json(
     { data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) } },
@@ -246,7 +249,10 @@ async function handleForgotPassword(body: unknown) {
       return NextResponse.json({ data: { success: true } })
     }
 
-    await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    const emailResult = await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    if (!emailResult.success) {
+      console.error('[auth/forgot-password] reset email failed:', emailResult.error)
+    }
 
     return NextResponse.json({ data: { success: true } })
   } catch (error) {
@@ -289,7 +295,10 @@ async function handleSendVerification(req: NextRequest) {
     if (!user) return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
     if (user.emailVerified) return NextResponse.json({ data: { success: true, alreadyVerified: true } })
 
-    await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    if (!emailResult.success) {
+      console.error('[auth/send-verification] email failed:', emailResult.error)
+    }
 
     return NextResponse.json({ data: { success: true } })
   } catch (error) {
