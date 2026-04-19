@@ -1,77 +1,72 @@
-# ========================
-# Node / Next.js
-# ========================
+# dependencies
 node_modules/
+
+# build output
 .next/
 out/
 dist/
 build/
 coverage/
 
-# Logs
+# TypeScript / Next
+.next/cache/
+.next/types/
+*.tsbuildinfo
+tsc_out.txt
+
+# environment
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Env
-.env
-.env.local
-.env.development
-.env.production
-.env.test
+# OS / system
+.DS_Store
+Thumbs.db
 
-# ========================
+# editor
+.vscode/
+.idea/
+
 # Vercel
-# ========================
-.vercel
+.vercel/
 
-# ========================
-# Android / TWA (CRITICAL)
-# ========================
-.gradle/
-build/
-app/build/
-local.properties
-
-# Android build outputs
+# Android / Bubblewrap / TWA artifacts
+*.keystore
+*.jks
 *.apk
 *.aab
 *.ap_
 *.idsig
+.gradle/
+android/.gradle/
+android/build/
+local.properties
+usedcarsdoctor-bubblewrap/
+gradle/
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+gradle.properties
+manifest-checksum.txt
+store_icon.png
+twa-manifest.json
 
-# Signing keys (NEVER COMMIT)
-*.keystore
-*.jks
-
-# ========================
-# Python (Claude / tools)
-# ========================
+# Python/tool caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# ========================
-# OS files
-# ========================
-.DS_Store
-Thumbs.db
-
-# ========================
-# IDE
-# ========================
-.vscode/
-.idea/
-
-# ========================
-# Misc
-# ========================
-tsc_out.txt
-*.log
-
-# build cache
-*.tsbuildinfo
-
-# debug / test scripts
-test_*.mts
-
+# Local AI assistant/project metadata
 .claude/
+
+# temporary scripts/files
+test_*.mts

@@ -34,6 +34,10 @@ export class ResendEmailProvider implements EmailProvider {
         return { success: false, error: error.message }
       }
 
+      console.info('[email] Resend accepted message', {
+        messageId: data?.id,
+        from: this.from,
+      })
       return { success: true, messageId: data?.id }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null)
     const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
-    const { html } = buildDynamicAppUpdateTemplate(content)
+    const lang = typeof body?.language === 'string' ? body.language : undefined
+    const { html } = buildDynamicAppUpdateTemplate(content, lang)
     return NextResponse.json({ data: { html } })
   } catch (error) {
     logApiError('admin/announcement/preview', 'POST', error)

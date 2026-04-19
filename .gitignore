@@ -50,8 +50,6 @@ android/.gradle/
 android/build/
 local.properties
 usedcarsdoctor-bubblewrap/
-app/
-!src/app/
 gradle/
 gradlew
 gradlew.bat
@@ -72,4 +70,3 @@ __pycache__/
 
 # temporary scripts/files
 test_*.mts
-0

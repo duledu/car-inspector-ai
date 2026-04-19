@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
     const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
+    const lang = typeof body?.language === 'string' ? body.language : undefined
 
     const requestedRecipient = typeof body?.testEmail === 'string' ? body.testEmail.trim().toLowerCase() : ''
     const recipient = requestedRecipient || DEFAULT_ADMIN_TEST_EMAIL || guard.adminEmail
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
       return apiError('A valid test email recipient is required', { status: 422, code: 'VALIDATION_ERROR' })
     }
 
-    const template = buildDynamicAppUpdateTemplate(content)
+    const template = buildDynamicAppUpdateTemplate(content, lang)
     const result   = await sendEmail({
       to:      recipient,
       subject: template.subject,

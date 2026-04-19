@@ -13,7 +13,13 @@ export interface SendResetPasswordEmailInput {
 
 export async function sendResetPasswordEmail(input: SendResetPasswordEmailInput): Promise<SendEmailResult> {
   const token    = await createPasswordResetToken(input.userId)
-  const resetUrl = `${getAppOrigin()}/auth/reset-password?token=${token}`
+  const origin   = getAppOrigin()
+  const resetUrl = `${origin}/auth/reset-password?token=${token}`
+  console.info('[email/reset] token persisted and reset url built', {
+    userId: input.userId,
+    origin,
+  })
+
   const template = buildResetPasswordTemplate({ name: input.name, resetUrl, lang: input.lang })
   const result   = await sendEmail({ to: input.to, subject: template.subject, html: template.html, text: template.text })
   if (!result.success) {

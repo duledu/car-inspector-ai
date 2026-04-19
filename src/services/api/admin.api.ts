@@ -39,15 +39,15 @@ export const adminApi = {
     return data.data
   },
 
-  previewAnnouncement: async (content: AppAnnouncementContent): Promise<string> => {
-    const { data } = await apiClient.post<ApiResponse<{ html: string }>>('/admin/announcement/preview', { content })
+  previewAnnouncement: async (content: AppAnnouncementContent, language = 'en'): Promise<string> => {
+    const { data } = await apiClient.post<ApiResponse<{ html: string }>>('/admin/announcement/preview', { content, language })
     return data.data.html
   },
 
-  sendAnnouncementTest: async (content: AppAnnouncementContent, testEmail?: string): Promise<{ sentTo: string }> => {
+  sendAnnouncementTest: async (content: AppAnnouncementContent, testEmail?: string, language = 'en'): Promise<{ sentTo: string }> => {
     const { data } = await apiClient.post<ApiResponse<{ success: boolean; sentTo: string }>>(
       '/admin/announcement/send-test',
-      { content, testEmail }
+      { content, testEmail, language }
     )
     return data.data
   },
@@ -55,11 +55,12 @@ export const adminApi = {
   sendAnnouncementToAll: async (
     content: AppAnnouncementContent,
     manualEmails: string[],
-    recipientMode: RecipientMode
+    recipientMode: RecipientMode,
+    language = 'en'
   ): Promise<BulkSendResult> => {
     const { data } = await apiClient.post<ApiResponse<BulkSendResult>>(
       '/admin/announcement/send-all',
-      { content, confirmed: true, manualEmails, recipientMode }
+      { content, confirmed: true, manualEmails, recipientMode, language }
     )
     return data.data
   },

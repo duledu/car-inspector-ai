@@ -61,15 +61,14 @@ export function buildBaseTemplate(opts: BaseTemplateOptions): string {
               <!-- Brand -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:36px;">
                 <tr>
-                  <td>
+                  <td style="vertical-align:middle;">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);">Used Cars Doctor</p>
                     <p style="margin:0;font-size:19px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;">
                       <span style="color:#22d3ee;">Used Car</span> Inspector AI
                     </p>
                   </td>
-                  <td align="right" style="vertical-align:top;">
-                    <!-- Decorative icon -->
-                    <div style="width:42px;height:42px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.18);border-radius:10px;display:inline-block;text-align:center;line-height:42px;font-size:20px;">🚗</div>
+                  <td align="right" style="vertical-align:middle;width:36px;">
+                    <img src="https://usedcarsdoctor.com/icons/icon-192.png" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border-radius:6px;" />
                   </td>
                 </tr>
               </table>

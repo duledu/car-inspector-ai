@@ -83,7 +83,7 @@ function parseManualEmails(raw: string): string[] {
   )]
 }
 
-function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage, manualLanguage, onManualLanguageChange }: Readonly<{
+function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage, manualLanguage, onManualLanguageChange, languageNote }: Readonly<{
   raw: string
   onRawChange: (v: string) => void
   mode: RecipientMode
@@ -91,6 +91,7 @@ function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage
   showLanguage: boolean
   manualLanguage: SupportedLang
   onManualLanguageChange: (lang: SupportedLang) => void
+  languageNote?: string
 }>) {
   const parsed  = parseManualEmails(raw)
   const modeLabels: Record<RecipientMode, string> = { db: 'DB users only', manual: 'Manual only', both: 'DB + manual' }
@@ -122,7 +123,7 @@ function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage
       </div>
       {showLanguage && (
         <div style={S.fieldGroup}>
-          <label style={S.label}>Manual recipient language</label>
+          <label style={S.label}>Language</label>
           <select
             style={S.input}
             value={manualLanguage}
@@ -134,9 +135,11 @@ function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage
               </option>
             ))}
           </select>
-          <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
-            DB users receive marketing emails in their own preferred language. Manual recipients use this selected language.
-          </p>
+          {languageNote && (
+            <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
+              {languageNote}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -264,9 +267,12 @@ function RightPanel(props: Readonly<RightPanelProps>) {
           onRawChange={props.onManualEmailsChange}
           mode={props.recipientMode}
           onModeChange={props.onRecipientModeChange}
-          showLanguage={props.campaignType === 'marketing'}
+          showLanguage={true}
           manualLanguage={props.manualLanguage}
           onManualLanguageChange={props.onManualLanguageChange}
+          languageNote={props.campaignType === 'marketing'
+            ? 'DB users receive emails in their own preferred language. Manual recipients use this selected language. Admin-edited content takes priority; this language is used as fallback for empty fields.'
+            : 'Controls system labels (footer, button fallback text) in the rendered email.'}
         />
 
         <div style={S.divider} />
@@ -366,7 +372,7 @@ function MarketingFormFields({ form, onChange }: Readonly<{
     <div style={{ flex: '0 0 520px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={S.card}>
         <p style={{ margin: '0 0 14px', fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
-          Marketing copy is localized for en, sr, de, mk, and sq in the email template. This form controls campaign metadata and destination URLs.
+          All fields are fully editable. Localized defaults exist for en, sr, de, mk, and sq — leave a field empty to use the localized default for the recipient's language.
         </p>
         <p style={S.groupTitle}>Email Metadata</p>
         <Field label="Subject" value={form.subject} onChange={set('subject')} />
@@ -463,7 +469,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     setPreviewing(true)
     try {
       const html = campaignType === 'announcement'
-        ? await adminApi.previewAnnouncement(announcementForm)
+        ? await adminApi.previewAnnouncement(announcementForm, manualLanguage)
         : await adminApi.previewMarketing(marketingForm, manualLanguage)
       setPreviewHtml(html)
     } catch (error) {
@@ -477,7 +483,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     setTestSending(true); setTestResult(null); setBulkError(null)
     try {
       const r = campaignType === 'announcement'
-        ? await adminApi.sendAnnouncementTest(announcementForm, testEmail || undefined)
+        ? await adminApi.sendAnnouncementTest(announcementForm, testEmail || undefined, manualLanguage)
         : await adminApi.sendMarketingTest(marketingForm, testEmail || undefined, manualLanguage)
       setTestResult(`✓ Sent to ${r.sentTo}`)
     } catch (error) {
@@ -493,7 +499,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     const manual = parseManualEmails(manualEmailsRaw)
     try {
       const result = campaignType === 'announcement'
-        ? await adminApi.sendAnnouncementToAll(announcementForm, manual, recipientMode)
+        ? await adminApi.sendAnnouncementToAll(announcementForm, manual, recipientMode, manualLanguage)
         : await adminApi.sendMarketingToAll(marketingForm, manual, recipientMode, manualLanguage)
       setBulkResult(result)
     } catch (error) {

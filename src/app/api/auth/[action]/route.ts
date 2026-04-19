@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { prisma } from '@/config/prisma'
 import { issueTokens, requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
@@ -34,7 +35,7 @@ const refreshSchema = z.object({
 })
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
 })
 
 const resetPasswordSchema = z.object({
@@ -132,6 +133,10 @@ function toUserDto(user: { id: string; email: string; name: string; avatarUrl: s
     emailVerified:     !!user.emailVerified,
     createdAt:         user.createdAt.toISOString(),
   }
+}
+
+function hashEmailForLogs(email: string): string {
+  return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12)
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -269,23 +274,47 @@ async function handleForgotPassword(body: unknown) {
     return apiError('Valid email required', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
+  const requestedEmail = parsed.data.email
+  const emailHash = hashEmailForLogs(requestedEmail)
+  console.info('[auth/forgot-password] request received', { emailHash })
+
   try {
-    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } })
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: requestedEmail, mode: 'insensitive' } },
+    })
+
     // Always return success to prevent email enumeration
-    if (!user?.passwordHash) {
+    if (!user) {
+      console.info('[auth/forgot-password] user lookup missed', { emailHash })
       return NextResponse.json({ data: { success: true } })
     }
 
+    console.info('[auth/forgot-password] user lookup matched', {
+      emailHash,
+      userId: user.id,
+      hasPasswordHash: !!user.passwordHash,
+    })
+
     const emailResult = await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     if (!emailResult.success) {
-      console.error('[auth/forgot-password] reset email failed:', emailResult.error)
+      console.error('[auth/forgot-password] reset email failed', {
+        emailHash,
+        userId: user.id,
+        error: emailResult.error,
+      })
       // Surface real system failures — the user exists so we are not leaking account presence
       return apiError('Failed to send reset email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
     }
 
+    console.info('[auth/forgot-password] reset email sent', {
+      emailHash,
+      userId: user.id,
+      messageId: emailResult.messageId,
+    })
+
     return NextResponse.json({ data: { success: true } })
   } catch (error) {
-    logApiError('auth/forgot-password', 'forgotPassword', error)
+    logApiError('auth/forgot-password', 'forgotPassword', error, { emailHash })
     return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })
   }
 }

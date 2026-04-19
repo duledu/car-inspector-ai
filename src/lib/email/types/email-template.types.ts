@@ -14,6 +14,7 @@ export interface BaseEmailTemplateProps {
   ctaUrl: string
   footnote?: string
   supportEmail?: string
+  lang?: string
   cards?: EmailCardItem[]
   secondaryTitle?: string
   secondaryBody?: string

@@ -1,9 +1,20 @@
 import { escHtml } from './template-utils'
 import type { BaseEmailTemplateProps, EmailCardItem } from '../types/email-template.types'
 
+function getBaseLabels(lang?: string) {
+  switch (lang) {
+    case 'sr': return { buttonFallback: 'Dugme ne radi? Kopirajte ovaj link:', productLine: 'AI pregled polovnih vozila', questions: 'Pitanja?' }
+    case 'de': return { buttonFallback: 'Schaltfläche funktioniert nicht? Kopieren Sie diesen Link:', productLine: 'KI-gestützte Fahrzeugprüfung', questions: 'Fragen?' }
+    case 'mk': return { buttonFallback: 'Копчето не работи? Копирајте го овој линк:', productLine: 'AI проверка на возила', questions: 'Прашања?' }
+    case 'sq': return { buttonFallback: 'Butoni nuk funksionon? Kopjojeni këtë lidhje:', productLine: 'Inspektim automjeti me AI', questions: 'Pyetje?' }
+    default:   return { buttonFallback: 'Button not working? Copy this link:', productLine: 'AI-powered vehicle inspection', questions: 'Questions?' }
+  }
+}
+
 export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
   const support = opts.supportEmail ?? 'support@usedcarsdoctor.com'
   const year    = new Date().getFullYear()
+  const labels  = getBaseLabels(opts.lang)
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -50,8 +61,8 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                       <span style="color:#00c2ff;">Used Car</span> Inspector AI
                     </p>
                   </td>
-                  <td align="right" style="vertical-align:top;">
-                    <div style="width:44px;height:44px;background:rgba(0,194,255,0.07);border:1px solid rgba(0,194,255,0.18);border-radius:12px;display:inline-block;text-align:center;line-height:44px;font-size:22px;">🚗</div>
+                  <td align="right" style="vertical-align:middle;width:36px;">
+                    <img src="https://usedcarsdoctor.com/icons/icon-192.png" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border-radius:6px;" />
                   </td>
                 </tr>
               </table>
@@ -97,7 +108,7 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                 <tr>
                   <td style="background:rgba(0,194,255,0.04);border:1px solid rgba(0,194,255,0.1);border-radius:10px;padding:14px 16px;">
                     <p style="margin:0 0 5px;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:rgba(255,255,255,0.28);">
-                      Button not working? Copy this link:
+                      ${labels.buttonFallback}
                     </p>
                     <p style="margin:0;font-size:12px;color:#00c2ff;word-break:break-all;line-height:1.5;">
                       <a href="${opts.ctaUrl}" target="_blank" style="color:#00c2ff;text-decoration:underline;">${opts.ctaUrl}</a>
@@ -129,10 +140,10 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
               <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.18);">
-                © ${year} Used Cars Doctor · AI-powered vehicle inspection
+                © ${year} Used Cars Doctor · ${labels.productLine}
               </p>
               <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.18);">
-                Questions? <a href="mailto:${support}" style="color:rgba(0,194,255,0.4);text-decoration:none;">${support}</a>
+                ${labels.questions} <a href="mailto:${support}" style="color:rgba(0,194,255,0.4);text-decoration:none;">${support}</a>
               </p>
             </td>
           </tr>

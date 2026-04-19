@@ -33,7 +33,7 @@ export function buildAppUpdateTemplate(opts: AppUpdateTemplateProps): { html: st
   return { html, text, subject: s.subject }
 }
 
-export function buildDynamicAppUpdateTemplate(content: AppAnnouncementContent): { html: string; text: string; subject: string } {
+export function buildDynamicAppUpdateTemplate(content: AppAnnouncementContent, lang?: string): { html: string; text: string; subject: string } {
   const cards: EmailCardItem[] = [
     { icon: content.card1Icon, title: content.card1Title, description: content.card1Description },
     { icon: content.card2Icon, title: content.card2Title, description: content.card2Description },
@@ -64,6 +64,7 @@ export function buildDynamicAppUpdateTemplate(content: AppAnnouncementContent): 
     bodyContent:       bodyParts.join('\n'),
     ctaLabel:          content.ctaLabel,
     ctaUrl:            content.ctaUrl,
+    lang,
     cards:             cards.length > 0 ? cards : undefined,
     footnote:          content.footnote    || undefined,
     secondaryTitle:    content.secondaryTitle    || undefined,

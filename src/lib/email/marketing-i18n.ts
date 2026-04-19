@@ -84,15 +84,26 @@ export function localizeMarketingContent(
   base: MarketingCampaignContent,
   rawLang: string | null | undefined,
 ): { content: MarketingCampaignContent; lang: SupportedLang } {
-  const lang = resolveMarketingLang(rawLang)
+  const lang     = resolveMarketingLang(rawLang)
+  const defaults = marketingTranslations[lang]
 
   return {
     lang,
     content: {
-      ...marketingTranslations[lang],
       campaignName:      base.campaignName,
+      subject:           base.subject           || defaults.subject,
+      previewText:       base.previewText        || defaults.previewText,
+      headline:          base.headline           || defaults.headline,
+      introParagraph:    base.introParagraph     || defaults.introParagraph,
+      ctaLabel:          base.ctaLabel           || defaults.ctaLabel,
       ctaUrl:            base.ctaUrl,
+      value1:            base.value1             || defaults.value1,
+      value2:            base.value2             || defaults.value2,
+      value3:            base.value3             || defaults.value3,
+      trustParagraph:    base.trustParagraph     || defaults.trustParagraph,
+      secondaryCtaLabel: base.secondaryCtaLabel  || defaults.secondaryCtaLabel,
       secondaryCtaUrl:   base.secondaryCtaUrl,
+      footerNote:        base.footerNote         || defaults.footerNote,
     },
   }
 }

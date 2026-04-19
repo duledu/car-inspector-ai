@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
+    const lang = typeof body?.language === 'string' ? body.language : undefined
     const manualEmails: string[]          = Array.isArray(body?.manualEmails) ? body.manualEmails : []
     const recipientMode: RecipientMode    = (['db', 'manual', 'both'] as RecipientMode[]).includes(body?.recipientMode)
       ? (body.recipientMode as RecipientMode)
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       return apiError('At least one valid manual recipient email is required', { status: 422, code: 'VALIDATION_ERROR' })
     }
 
-    const template = buildDynamicAppUpdateTemplate(content)
+    const template = buildDynamicAppUpdateTemplate(content, lang)
     const result   = await sendBulkEmails({ template, manualEmails, recipientMode })
 
     return NextResponse.json({ data: result })
