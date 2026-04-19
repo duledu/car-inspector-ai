@@ -61,8 +61,8 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                       <span style="color:#00c2ff;">Used Car</span> Inspector AI
                     </p>
                   </td>
-                  <td align="right" style="vertical-align:middle;width:36px;">
-                    <img src="https://usedcarsdoctor.com/icons/icon-192.png" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border-radius:6px;" />
+                  <td align="right" style="vertical-align:middle;width:41px;">
+                    <img src="https://usedcarsdoctor.com/icons/logo_usedcarsdoctor_no_bg_newlast.svg" width="41" height="34" alt="" style="display:block;width:41px;height:34px;" />
                   </td>
                 </tr>
               </table>
