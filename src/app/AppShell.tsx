@@ -11,11 +11,28 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
+import { isSupportedLang, LANG_COOKIE } from '@/i18n/shared'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { AmbientBackground } from '@/components/layout/AmbientBackground'
+
+// Applies the authenticated user's saved language preference to i18n + cookie.
+// Runs whenever preferredLanguage changes in the store (login, register, profile update).
+function UserLangSync() {
+  const { i18n } = useTranslation()
+  const preferredLanguage = useUserStore(state => state.user?.preferredLanguage)
+
+  useEffect(() => {
+    if (!preferredLanguage || !isSupportedLang(preferredLanguage)) return
+    if (i18n.language === preferredLanguage) return
+    i18n.changeLanguage(preferredLanguage)
+    document.cookie = `${LANG_COOKIE}=${encodeURIComponent(preferredLanguage)}; Path=/; Max-Age=31536000; SameSite=Lax`
+  }, [preferredLanguage, i18n])
+
+  return null
+}
 
 // Maps pathnames to topbar translation key slugs (used for mobile header title)
 const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
@@ -74,6 +91,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <>
+      <UserLangSync />
       {/* ── Desktop layout (768px+) ── */}
       <div
         className="desktop-only app-readability"

@@ -83,6 +83,36 @@ const sq = {
   'auth.error.googleEmailUnverified': 'Email-i i llogarisë suaj Google duhet të jetë i verifikuar para hyrjes.',
   'auth.googleContinue':          'Vazhdo me Google',
   'auth.orDivider':               'ose',
+  'auth.forgotPasswordLink':      'Keni harruar fjalëkalimin?',
+  'auth.backToSignIn':            'Kthehu tek hyrja',
+
+  'auth.forgotPassword.title':     'Keni harruar fjalëkalimin?',
+  'auth.forgotPassword.subtitle':  'Shkruani adresën tuaj të e-mailit dhe do t\'ju dërgojmë një lidhje për rivendosje.',
+  'auth.forgotPassword.submit':    'Dërgo lidhjen e rivendosjes',
+  'auth.forgotPassword.sending':   'Duke dërguar…', // NOSONAR
+  'auth.forgotPassword.sentTitle': 'Kontrolloni e-mailin',
+  'auth.forgotPassword.sentBody':  'Nëse ekziston një llogari për {{email}}, së shpejti do të merrni një lidhje. Kontrolloni edhe dosjen e postës së padëshiruar.',
+  'auth.forgotPassword.error':     'Diçka shkoi keq. Ju lutemi provoni përsëri.',
+
+  'auth.resetPassword.title':            'Vendosni fjalëkalim të ri',
+  'auth.resetPassword.subtitle':         'Zgjidhni një fjalëkalim të fortë për llogarinë tuaj.',
+  'auth.resetPassword.newPasswordLabel': 'Fjalëkalim i ri',
+  'auth.resetPassword.submit':           'Ruaj fjalëkalimin e ri',
+  'auth.resetPassword.saving':           'Duke ruajtur…',
+  'auth.resetPassword.doneTitle':        'Fjalëkalimi u përditësua',
+  'auth.resetPassword.doneBody':         'Fjalëkalimi juaj u ndryshua. Së shpejti do të ridrejtoheni.',
+  'auth.resetPassword.expired':          'Kjo lidhje ka skaduar. Ju lutemi kërkoni një të re.',
+  'auth.resetPassword.error':            'Lidhje e pavlefshme ose tashmë e përdorur. Ju lutemi kërkoni një të re.',
+  'auth.resetPassword.noToken':          'Nuk u gjet asnjë shenjë. Ju lutemi përdorni lidhjen nga e-maili juaj.',
+
+  'auth.verifyEmail.verifyingTitle': 'Po verifikohet e-maili…',
+  'auth.verifyEmail.verifyingBody':  'Ju lutemi prisni ndërsa verifikojmë adresën tuaj të e-mailit.',
+  'auth.verifyEmail.successTitle':   'E-maili u verifikua',
+  'auth.verifyEmail.successBody':    'Adresa juaj e e-mailit u verifikua. Tani mund të hyni.',
+  'auth.verifyEmail.expiredTitle':   'Lidhja ka skaduar',
+  'auth.verifyEmail.expiredBody':    'Kjo lidhje ka skaduar. Hyni dhe kërkoni një e-mail verifikimi të ri.',
+  'auth.verifyEmail.invalidTitle':   'Lidhje e pavlefshme',
+  'auth.verifyEmail.invalidBody':    'Kjo lidhje është e pavlefshme ose tashmë është përdorur.',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Kthehu në faqen kryesore',
@@ -499,8 +529,13 @@ const sq = {
   'profile.signOut':          'Dil',
   'profile.signOutDesc':      'Do të ridrejtoheni te faqja e hyrjes.',
   'profile.carverticalReport':'Raport historiku CarVertical',
-  'profile.failedToSave':     'Ruajtja dështoi',
-  'profile.legal':            'Ligjore',
+  'profile.failedToSave':       'Ruajtja dështoi',
+  'profile.legal':              'Ligjore',
+  'profile.language':           'Gjuha e aplikacionit',
+  'profile.languageDesc':       'Gjuha juaj e preferuar do të zbatohet çdo herë që hyni.',
+  'profile.languageSaveError':  'Ruajtja e preferencës së gjuhës dështoi.',
+  'auth.preferredLanguage':     'Gjuha e aplikacionit',
+  'common.saving':              'Duke ruajtur…',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Paneli kryesor',

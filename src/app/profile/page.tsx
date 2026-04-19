@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useUserStore, useVehicleStore, usePaymentStore, useInspectionStore } from '@/store'
+import { SUPPORTED_LANGS, LANG_META, isSupportedLang } from '@/i18n/shared'
+import type { SupportedLang } from '@/i18n/shared'
 import AppShell from '../AppShell'
 
 const STATUS_COLOR: Record<string, string> = {
@@ -44,6 +46,11 @@ export default function ProfilePage() {
   const [name,      setName]      = useState(user?.name ?? '')
   const [saving,    setSaving]    = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  const rawLang = user?.preferredLanguage
+  const currentLang: SupportedLang = isSupportedLang(rawLang) ? rawLang : 'en'
+  const [langSaving,    setLangSaving]    = useState(false)
+  const [langSaveError, setLangSaveError] = useState<string | null>(null)
 
   const handleLogout = async () => {
     await logout()
@@ -234,6 +241,55 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+
+        {/* ── Language preference ── */}
+        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+            {t('profile.language')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <select
+                value={currentLang}
+                onChange={async (e) => {
+                  const selected = e.target.value as SupportedLang
+                  setLangSaving(true)
+                  setLangSaveError(null)
+                  try {
+                    await updateProfile({ preferredLanguage: selected })
+                  } catch {
+                    setLangSaveError(t('profile.languageSaveError'))
+                  } finally {
+                    setLangSaving(false)
+                  }
+                }}
+                disabled={langSaving}
+                style={{
+                  width: '100%', padding: '11px 13px', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+                  borderRadius: 10, fontSize: 14, color: langSaving ? 'rgba(255,255,255,0.4)' : '#fff',
+                  fontFamily: 'var(--font-sans)', outline: 'none', cursor: langSaving ? 'not-allowed' : 'pointer',
+                  appearance: 'none', WebkitAppearance: 'none',
+                }}
+              >
+                {SUPPORTED_LANGS.map(l => (
+                  <option key={l} value={l} style={{ background: '#0d1420', color: '#fff' }}>
+                    {LANG_META[l].full}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {langSaving && (
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{t('common.saving')}</span>
+            )}
+          </div>
+          {langSaveError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>{langSaveError}</div>
+          )}
+          <p style={{ margin: '10px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
+            {t('profile.languageDesc')}
+          </p>
+        </div>
 
         {/* Legal links */}
         <div style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14 }}>

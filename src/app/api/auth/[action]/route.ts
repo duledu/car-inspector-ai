@@ -9,6 +9,9 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/config/prisma'
 import { issueTokens, requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { consumeEmailVerificationToken, consumePasswordResetToken } from '@/lib/email/token-utils'
+import { sendVerifyEmail } from '@/lib/email/senders/send-verify-email'
+import { sendResetPasswordEmail } from '@/lib/email/senders/send-reset-password-email'
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -17,14 +20,30 @@ const loginSchema = z.object({
   password: z.string().min(8),
 })
 
+const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq'] as const
+
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
   password: z.string().min(8).max(128),
+  preferredLanguage: z.enum(SUPPORTED_LANGS).optional().default('en'),
 })
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
+})
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+})
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
+})
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
 })
 
 // ─── Route Handlers ──────────────────────────────────────────────────────────
@@ -45,6 +64,14 @@ export async function POST(
     case 'logout':
       // Stateless JWTs — client discards tokens. No server action needed.
       return NextResponse.json({ data: { success: true } })
+    case 'forgot-password':
+      return handleForgotPassword(body)
+    case 'reset-password':
+      return handleResetPassword(body)
+    case 'send-verification':
+      return handleSendVerification(req)
+    case 'verify-email':
+      return handleVerifyEmail(body)
     default:
       return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
   }
@@ -68,6 +95,20 @@ export async function PATCH(
     return handleUpdateProfile(req)
   }
   return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
+}
+
+// ─── DTO helper ──────────────────────────────────────────────────────────────
+
+function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; createdAt: Date }) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    preferredLanguage: user.preferredLanguage ?? 'en',
+    createdAt: user.createdAt.toISOString(),
+  }
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -102,19 +143,7 @@ async function handleLogin(body: unknown) {
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
 
     return NextResponse.json({
-      data: {
-        accessToken,
-        refreshToken,
-        expiresAt,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatarUrl: user.avatarUrl,
-          role: user.role,
-          createdAt: user.createdAt.toISOString(),
-        },
-      },
+      data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
     })
   } catch (error) {
     logApiError('auth/login', 'login', error)
@@ -142,27 +171,18 @@ async function handleRegister(body: unknown) {
       email: parsed.data.email,
       passwordHash,
       role: 'USER',
+      preferredLanguage: parsed.data.preferredLanguage,
     },
   })
 
   const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
 
+  // Fire-and-forget — never block registration on email delivery
+  sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    .catch(err => console.error('[register] verification email failed:', err))
+
   return NextResponse.json(
-    {
-      data: {
-        accessToken,
-        refreshToken,
-        expiresAt,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatarUrl: user.avatarUrl,
-          role: user.role,
-          createdAt: user.createdAt.toISOString(),
-        },
-      },
-    },
+    { data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) } },
     { status: 201 }
   )
 }
@@ -192,19 +212,7 @@ async function handleRefresh(body: unknown) {
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
 
     return NextResponse.json({
-      data: {
-        accessToken,
-        refreshToken,
-        expiresAt,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatarUrl: user.avatarUrl,
-          role: user.role,
-          createdAt: user.createdAt.toISOString(),
-        },
-      },
+      data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
     })
   } catch {
     return apiError('Invalid or expired refresh token', { status: 401, code: 'INVALID_REFRESH_TOKEN' })
@@ -222,16 +230,94 @@ async function handleGetMe(req: NextRequest) {
     return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
   }
 
-  return NextResponse.json({
-    data: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      role: user.role,
-      createdAt: user.createdAt.toISOString(),
-    },
-  })
+  return NextResponse.json({ data: toUserDto(user) })
+}
+
+async function handleForgotPassword(body: unknown) {
+  const parsed = forgotPasswordSchema.safeParse(body)
+  if (!parsed.success) {
+    return apiError('Valid email required', { status: 422, code: 'VALIDATION_ERROR' })
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } })
+    // Always return success to prevent email enumeration
+    if (!user?.passwordHash) {
+      return NextResponse.json({ data: { success: true } })
+    }
+
+    await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+
+    return NextResponse.json({ data: { success: true } })
+  } catch (error) {
+    logApiError('auth/forgot-password', 'forgotPassword', error)
+    return NextResponse.json({ data: { success: true } }) // never expose errors
+  }
+}
+
+async function handleResetPassword(body: unknown) {
+  const parsed = resetPasswordSchema.safeParse(body)
+  if (!parsed.success) {
+    return apiError('Invalid request', { status: 422, code: 'VALIDATION_ERROR' })
+  }
+
+  try {
+    const result = await consumePasswordResetToken(parsed.data.token)
+    if ('error' in result) {
+      const msg = result.error === 'expired' ? 'This reset link has expired. Please request a new one.' : 'Invalid or already used reset link.'
+      return apiError(msg, { status: 400, code: 'INVALID_TOKEN' })
+    }
+
+    const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12)
+    await prisma.user.update({ where: { id: result.userId }, data: { passwordHash } })
+
+    return NextResponse.json({ data: { success: true } })
+  } catch (error) {
+    logApiError('auth/reset-password', 'resetPassword', error)
+    return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })
+  }
+}
+
+async function handleSendVerification(req: NextRequest) {
+  const authResult = await requireAuth(req)
+  if (!authResult.success) {
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: authResult.userId } })
+    if (!user) return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
+    if (user.emailVerified) return NextResponse.json({ data: { success: true, alreadyVerified: true } })
+
+    await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+
+    return NextResponse.json({ data: { success: true } })
+  } catch (error) {
+    logApiError('auth/send-verification', 'sendVerification', error)
+    return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })
+  }
+}
+
+async function handleVerifyEmail(body: unknown) {
+  const parsed = verifyEmailSchema.safeParse(body)
+  if (!parsed.success) {
+    return apiError('Token required', { status: 422, code: 'VALIDATION_ERROR' })
+  }
+
+  try {
+    const result = await consumeEmailVerificationToken(parsed.data.token)
+    if ('error' in result) {
+      const msg = result.error === 'expired' ? 'This verification link has expired. Please request a new one.' : 'Invalid or already used verification link.'
+      return apiError(msg, { status: 400, code: 'INVALID_TOKEN' })
+    }
+
+    await prisma.user.update({ where: { id: result.userId }, data: { emailVerified: new Date() } })
+
+    return NextResponse.json({ data: { success: true } })
+  } catch (error) {
+    logApiError('auth/verify-email', 'verifyEmail', error)
+    return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })
+  }
 }
 
 async function handleUpdateProfile(req: NextRequest) {
@@ -244,6 +330,7 @@ async function handleUpdateProfile(req: NextRequest) {
   const schema = z.object({
     name: z.string().min(2).max(100).optional(),
     avatarUrl: z.string().url().nullable().optional(),
+    preferredLanguage: z.enum(SUPPORTED_LANGS).optional(),
   })
 
   const parsed = schema.safeParse(body)
@@ -256,14 +343,5 @@ async function handleUpdateProfile(req: NextRequest) {
     data: { ...parsed.data },
   })
 
-  return NextResponse.json({
-    data: {
-      id: updated.id,
-      email: updated.email,
-      name: updated.name,
-      avatarUrl: updated.avatarUrl,
-      role: updated.role,
-      createdAt: updated.createdAt.toISOString(),
-    },
-  })
+  return NextResponse.json({ data: toUserDto(updated) })
 }

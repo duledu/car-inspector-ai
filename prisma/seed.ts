@@ -1,15 +1,12 @@
 // =============================================================================
-// Prisma Seed — dev accounts
+// Prisma Seed - development accounts
 //
-// Creates two accounts if they do not already exist:
-//   1. admin@test.com / Admin123!    — ADMIN role, full access
-//   2. duledu25@gmail.com / duledu25 — USER role, original dev account
+// Creates optional local accounts for development. Configure credentials with:
+//   SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_USER_EMAIL, SEED_USER_PASSWORD
 //
-// Safe to run multiple times (idempotent — skips existing accounts).
-// Run: npm run db:seed
+// Passwords are never printed to the console.
 // =============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import { PrismaClient } from '.prisma/client'
 import bcrypt from 'bcryptjs'
 
@@ -24,28 +21,48 @@ interface SeedAccount {
   role: Role
 }
 
-// Dev-only defaults — override via env vars in any environment
-const DEV_ADMIN_CREDS = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!'
-const DEV_USER_CREDS  = process.env.SEED_USER_PASSWORD  ?? 'duledu25'
+function getSeedAccounts(): SeedAccount[] {
+  const accounts: SeedAccount[] = []
 
-const SEED_ACCOUNTS: SeedAccount[] = [
-  { email: 'admin@test.com',       password: DEV_ADMIN_CREDS, name: 'Admin',             role: 'ADMIN' },
-  { email: 'duledu25@gmail.com',   password: DEV_USER_CREDS,  name: 'Dusan Stevanovic',  role: 'USER'  },
-]
+  const adminEmail = process.env.SEED_ADMIN_EMAIL
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD
+  if (adminEmail && adminPassword) {
+    accounts.push({
+      email: adminEmail,
+      password: adminPassword,
+      name: process.env.SEED_ADMIN_NAME ?? 'Admin',
+      role: 'ADMIN',
+    })
+  }
+
+  const userEmail = process.env.SEED_USER_EMAIL
+  const userPassword = process.env.SEED_USER_PASSWORD
+  if (userEmail && userPassword) {
+    accounts.push({
+      email: userEmail,
+      password: userPassword,
+      name: process.env.SEED_USER_NAME ?? 'Test User',
+      role: 'USER',
+    })
+  }
+
+  return accounts
+}
 
 async function upsertAccount(account: SeedAccount) {
   const existing = await prisma.user.findUnique({ where: { email: account.email } })
 
   if (existing) {
     if (existing.role === account.role) {
-      console.log(`  ${account.email} already exists (${account.role}) — skipped`)
+      console.log(`  ${account.email} already exists (${account.role}) - skipped`)
       return
     }
+
     await prisma.user.update({
       where: { email: account.email },
       data: { role: account.role },
     })
-    console.log(`↑ Updated role for ${account.email} → ${account.role}`)
+    console.log(`  Updated role for ${account.email} -> ${account.role}`)
     return
   }
 
@@ -59,20 +76,21 @@ async function upsertAccount(account: SeedAccount) {
     },
   })
 
-  console.log(`✔ Created ${user.role}: ${user.email}`)
-  console.log(`  Password : ${account.password}`)
-  console.log(`  ID       : ${user.id}`)
+  console.log(`  Created ${user.role}: ${user.email}`)
 }
 
 async function main() {
-  console.log('\n── Seeding dev accounts ─────────────────────────\n')
-  for (const account of SEED_ACCOUNTS) {
+  const accounts = getSeedAccounts()
+
+  console.log('\nSeeding development accounts\n')
+  if (accounts.length === 0) {
+    console.log('  No seed accounts configured. Set SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD or SEED_USER_EMAIL/SEED_USER_PASSWORD.')
+    return
+  }
+
+  for (const account of accounts) {
     await upsertAccount(account)
   }
-  console.log('\n─────────────────────────────────────────────────')
-  console.log('Admin : admin@test.com     / Admin123!')
-  console.log('User  : duledu25@gmail.com / duledu25')
-  console.log('─────────────────────────────────────────────────\n')
 }
 
 main()

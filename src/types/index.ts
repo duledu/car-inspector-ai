@@ -13,6 +13,7 @@ export interface AuthUser {
   name: string
   avatarUrl?: string | null
   role: UserRole
+  preferredLanguage?: string | null
   createdAt: string
 }
 
@@ -32,6 +33,7 @@ export interface RegisterPayload {
   name: string
   email: string
   password: string
+  preferredLanguage?: string
 }
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────

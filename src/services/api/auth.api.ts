@@ -31,7 +31,7 @@ export const authApi = {
     return data.data
   },
 
-  updateProfile: async (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl'>>): Promise<AuthUser> => {
+  updateProfile: async (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage'>>): Promise<AuthUser> => {
     const { data } = await apiClient.patch<ApiResponse<AuthUser>>('/auth/me', updates)
     return data.data
   },
@@ -42,5 +42,13 @@ export const authApi = {
 
   resetPassword: async (token: string, newPassword: string): Promise<void> => {
     await apiClient.post('/auth/reset-password', { token, newPassword })
+  },
+
+  sendVerificationEmail: async (): Promise<void> => {
+    await apiClient.post('/auth/send-verification')
+  },
+
+  verifyEmail: async (token: string): Promise<void> => {
+    await apiClient.post('/auth/verify-email', { token })
   },
 }

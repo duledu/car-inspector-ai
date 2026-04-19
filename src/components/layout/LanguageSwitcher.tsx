@@ -9,11 +9,13 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGS, LANG_META, LS_KEY, LANG_COOKIE } from '@/i18n'
 import type { SupportedLang } from '@/i18n'
+import { useUserStore } from '@/store'
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref  = useRef<HTMLDivElement>(null)
+  const { user, updateProfile } = useUserStore()
 
   const current = (
     (SUPPORTED_LANGS as readonly string[]).includes(i18n.language)
@@ -27,7 +29,11 @@ export function LanguageSwitcher() {
     try { localStorage.setItem(LS_KEY, lang) } catch { /* ignore */ }
     document.cookie = `${LANG_COOKIE}=${encodeURIComponent(lang)}; Path=/; Max-Age=31536000; SameSite=Lax`
     setOpen(false)
-  }, [current, i18n])
+    // For authenticated users, persist the choice to their profile
+    if (user) {
+      updateProfile({ preferredLanguage: lang }).catch(() => { /* non-critical */ })
+    }
+  }, [current, i18n, user, updateProfile])
 
   // Close on outside click
   useEffect(() => {

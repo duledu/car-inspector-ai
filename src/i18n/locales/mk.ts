@@ -83,6 +83,36 @@ const mk = {
   'auth.error.googleEmailUnverified': 'Email адресата на Google сметката мора да биде потврдена пред најавување.',
   'auth.googleContinue':          'Продолжете со Google',
   'auth.orDivider':               'или',
+  'auth.forgotPasswordLink':      'Ја заборавивте лозинката?',
+  'auth.backToSignIn':            'Назад кон најава',
+
+  'auth.forgotPassword.title':     'Ја заборавивте лозинката?',
+  'auth.forgotPassword.subtitle':  'Внесете ја вашата е-пошта и ќе ви испратиме линк за ресетирање.',
+  'auth.forgotPassword.submit':    'Испрати линк за ресетирање',
+  'auth.forgotPassword.sending':   'Испраќање…', // NOSONAR
+  'auth.forgotPassword.sentTitle': 'Проверете ја е-поштата',
+  'auth.forgotPassword.sentBody':  'Ако постои сметка за {{email}}, наскоро ќе добиете линк. Проверете го и спамот.',
+  'auth.forgotPassword.error':     'Нешто тргна наопаку. Обидете се повторно.',
+
+  'auth.resetPassword.title':            'Поставете нова лозинка',
+  'auth.resetPassword.subtitle':         'Изберете силна лозинка за вашата сметка.',
+  'auth.resetPassword.newPasswordLabel': 'Нова лозинка',
+  'auth.resetPassword.submit':           'Зачувај нова лозинка',
+  'auth.resetPassword.saving':           'Зачувување…',
+  'auth.resetPassword.doneTitle':        'Лозинката е сменета',
+  'auth.resetPassword.doneBody':         'Вашата лозинка е сменета. Наскоро ќе бидете пренасочени.',
+  'auth.resetPassword.expired':          'Овој линк истече. Побарајте нов.',
+  'auth.resetPassword.error':            'Неважечки или веќе употребен линк. Побарајте нов.',
+  'auth.resetPassword.noToken':          'Токенот не е пронајден. Користете го линкот од е-поштата.',
+
+  'auth.verifyEmail.verifyingTitle': 'Потврдување на е-пошта…',
+  'auth.verifyEmail.verifyingBody':  'Ве молиме почекајте додека ја потврдуваме вашата е-пошта.',
+  'auth.verifyEmail.successTitle':   'Е-поштата е потврдена',
+  'auth.verifyEmail.successBody':    'Вашата е-пошта е потврдена. Можете да се најавите.',
+  'auth.verifyEmail.expiredTitle':   'Линкот истече',
+  'auth.verifyEmail.expiredBody':    'Овој линк истече. Најавете се и побарајте нов.',
+  'auth.verifyEmail.invalidTitle':   'Неважечки линк',
+  'auth.verifyEmail.invalidBody':    'Овој линк е неважечки или веќе е употребен.',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Назад на почетна',
@@ -499,8 +529,13 @@ const mk = {
   'profile.signOut':          'Одјава',
   'profile.signOutDesc':      'Ќе бидете пренасочени кон страницата за најава.',
   'profile.carverticalReport':'CarVertical извештај за историја',
-  'profile.failedToSave':     'Зачувувањето не успеа',
-  'profile.legal':            'Правно',
+  'profile.failedToSave':       'Зачувувањето не успеа',
+  'profile.legal':              'Правно',
+  'profile.language':           'Јазик на апликацијата',
+  'profile.languageDesc':       'Вашиот претпочитан јазик ќе биде применет при секое најавување.',
+  'profile.languageSaveError':  'Зачувувањето на јазичната поставка не успеа.',
+  'auth.preferredLanguage':     'Јазик на апликацијата',
+  'common.saving':              'Зачувување…',
 
   // ─── Topbar ───────────────────────────────────────────────────────────────────
   'topbar.dashboard.title':   'Контролна табла',

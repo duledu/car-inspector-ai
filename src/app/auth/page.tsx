@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
+import { SUPPORTED_LANGS, LANG_META, isSupportedLang, LANG_COOKIE } from '@/i18n/shared'
+import type { SupportedLang } from '@/i18n/shared'
 import { balanceHeadlineText } from '@/lib/typography'
 
 type Tab = 'login' | 'register'
@@ -39,6 +41,12 @@ function AuthPageContent() {
   const [email,        setEmail]        = useState('')
   const [password,     setPassword]     = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [lang,         setLang]         = useState<SupportedLang>(() => {
+    if (typeof document === 'undefined') return 'en'
+    const cookie = document.cookie.split('; ').find(r => r.startsWith(`${LANG_COOKIE}=`))
+    const val = cookie ? decodeURIComponent(cookie.split('=')[1] ?? '') : null
+    return isSupportedLang(val) ? val : 'en'
+  })
 
   useEffect(() => { if (isAuthenticated) router.replace(redirect) }, [isAuthenticated])
   useEffect(() => { clearError() },                                   [tab])
@@ -55,8 +63,11 @@ function AuthPageContent() {
     e.preventDefault()
     clearError()
     try {
-      if (tab === 'login') await login({ email, password })
-      else                 await register({ name, email, password })
+      if (tab === 'login') {
+        await login({ email, password })
+      } else {
+        await register({ name, email, password, preferredLanguage: lang })
+      }
       router.replace(redirect)
     } catch { /* error shown via store */ }
   }
@@ -269,6 +280,45 @@ function AuthPageContent() {
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 {t(error)}
+              </div>
+            )}
+
+            {/* Language preference — register tab only */}
+            {tab === 'register' && (
+              <div>
+                <label htmlFor="auth-lang" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
+                  {t('auth.preferredLanguage')}
+                </label>
+                <select
+                  id="auth-lang"
+                  value={lang}
+                  onChange={e => setLang(e.target.value as SupportedLang)}
+                  style={{
+                    width: '100%', padding: '13px 14px', boxSizing: 'border-box',
+                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+                    borderRadius: 11, fontSize: 15, color: '#fff',
+                    fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer',
+                    appearance: 'none', WebkitAppearance: 'none',
+                  }}
+                >
+                  {SUPPORTED_LANGS.map(l => (
+                    <option key={l} value={l} style={{ background: '#0d1420', color: '#fff' }}>
+                      {LANG_META[l].full}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Forgot password — login tab only */}
+            {tab === 'login' && (
+              <div style={{ textAlign: 'right', marginTop: -4 }}>
+                <Link href="/auth/forgot-password" style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#22d3ee' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)' }}
+                >
+                  {t('auth.forgotPasswordLink')}
+                </Link>
               </div>
             )}
 

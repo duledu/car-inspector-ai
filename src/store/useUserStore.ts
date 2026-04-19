@@ -42,7 +42,7 @@ interface UserActions {
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
   clearError: () => void
-  updateProfile: (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl'>>) => Promise<void>
+  updateProfile: (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage'>>) => Promise<void>
 }
 
 type UserStore = UserState & UserActions
@@ -152,6 +152,17 @@ export const useUserStore = create<UserStore>()(
           if (state.user) {
             state.user.name = updated.name
             state.user.avatarUrl = updated.avatarUrl
+            if (updated.preferredLanguage !== undefined) {
+              state.user.preferredLanguage = updated.preferredLanguage
+            }
+          }
+          // Keep session.user in sync so Zustand persists the updated value
+          if (state.session?.user) {
+            state.session.user.name = updated.name
+            state.session.user.avatarUrl = updated.avatarUrl
+            if (updated.preferredLanguage !== undefined) {
+              state.session.user.preferredLanguage = updated.preferredLanguage
+            }
           }
         })
       },

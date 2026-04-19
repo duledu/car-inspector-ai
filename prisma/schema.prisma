@@ -22,22 +22,25 @@ model User {
   passwordHash  String?
   avatarUrl     String?
   role          UserRole  @default(USER)
-  googleId      String?   @unique
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
+  googleId          String?   @unique
+  emailVerified     DateTime?
+  preferredLanguage String?   @default("en")
+  createdAt         DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  vehicles         Vehicle[]
-  inspections      InspectionSession[]
-  posts            Post[]
-  comments         Comment[]
-  likes            Like[]
-  sentMessages     Message[]         @relation("SentMessages")
-  conversations    ConversationParticipant[]
-  purchases        PremiumPurchase[]
-  accessGrants     AccessGrant[]
-  paymentEvents    PaymentEvent[]
+  vehicles                Vehicle[]
+  inspections             InspectionSession[]
+  posts                   Post[]
+  comments                Comment[]
+  likes                   Like[]
+  sentMessages            Message[]                  @relation("SentMessages")
+  conversations           ConversationParticipant[]
+  purchases               PremiumPurchase[]
+  accessGrants            AccessGrant[]
+  paymentEvents           PaymentEvent[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@index([email])
   @@map("users")
@@ -478,4 +481,49 @@ enum MessageType {
   IMAGE
   VEHICLE_CARD
   REPORT_SHARE
+}
+
+// =============================================================================
+// EMAIL VERIFICATION & PASSWORD RESET TOKENS
+// =============================================================================
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// =============================================================================
+// ADMIN CONTENT
+// =============================================================================
+
+model AppAnnouncement {
+  id        String   @id @default(cuid())
+  slug      String   @unique @default("default")
+  content   Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("app_announcements")
 }
