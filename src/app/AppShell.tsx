@@ -75,11 +75,16 @@ export default function AppShell({ children }: AppShellProps) {
       router.replace(`/auth?redirect=${encodeURIComponent(pathname)}`)
       return
     }
+    if (user?.emailVerified === false) {
+      router.replace('/verify-required')
+      return
+    }
     refreshSession()
-  }, [hydrated, isAuthenticated])
+  }, [hydrated, isAuthenticated, user?.emailVerified])
 
   if (!hydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (!isAuthenticated) return null
+  if (user?.emailVerified === false) return null
 
   const pageMeta = PAGE_SLUG[pathname] ?? { slug: 'fallback' }
   const backgroundContext = pathname === '/inspection'

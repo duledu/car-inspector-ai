@@ -71,6 +71,7 @@ const mk = {
   'auth.error.validationRegister':'Пополнете ги сите задолжителни полиња правилно.',
   'auth.error.serverError':       'Нешто тргна наопаку. Обидете се повторно.',
   'auth.error.networkError':      'Не може да се поврзе со серверот. Проверете ја интернет врската.',
+  'auth.error.genericLogin':      'Нешто тргна наопаку. Обидете се повторно.',
   'auth.error.loginFailed':       'Најавувањето не успеа.',
   'auth.error.registerFailed':    'Регистрацијата не успеа.',
   'auth.error.googleDenied':      'Google најавувањето е откажано.',
@@ -104,6 +105,14 @@ const mk = {
   'auth.resetPassword.expired':          'Овој линк истече. Побарајте нов.',
   'auth.resetPassword.error':            'Неважечки или веќе употребен линк. Побарајте нов.',
   'auth.resetPassword.noToken':          'Токенот не е пронајден. Користете го линкот од е-поштата.',
+
+  'auth.verifyRequired.title':          'Потврдете е-пошта',
+  'auth.verifyRequired.body':           'Ве молиме потврдете ја вашата е-адреса пред пристап до сметката.',
+  'auth.verifyRequired.resendButton':   'Испрати повторно',
+  'auth.verifyRequired.resendSending':  'Испраќање…',
+  'auth.verifyRequired.resendSent':     'Е-мејлот е испратен — проверете inbox.',
+  'auth.verifyRequired.resendError':    'Испраќањето не успеа. Обидете се повторно.',
+  'auth.verifyRequired.signOut':        'Одјави се',
 
   'auth.verifyEmail.verifyingTitle': 'Потврдување на е-пошта…',
   'auth.verifyEmail.verifyingBody':  'Ве молиме почекајте додека ја потврдуваме вашата е-пошта.',

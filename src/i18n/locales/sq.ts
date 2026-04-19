@@ -71,6 +71,7 @@ const sq = {
   'auth.error.validationRegister':'Ju lutemi plotësoni të gjitha fushat e detyrueshme saktë.',
   'auth.error.serverError':       'Diçka shkoi keq. Ju lutemi provoni përsëri.',
   'auth.error.networkError':      'Nuk mund të lidhet me serverin. Kontrolloni lidhjen me internetin.',
+  'auth.error.genericLogin':      'Diçka shkoi keq. Ju lutemi provoni përsëri.',
   'auth.error.loginFailed':       'Hyrja dështoi.',
   'auth.error.registerFailed':    'Regjistrimi dështoi.',
   'auth.error.googleDenied':      'Hyrja me Google u anulua.',
@@ -104,6 +105,14 @@ const sq = {
   'auth.resetPassword.expired':          'Kjo lidhje ka skaduar. Ju lutemi kërkoni një të re.',
   'auth.resetPassword.error':            'Lidhje e pavlefshme ose tashmë e përdorur. Ju lutemi kërkoni një të re.',
   'auth.resetPassword.noToken':          'Nuk u gjet asnjë shenjë. Ju lutemi përdorni lidhjen nga e-maili juaj.',
+
+  'auth.verifyRequired.title':          'Verifiko e-mailin',
+  'auth.verifyRequired.body':           'Ju lutem verifikoni adresen tuaj te e-mailit para se te aksesoni llogarite.',
+  'auth.verifyRequired.resendButton':   'Rideergo emailin e verifikimit',
+  'auth.verifyRequired.resendSending':  'Po dergon…',
+  'auth.verifyRequired.resendSent':     'Emaili u dergua — kontrolloni inbox.',
+  'auth.verifyRequired.resendError':    'Dergimi deshtoi. Provoni perseri.',
+  'auth.verifyRequired.signOut':        'Dilni',
 
   'auth.verifyEmail.verifyingTitle': 'Po verifikohet e-maili…',
   'auth.verifyEmail.verifyingBody':  'Ju lutemi prisni ndërsa verifikojmë adresën tuaj të e-mailit.',

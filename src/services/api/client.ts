@@ -64,6 +64,12 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     const status  = error.response?.status
+    const requestUrl = originalRequest.url ?? ''
+    const isAuthSubmission =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password')
 
     // When responseType is 'blob' (e.g. PDF download), error bodies arrive as Blob objects.
     // Parse them back to JSON so we can read the message field.
@@ -87,14 +93,14 @@ apiClient.interceptors.response.use(
        message === 'Server configuration error' ||
        message === 'Missing Authorization header')
 
-    if (isHardAuthFailure) {
+    if (isHardAuthFailure && !isAuthSubmission) {
       clearSessionAndRedirect()
       // Never resolve — page is navigating away.
       return REDIRECT_PENDING
     }
 
     // ── Soft auth failure: token expired — attempt silent refresh ─────────────
-    if (status === 401 && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry && !isAuthSubmission) {
       originalRequest._retry = true
       try {
         const storeState = readStoredAuthState()

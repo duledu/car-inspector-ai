@@ -76,15 +76,15 @@ export const adminApi = {
     return data.data
   },
 
-  previewMarketing: async (content: MarketingCampaignContent): Promise<string> => {
-    const { data } = await apiClient.post<ApiResponse<{ html: string }>>('/admin/marketing/preview', { content })
+  previewMarketing: async (content: MarketingCampaignContent, language = 'en'): Promise<string> => {
+    const { data } = await apiClient.post<ApiResponse<{ html: string }>>('/admin/marketing/preview', { content, language })
     return data.data.html
   },
 
-  sendMarketingTest: async (content: MarketingCampaignContent, testEmail?: string): Promise<{ sentTo: string }> => {
+  sendMarketingTest: async (content: MarketingCampaignContent, testEmail?: string, language = 'en'): Promise<{ sentTo: string }> => {
     const { data } = await apiClient.post<ApiResponse<{ success: boolean; sentTo: string }>>(
       '/admin/marketing/send-test',
-      { content, testEmail }
+      { content, testEmail, language }
     )
     return data.data
   },
@@ -92,11 +92,12 @@ export const adminApi = {
   sendMarketingToAll: async (
     content: MarketingCampaignContent,
     manualEmails: string[],
-    recipientMode: RecipientMode
+    recipientMode: RecipientMode,
+    manualLanguage = 'en'
   ): Promise<BulkSendResult> => {
     const { data } = await apiClient.post<ApiResponse<BulkSendResult>>(
       '/admin/marketing/send-all',
-      { content, confirmed: true, manualEmails, recipientMode }
+      { content, confirmed: true, manualEmails, recipientMode, manualLanguage }
     )
     return data.data
   },

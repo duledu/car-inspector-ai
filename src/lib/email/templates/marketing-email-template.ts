@@ -1,12 +1,18 @@
 import { escHtml } from './template-utils'
 import type { MarketingCampaignContent } from '../types/email-template.types'
 
-export function buildMarketingEmailTemplate(c: MarketingCampaignContent): { html: string; text: string; subject: string } {
-  const year    = new Date().getFullYear()
+export function buildMarketingEmailTemplate(
+  c: MarketingCampaignContent,
+  lang = 'en',
+): { html: string; text: string; subject: string } {
+  const year = new Date().getFullYear()
   const support = 'support@usedcarsdoctor.com'
+  const safeCtaUrl = escHtml(c.ctaUrl)
+  const safeSecondaryUrl = escHtml(c.secondaryCtaUrl)
+  const labels = getMarketingTemplateLabels(lang)
 
   const html = `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="${escHtml(lang)}" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,58 +24,60 @@ export function buildMarketingEmailTemplate(c: MarketingCampaignContent): { html
     <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
   </noscript>
   <![endif]-->
+  <style>
+    @media only screen and (max-width: 620px) {
+      .outer-pad { padding: 18px 12px 26px !important; }
+      .card-pad { padding: 22px 20px 24px !important; border-radius: 0 0 18px 18px !important; }
+      .brand-name { font-size: 15px !important; }
+      .divider { margin: 18px 0 20px !important; }
+      .headline { font-size: 25px !important; line-height: 1.16 !important; margin-bottom: 12px !important; }
+      .intro { font-size: 15px !important; line-height: 1.55 !important; margin-bottom: 18px !important; }
+      .cta-table { width: 100% !important; margin-bottom: 22px !important; }
+      .cta-cell { display: block !important; width: 100% !important; }
+      .cta-link { display: block !important; padding: 15px 16px !important; text-align: center !important; }
+      .value-table { margin-bottom: 22px !important; }
+      .footer-pad { padding-top: 16px !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#06070a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-
-  <!-- Preview text (hidden) -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#06070a;">
-    ${escHtml(c.previewText)}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+    ${escHtml(c.previewText)}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
   </div>
 
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#06070a;min-height:100vh;">
     <tr>
-      <td align="center" style="padding:40px 16px 48px;">
+      <td class="outer-pad" align="center" style="padding:24px 16px 34px;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;width:100%;">
-
-          <!-- Top accent bar -->
           <tr>
-            <td style="height:2px;background:linear-gradient(90deg,#00c2ff 0%,#7dd3fc 50%,#00c2ff 100%);border-radius:2px 2px 0 0;font-size:0;line-height:0;">&nbsp;</td>
+            <td style="height:2px;background:#00c2ff;border-radius:2px 2px 0 0;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
 
-          <!-- Card -->
           <tr>
-            <td style="background:linear-gradient(170deg,#0f1823 0%,#0a1018 100%);border:1px solid #1a2232;border-top:none;border-radius:0 0 24px 24px;padding:44px 48px 40px;">
-
-              <!-- Brand (minimal — no icon) -->
+            <td class="card-pad" style="background:linear-gradient(170deg,#0f1823 0%,#0a1018 100%);border:1px solid #1a2232;border-top:none;border-radius:0 0 22px 22px;padding:30px 34px 30px;">
               <p style="margin:0 0 2px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);">Used Cars Doctor</p>
-              <p style="margin:0;font-size:17px;font-weight:800;color:#ffffff;letter-spacing:-0.3px;">
+              <p class="brand-name" style="margin:0;font-size:16px;font-weight:800;color:#ffffff;letter-spacing:-0.3px;">
                 <span style="color:#00c2ff;">Used Car</span> Inspector AI
               </p>
 
-              <!-- Divider -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:28px 0 32px;">
-                <tr>
-                  <td style="height:1px;background:#1a2232;font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
+              <table class="divider" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:22px 0 24px;">
+                <tr><td style="height:1px;background:#1a2232;font-size:0;line-height:0;">&nbsp;</td></tr>
               </table>
 
-              <!-- Headline -->
-              <h1 style="margin:0 0 20px;font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-0.8px;line-height:1.15;">
+              <h1 class="headline" style="margin:0 0 14px;font-size:29px;font-weight:800;color:#ffffff;letter-spacing:-0.7px;line-height:1.15;">
                 ${escHtml(c.headline)}
               </h1>
 
-              <!-- Intro paragraph -->
-              <p style="margin:0 0 32px;font-size:16px;color:rgba(255,255,255,0.62);line-height:1.7;">
+              <p class="intro" style="margin:0 0 22px;font-size:16px;color:rgba(255,255,255,0.68);line-height:1.6;">
                 ${escHtml(c.introParagraph)}
               </p>
 
-              <!-- Primary CTA -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:40px;">
+              <table class="cta-table" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:28px;">
                 <tr>
-                  <td style="border-radius:12px;background:#00c2ff;">
-                    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${c.ctaUrl}" style="height:54px;v-text-anchor:middle;width:260px;" arcsize="22%" strokecolor="#00c2ff" fillcolor="#00c2ff"><w:anchorlock/><center style="color:#000000;font-family:Arial,sans-serif;font-size:16px;font-weight:800;">${escHtml(c.ctaLabel)}</center></v:roundrect><![endif]-->
+                  <td class="cta-cell" style="border-radius:12px;background:#00c2ff;box-shadow:0 10px 26px rgba(0,194,255,0.16);">
+                    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${safeCtaUrl}" style="height:50px;v-text-anchor:middle;width:245px;" arcsize="22%" strokecolor="#00c2ff" fillcolor="#00c2ff"><w:anchorlock/><center style="color:#000000;font-family:Arial,sans-serif;font-size:15px;font-weight:800;">${escHtml(c.ctaLabel)}</center></v:roundrect><![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="${c.ctaUrl}" target="_blank" style="display:inline-block;padding:16px 42px;font-size:16px;font-weight:800;color:#000000;text-decoration:none;border-radius:12px;letter-spacing:-0.2px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                    <a class="cta-link" href="${safeCtaUrl}" target="_blank" style="display:inline-block;padding:15px 32px;font-size:15px;font-weight:800;color:#000000;text-decoration:none;border-radius:12px;letter-spacing:-0.2px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
                       ${escHtml(c.ctaLabel)}
                     </a>
                     <!--<![endif]-->
@@ -77,71 +85,57 @@ export function buildMarketingEmailTemplate(c: MarketingCampaignContent): { html
                 </tr>
               </table>
 
-              <!-- Value block label -->
-              <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);">What you get</p>
+              <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);">${escHtml(labels.valueHeading)}</p>
 
-              <!-- Value items -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:36px;">
+              <table class="value-table" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:26px;">
                 <tr>
-                  <td style="vertical-align:top;width:22px;font-size:16px;font-weight:800;color:#00c2ff;line-height:1.65;padding-top:1px;">✓</td>
-                  <td style="font-size:15px;color:rgba(255,255,255,0.72);line-height:1.65;padding-left:12px;">${escHtml(c.value1)}</td>
+                  <td style="vertical-align:top;width:20px;font-size:15px;font-weight:800;color:#00c2ff;line-height:1.5;padding-top:1px;">✓</td>
+                  <td style="font-size:14px;color:rgba(255,255,255,0.74);line-height:1.5;padding-left:10px;">${escHtml(c.value1)}</td>
                 </tr>
-                <tr><td colspan="2" style="height:12px;">&nbsp;</td></tr>
+                <tr><td colspan="2" style="height:9px;">&nbsp;</td></tr>
                 <tr>
-                  <td style="vertical-align:top;width:22px;font-size:16px;font-weight:800;color:#00c2ff;line-height:1.65;padding-top:1px;">✓</td>
-                  <td style="font-size:15px;color:rgba(255,255,255,0.72);line-height:1.65;padding-left:12px;">${escHtml(c.value2)}</td>
+                  <td style="vertical-align:top;width:20px;font-size:15px;font-weight:800;color:#00c2ff;line-height:1.5;padding-top:1px;">✓</td>
+                  <td style="font-size:14px;color:rgba(255,255,255,0.74);line-height:1.5;padding-left:10px;">${escHtml(c.value2)}</td>
                 </tr>
-                <tr><td colspan="2" style="height:12px;">&nbsp;</td></tr>
+                <tr><td colspan="2" style="height:9px;">&nbsp;</td></tr>
                 <tr>
-                  <td style="vertical-align:top;width:22px;font-size:16px;font-weight:800;color:#00c2ff;line-height:1.65;padding-top:1px;">✓</td>
-                  <td style="font-size:15px;color:rgba(255,255,255,0.72);line-height:1.65;padding-left:12px;">${escHtml(c.value3)}</td>
+                  <td style="vertical-align:top;width:20px;font-size:15px;font-weight:800;color:#00c2ff;line-height:1.5;padding-top:1px;">✓</td>
+                  <td style="font-size:14px;color:rgba(255,255,255,0.74);line-height:1.5;padding-left:10px;">${escHtml(c.value3)}</td>
                 </tr>
               </table>
 
-              <!-- Thin divider -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:28px;">
-                <tr>
-                  <td style="height:1px;background:rgba(255,255,255,0.07);font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:20px;">
+                <tr><td style="height:1px;background:rgba(255,255,255,0.07);font-size:0;line-height:0;">&nbsp;</td></tr>
               </table>
 
-              <!-- Trust paragraph -->
-              <p style="margin:0 0 24px;font-size:14px;color:rgba(255,255,255,0.42);line-height:1.75;font-style:italic;">
+              <p style="margin:0 0 16px;font-size:13px;color:rgba(255,255,255,0.48);line-height:1.6;font-style:italic;">
                 ${escHtml(c.trustParagraph)}
               </p>
 
-              <!-- Secondary CTA (text link) -->
-              <p style="margin:0 0 36px;font-size:14px;">
-                <a href="${c.secondaryCtaUrl}" target="_blank" style="color:#00c2ff;text-decoration:none;font-weight:700;">${escHtml(c.secondaryCtaLabel)} →</a>
+              <p style="margin:0 0 24px;font-size:14px;">
+                <a href="${safeSecondaryUrl}" target="_blank" style="color:#00c2ff;text-decoration:none;font-weight:700;">${escHtml(c.secondaryCtaLabel)} →</a>
               </p>
 
-              <!-- Bottom divider -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:20px;">
-                <tr>
-                  <td style="height:1px;background:rgba(255,255,255,0.06);font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
+                <tr><td style="height:1px;background:rgba(255,255,255,0.06);font-size:0;line-height:0;">&nbsp;</td></tr>
               </table>
 
-              <!-- Footer note -->
               <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.22);line-height:1.6;">
                 ${escHtml(c.footerNote)}
               </p>
-
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
-            <td style="padding:24px 0 0;text-align:center;">
+            <td class="footer-pad" style="padding:20px 0 0;text-align:center;">
               <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.16);">
-                © ${year} Used Cars Doctor · AI-powered vehicle inspection
+                © ${year} Used Cars Doctor · ${escHtml(labels.productLine)}
               </p>
               <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.16);">
-                Questions? <a href="mailto:${support}" style="color:rgba(0,194,255,0.35);text-decoration:none;">${support}</a>
+                ${escHtml(labels.questions)} <a href="mailto:${support}" style="color:rgba(0,194,255,0.35);text-decoration:none;">${support}</a>
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -156,16 +150,15 @@ export function buildMarketingEmailTemplate(c: MarketingCampaignContent): { html
     '',
     `${c.ctaLabel}: ${c.ctaUrl}`,
     '',
-    '— What you get —',
-    `✓ ${c.value1}`,
-    `✓ ${c.value2}`,
-    `✓ ${c.value3}`,
+    labels.valueHeading,
+    `- ${c.value1}`,
+    `- ${c.value2}`,
+    `- ${c.value3}`,
     '',
     c.trustParagraph,
     '',
     `${c.secondaryCtaLabel}: ${c.secondaryCtaUrl}`,
     '',
-    '—',
     c.footerNote,
     '',
     `© ${year} Used Cars Doctor`,
@@ -173,4 +166,39 @@ export function buildMarketingEmailTemplate(c: MarketingCampaignContent): { html
   ].join('\n')
 
   return { html, text, subject: c.subject }
+}
+
+function getMarketingTemplateLabels(lang: string) {
+  switch (lang) {
+    case 'sr':
+      return {
+        valueHeading: 'Šta dobijate',
+        productLine: 'AI pregled polovnih vozila',
+        questions:   'Pitanja?',
+      }
+    case 'de':
+      return {
+        valueHeading: 'Was Sie bekommen',
+        productLine: 'KI-gestützte Fahrzeugprüfung',
+        questions:   'Fragen?',
+      }
+    case 'mk':
+      return {
+        valueHeading: 'Што добивате',
+        productLine: 'AI проверка на возила',
+        questions:   'Прашања?',
+      }
+    case 'sq':
+      return {
+        valueHeading: 'Çfarë përfitoni',
+        productLine: 'Inspektim automjeti me AI',
+        questions:   'Pyetje?',
+      }
+    default:
+      return {
+        valueHeading: 'What you get',
+        productLine: 'AI-powered vehicle inspection',
+        questions:   'Questions?',
+      }
+  }
 }

@@ -8,6 +8,7 @@ import type { AppAnnouncementContent } from '@/lib/email/types/email-template.ty
 import type { RecipientMode } from '@/lib/admin/bulk-email-sender'
 
 export const maxDuration = 60
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)
@@ -25,6 +26,16 @@ export async function POST(req: NextRequest) {
     const recipientMode: RecipientMode    = (['db', 'manual', 'both'] as RecipientMode[]).includes(body?.recipientMode)
       ? (body.recipientMode as RecipientMode)
       : 'db'
+
+    const validManualCount = manualEmails
+      .filter((email): email is string => typeof email === 'string')
+      .map(email => email.trim())
+      .filter(email => EMAIL_RE.test(email))
+      .length
+
+    if ((recipientMode === 'manual' || recipientMode === 'both') && validManualCount === 0) {
+      return apiError('At least one valid manual recipient email is required', { status: 422, code: 'VALIDATION_ERROR' })
+    }
 
     const template = buildDynamicAppUpdateTemplate(content)
     const result   = await sendBulkEmails({ template, manualEmails, recipientMode })

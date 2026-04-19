@@ -21,8 +21,9 @@ function resolveAuthError(err: any, action: 'login' | 'register'): string {
   if (code === 'EMAIL_IN_USE'       || status === 409) return 'auth.error.emailInUse'
   if (code === 'VALIDATION_ERROR'   || status === 422)
     return action === 'login' ? 'auth.error.validationLogin' : 'auth.error.validationRegister'
-  if (status === 500) return 'auth.error.serverError'
-  if (!status)        return 'auth.error.networkError'
+  if (action === 'login' && (status >= 500 || !status)) return 'auth.error.genericLogin'
+  if (status >= 500) return 'auth.error.serverError'
+  if (!status)       return 'auth.error.networkError'
 
   return action === 'login' ? 'auth.error.loginFailed' : 'auth.error.registerFailed'
 }
@@ -71,6 +72,9 @@ export const useUserStore = create<UserStore>()(
           })
         } catch (err: any) {
           set((state) => {
+            state.user = null
+            state.session = null
+            state.isAuthenticated = false
             state.isLoading = false
             state.error = resolveAuthError(err, 'login')
           })

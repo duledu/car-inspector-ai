@@ -6,6 +6,8 @@ import { sendEmail } from '@/lib/email/send-email'
 import { apiError, logApiError } from '@/utils/api-response'
 import type { AppAnnouncementContent } from '@/lib/email/types/email-template.types'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)
   if (!guard.success) return guard.response
@@ -14,12 +16,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
 
-    const recipient: string = typeof body?.testEmail === 'string' && body.testEmail.includes('@')
-      ? body.testEmail
-      : DEFAULT_ADMIN_TEST_EMAIL
+    const requestedRecipient = typeof body?.testEmail === 'string' ? body.testEmail.trim().toLowerCase() : ''
+    const recipient = requestedRecipient || DEFAULT_ADMIN_TEST_EMAIL || guard.adminEmail
 
-    if (!recipient) {
-      return apiError('A test email recipient is required', { status: 422, code: 'VALIDATION_ERROR' })
+    if (!EMAIL_RE.test(recipient)) {
+      return apiError('A valid test email recipient is required', { status: 422, code: 'VALIDATION_ERROR' })
     }
 
     const template = buildDynamicAppUpdateTemplate(content)

@@ -65,7 +65,7 @@ export async function sendBulkEmails(opts: BulkSendOptions): Promise<BulkSendRes
       sent++
     } else {
       failed++
-      console.error('[bulk-email] failed for', email, result.error)
+      console.error('[bulk-email] delivery failed:', result.error)
     }
   }
 

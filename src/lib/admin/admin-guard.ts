@@ -19,8 +19,7 @@ export async function requireAdmin(req: NextRequest): Promise<AdminGuardResult> 
     return { success: false, response: apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' }) }
   }
 
-  const emailAllowed = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(auth.email.toLowerCase())
-  if (auth.role !== 'ADMIN' && !emailAllowed) {
+  if (auth.role !== 'ADMIN') {
     return { success: false, response: apiError('Forbidden', { status: 403, code: 'FORBIDDEN' }) }
   }
 

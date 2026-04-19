@@ -259,6 +259,7 @@ export async function GET(req: NextRequest) {
             avatarUrl:         user.avatarUrl,
             role:              user.role,
             preferredLanguage: user.preferredLanguage ?? 'en',
+            emailVerified:     true,
             createdAt:         user.createdAt.toISOString(),
           },
         },
@@ -299,6 +300,13 @@ export async function GET(req: NextRequest) {
 
     response.cookies.delete('gauth_state')
     response.cookies.delete('gauth_session')
+    response.cookies.set('uci_ev', '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      path:     '/',
+      maxAge:   30 * 24 * 60 * 60,
+      secure:   process.env.NODE_ENV === 'production',
+    })
 
     return response
 

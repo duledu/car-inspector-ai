@@ -8,8 +8,17 @@ import type { BulkSendResult } from '@/services/api/admin.api'
 import { DEFAULT_ANNOUNCEMENT, DEFAULT_MARKETING_CAMPAIGN } from '@/lib/admin/announcement-defaults'
 import type { AppAnnouncementContent, MarketingCampaignContent } from '@/lib/email/types/email-template.types'
 import type { RecipientMode } from '@/lib/admin/bulk-email-sender'
+import { LANG_META, SUPPORTED_LANGS } from '@/i18n/shared'
+import type { SupportedLang } from '@/i18n/shared'
 
 const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message
+  }
+  return fallback
+}
 
 // ─── Design tokens ───────────────────────────────────────────────────────────
 
@@ -74,11 +83,14 @@ function parseManualEmails(raw: string): string[] {
   )]
 }
 
-function ManualEmailSection({ raw, onRawChange, mode, onModeChange }: Readonly<{
+function ManualEmailSection({ raw, onRawChange, mode, onModeChange, showLanguage, manualLanguage, onManualLanguageChange }: Readonly<{
   raw: string
   onRawChange: (v: string) => void
   mode: RecipientMode
   onModeChange: (m: RecipientMode) => void
+  showLanguage: boolean
+  manualLanguage: SupportedLang
+  onManualLanguageChange: (lang: SupportedLang) => void
 }>) {
   const parsed  = parseManualEmails(raw)
   const modeLabels: Record<RecipientMode, string> = { db: 'DB users only', manual: 'Manual only', both: 'DB + manual' }
@@ -108,6 +120,25 @@ function ManualEmailSection({ raw, onRawChange, mode, onModeChange }: Readonly<{
           Comma or newline separated. Validated and deduplicated server-side.
         </p>
       </div>
+      {showLanguage && (
+        <div style={S.fieldGroup}>
+          <label style={S.label}>Manual recipient language</label>
+          <select
+            style={S.input}
+            value={manualLanguage}
+            onChange={e => onManualLanguageChange(e.target.value as SupportedLang)}
+          >
+            {SUPPORTED_LANGS.map(lang => (
+              <option key={lang} value={lang} style={{ background: '#0d1420', color: '#fff' }}>
+                {LANG_META[lang].full}
+              </option>
+            ))}
+          </select>
+          <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
+            DB users receive marketing emails in their own preferred language. Manual recipients use this selected language.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -163,6 +194,7 @@ function BulkResult({ result, onReset }: Readonly<{ result: BulkSendResult; onRe
 // ─── Shared right panel ───────────────────────────────────────────────────────
 
 interface RightPanelProps {
+  campaignType:        CampaignType
   onPreview:           () => Promise<void>
   previewing:          boolean
   previewHtml:         string | null
@@ -175,9 +207,12 @@ interface RightPanelProps {
   onManualEmailsChange: (v: string) => void
   recipientMode:       RecipientMode
   onRecipientModeChange: (m: RecipientMode) => void
+  manualLanguage:      SupportedLang
+  onManualLanguageChange: (lang: SupportedLang) => void
   onBulkSendClick:     () => void
   bulkSending:         boolean
   bulkResult:          BulkSendResult | null
+  bulkError:           string | null
   onBulkReset:         () => void
   dbUserCount:         number | null
 }
@@ -229,6 +264,9 @@ function RightPanel(props: Readonly<RightPanelProps>) {
           onRawChange={props.onManualEmailsChange}
           mode={props.recipientMode}
           onModeChange={props.onRecipientModeChange}
+          showLanguage={props.campaignType === 'marketing'}
+          manualLanguage={props.manualLanguage}
+          onManualLanguageChange={props.onManualLanguageChange}
         />
 
         <div style={S.divider} />
@@ -245,6 +283,9 @@ function RightPanel(props: Readonly<RightPanelProps>) {
           >
             {props.bulkSending ? 'Sending…' : `🚀 Send to ${props.recipientMode === 'manual' ? `${manualCount} manual` : props.recipientMode === 'both' ? `DB + ${manualCount} manual` : 'all DB users'}`}
           </button>
+        )}
+        {props.bulkError && !props.bulkResult && (
+          <p style={{ fontSize: 12, color: '#f87171', margin: '8px 0 0', lineHeight: 1.5 }}>{props.bulkError}</p>
         )}
 
       </div>
@@ -324,6 +365,9 @@ function MarketingFormFields({ form, onChange }: Readonly<{
   return (
     <div style={{ flex: '0 0 520px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={S.card}>
+        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
+          Marketing copy is localized for en, sr, de, mk, and sq in the email template. This form controls campaign metadata and destination URLs.
+        </p>
         <p style={S.groupTitle}>Email Metadata</p>
         <Field label="Subject" value={form.subject} onChange={set('subject')} />
         <TextArea label="Preview text" value={form.previewText} onChange={set('previewText')} rows={2} />
@@ -378,9 +422,11 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
   const [testResult,      setTestResult]       = useState<string | null>(null)
   const [manualEmailsRaw, setManualEmailsRaw]  = useState('')
   const [recipientMode,   setRecipientMode]    = useState<RecipientMode>('db')
+  const [manualLanguage,  setManualLanguage]   = useState<SupportedLang>('en')
   const [showConfirm,     setShowConfirm]      = useState(false)
   const [bulkSending,     setBulkSending]      = useState(false)
   const [bulkResult,      setBulkResult]       = useState<BulkSendResult | null>(null)
+  const [bulkError,       setBulkError]        = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([adminApi.getAnnouncement(), adminApi.getMarketing()])
@@ -394,6 +440,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     setPreviewHtml(null)
     setTestResult(null)
     setBulkResult(null)
+    setBulkError(null)
   }
 
   const campaignName = campaignType === 'announcement' ? announcementForm.campaignName : marketingForm.campaignName
@@ -404,8 +451,8 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
       if (campaignType === 'announcement') await adminApi.saveAnnouncement(announcementForm)
       else await adminApi.saveMarketing(marketingForm)
       setSaveMsg('Saved.')
-    } catch {
-      setSaveMsg('Save failed.')
+    } catch (error) {
+      setSaveMsg(getErrorMessage(error, 'Save failed.'))
     } finally {
       setSaving(false)
       setTimeout(() => setSaveMsg(null), 3000)
@@ -417,24 +464,24 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     try {
       const html = campaignType === 'announcement'
         ? await adminApi.previewAnnouncement(announcementForm)
-        : await adminApi.previewMarketing(marketingForm)
+        : await adminApi.previewMarketing(marketingForm, manualLanguage)
       setPreviewHtml(html)
-    } catch {
-      setPreviewHtml('<p style="color:#f87171;padding:20px;font-family:sans-serif;">Preview failed.</p>')
+    } catch (error) {
+      setPreviewHtml(`<p style="color:#f87171;padding:20px;font-family:sans-serif;">${getErrorMessage(error, 'Preview failed.')}</p>`)
     } finally {
       setPreviewing(false)
     }
   }
 
   const handleTestSend = async () => {
-    setTestSending(true); setTestResult(null)
+    setTestSending(true); setTestResult(null); setBulkError(null)
     try {
       const r = campaignType === 'announcement'
         ? await adminApi.sendAnnouncementTest(announcementForm, testEmail || undefined)
-        : await adminApi.sendMarketingTest(marketingForm, testEmail || undefined)
+        : await adminApi.sendMarketingTest(marketingForm, testEmail || undefined, manualLanguage)
       setTestResult(`✓ Sent to ${r.sentTo}`)
-    } catch {
-      setTestResult('✗ Test send failed.')
+    } catch (error) {
+      setTestResult(`Error: ${getErrorMessage(error, 'Test send failed.')}`)
     } finally {
       setTestSending(false)
     }
@@ -442,14 +489,15 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
 
   const handleBulkConfirm = async () => {
     setBulkSending(true)
+    setBulkError(null)
     const manual = parseManualEmails(manualEmailsRaw)
     try {
       const result = campaignType === 'announcement'
         ? await adminApi.sendAnnouncementToAll(announcementForm, manual, recipientMode)
-        : await adminApi.sendMarketingToAll(marketingForm, manual, recipientMode)
+        : await adminApi.sendMarketingToAll(marketingForm, manual, recipientMode, manualLanguage)
       setBulkResult(result)
-    } catch {
-      setTestResult('✗ Bulk send failed.')
+    } catch (error) {
+      setBulkError(getErrorMessage(error, 'Bulk send failed.'))
     } finally {
       setBulkSending(false)
       setShowConfirm(false)
@@ -457,6 +505,19 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
   }
 
   if (loading) return <div style={{ padding: 40, color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>Loading…</div>
+
+  const handleBulkSendClick = () => {
+    setBulkError(null)
+    setBulkResult(null)
+
+    const manual = parseManualEmails(manualEmailsRaw)
+    if ((recipientMode === 'manual' || recipientMode === 'both') && manual.length === 0) {
+      setBulkError('Enter at least one valid manual recipient email before sending.')
+      return
+    }
+
+    setShowConfirm(true)
+  }
 
   const manualCount = parseManualEmails(manualEmailsRaw).length
 
@@ -510,6 +571,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
         }
 
         <RightPanel
+          campaignType={campaignType}
           onPreview={handlePreview}
           previewing={previewing}
           previewHtml={previewHtml}
@@ -522,10 +584,13 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
           onManualEmailsChange={setManualEmailsRaw}
           recipientMode={recipientMode}
           onRecipientModeChange={setRecipientMode}
-          onBulkSendClick={() => setShowConfirm(true)}
+          manualLanguage={manualLanguage}
+          onManualLanguageChange={setManualLanguage}
+          onBulkSendClick={handleBulkSendClick}
           bulkSending={bulkSending}
           bulkResult={bulkResult}
-          onBulkReset={() => setBulkResult(null)}
+          bulkError={bulkError}
+          onBulkReset={() => { setBulkResult(null); setBulkError(null) }}
           dbUserCount={dbUserCount}
         />
       </div>
@@ -644,14 +709,23 @@ export default function AdminPanelPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.header}>
+      <div style={{ ...S.header, gap: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
             <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
           </span>
           <span style={S.badge}>⬡ Admin Panel</span>
         </div>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{user.email}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            style={{ ...S.btn('ghost'), padding: '8px 14px', fontSize: 12, whiteSpace: 'nowrap' }}
+          >
+            Back to Dashboard
+          </button>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{user.email}</span>
+        </div>
       </div>
 
       <div style={S.tabs}>

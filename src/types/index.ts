@@ -14,6 +14,7 @@ export interface AuthUser {
   avatarUrl?: string | null
   role: UserRole
   preferredLanguage?: string | null
+  emailVerified: boolean
   createdAt: string
 }
 

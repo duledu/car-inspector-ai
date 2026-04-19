@@ -61,9 +61,11 @@ export async function POST(
       return handleRegister(body)
     case 'refresh':
       return handleRefresh(body)
-    case 'logout':
-      // Stateless JWTs — client discards tokens. No server action needed.
-      return NextResponse.json({ data: { success: true } })
+    case 'logout': {
+      const logoutRes = NextResponse.json({ data: { success: true } })
+      clearEvCookie(logoutRes)
+      return logoutRes
+    }
     case 'forgot-password':
       return handleForgotPassword(body)
     case 'reset-password':
@@ -97,17 +99,38 @@ export async function PATCH(
   return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
 }
 
+// ─── Cookie helpers ───────────────────────────────────────────────────────────
+
+const EV_COOKIE    = 'uci_ev'
+const EV_MAX_AGE   = 30 * 24 * 60 * 60  // 30 days
+const IS_PROD      = process.env.NODE_ENV === 'production'
+
+function setEvCookie(res: NextResponse, verified: boolean) {
+  res.cookies.set(EV_COOKIE, verified ? '1' : '0', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path:     '/',
+    maxAge:   EV_MAX_AGE,
+    secure:   IS_PROD,
+  })
+}
+
+function clearEvCookie(res: NextResponse) {
+  res.cookies.set(EV_COOKIE, '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0, secure: IS_PROD })
+}
+
 // ─── DTO helper ──────────────────────────────────────────────────────────────
 
-function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; createdAt: Date }) {
+function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; emailVerified: Date | null; createdAt: Date }) {
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-    role: user.role,
+    id:                user.id,
+    email:             user.email,
+    name:              user.name,
+    avatarUrl:         user.avatarUrl,
+    role:              user.role,
     preferredLanguage: user.preferredLanguage ?? 'en',
-    createdAt: user.createdAt.toISOString(),
+    emailVerified:     !!user.emailVerified,
+    createdAt:         user.createdAt.toISOString(),
   }
 }
 
@@ -141,10 +164,11 @@ async function handleLogin(body: unknown) {
     }
 
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
-
-    return NextResponse.json({
+    const res = NextResponse.json({
       data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
     })
+    setEvCookie(res, !!user.emailVerified)
+    return res
   } catch (error) {
     logApiError('auth/login', 'login', error)
     const message = error instanceof Error ? error.message : String(error)
@@ -184,10 +208,12 @@ async function handleRegister(body: unknown) {
     })
     .catch(err => console.error('[auth/register] verification email unexpected error:', err))
 
-  return NextResponse.json(
+  const res = NextResponse.json(
     { data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) } },
     { status: 201 }
   )
+  setEvCookie(res, false) // new registrations are always unverified
+  return res
 }
 
 async function handleRefresh(body: unknown) {
@@ -213,10 +239,11 @@ async function handleRefresh(body: unknown) {
     if (!user) throw new Error('User not found')
 
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
-
-    return NextResponse.json({
+    const res = NextResponse.json({
       data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
     })
+    setEvCookie(res, !!user.emailVerified)
+    return res
   } catch {
     return apiError('Invalid or expired refresh token', { status: 401, code: 'INVALID_REFRESH_TOKEN' })
   }
@@ -252,12 +279,14 @@ async function handleForgotPassword(body: unknown) {
     const emailResult = await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     if (!emailResult.success) {
       console.error('[auth/forgot-password] reset email failed:', emailResult.error)
+      // Surface real system failures — the user exists so we are not leaking account presence
+      return apiError('Failed to send reset email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
     }
 
     return NextResponse.json({ data: { success: true } })
   } catch (error) {
     logApiError('auth/forgot-password', 'forgotPassword', error)
-    return NextResponse.json({ data: { success: true } }) // never expose errors
+    return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })
   }
 }
 
@@ -298,6 +327,7 @@ async function handleSendVerification(req: NextRequest) {
     const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     if (!emailResult.success) {
       console.error('[auth/send-verification] email failed:', emailResult.error)
+      return apiError('Failed to send verification email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
     }
 
     return NextResponse.json({ data: { success: true } })
@@ -322,7 +352,9 @@ async function handleVerifyEmail(body: unknown) {
 
     await prisma.user.update({ where: { id: result.userId }, data: { emailVerified: new Date() } })
 
-    return NextResponse.json({ data: { success: true } })
+    const verifyRes = NextResponse.json({ data: { success: true } })
+    setEvCookie(verifyRes, true)
+    return verifyRes
   } catch (error) {
     logApiError('auth/verify-email', 'verifyEmail', error)
     return apiError('An unexpected error occurred. Please try again.', { status: 500, code: 'INTERNAL_ERROR' })

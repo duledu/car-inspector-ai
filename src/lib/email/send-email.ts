@@ -18,7 +18,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     const provider = getProvider()
     const result = await provider.send(options)
     if (!result.success) {
-      console.error('[email] send failed:', { to: options.to, subject: options.subject, error: result.error })
+      console.error('[email] send failed:', result.error)
     }
     return result
   } catch (err) {

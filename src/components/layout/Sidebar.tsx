@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
+import { useUserStore } from '@/store'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 const NAV = [
@@ -87,6 +88,7 @@ const NAV = [
 export function Sidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
+  const role = useUserStore(s => s.user?.role)
 
   return (
     <div
@@ -151,6 +153,29 @@ export function Sidebar() {
         <div style={{ padding: '0 2px' }}>
           <LanguageSwitcher />
         </div>
+
+        {/* Admin panel */}
+        {role === 'ADMIN' && (
+          <Link href="/admin-panel" style={{ textDecoration: 'none' }}>
+            <div
+              style={{
+                padding: '7px 12px',
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'rgba(168,85,247,0.8)',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+              </svg>
+              Admin Panel
+            </div>
+          </Link>
+        )}
 
         {/* Back to landing */}
         <Link href="/" style={{ textDecoration: 'none' }}>

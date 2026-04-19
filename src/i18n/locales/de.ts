@@ -71,6 +71,7 @@ const de = {
   'auth.error.validationRegister':'Bitte alle Pflichtfelder korrekt ausfüllen.',
   'auth.error.serverError':       'Auf unserer Seite ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.',
   'auth.error.networkError':      'Keine Serververbindung. Bitte Internetverbindung prüfen.',
+  'auth.error.genericLogin':      'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
   'auth.error.loginFailed':       'Anmeldung fehlgeschlagen.',
   'auth.error.registerFailed':    'Registrierung fehlgeschlagen.',
   'auth.error.googleDenied':      'Google-Anmeldung wurde abgebrochen.',
@@ -104,6 +105,14 @@ const de = {
   'auth.resetPassword.expired':          'Dieser Link ist abgelaufen. Bitte fordern Sie einen neuen an.',
   'auth.resetPassword.error':            'Ungültiger oder bereits verwendeter Link. Bitte fordern Sie einen neuen an.',
   'auth.resetPassword.noToken':          'Kein Reset-Token gefunden. Bitte verwenden Sie den Link aus Ihrer E-Mail.',
+
+  'auth.verifyRequired.title':          'E-Mail verifizieren',
+  'auth.verifyRequired.body':           'Bitte verifizieren Sie Ihre E-Mail-Adresse, bevor Sie auf Ihr Konto zugreifen.',
+  'auth.verifyRequired.resendButton':   'Bestaetigung erneut senden',
+  'auth.verifyRequired.resendSending':  'Wird gesendet…',
+  'auth.verifyRequired.resendSent':     'Bestaetigung gesendet — pruefen Sie Ihren Posteingang.',
+  'auth.verifyRequired.resendError':    'Fehler beim Senden. Bitte versuchen Sie es erneut.',
+  'auth.verifyRequired.signOut':        'Abmelden',
 
   'auth.verifyEmail.verifyingTitle': 'E-Mail wird verifiziert…',
   'auth.verifyEmail.verifyingBody':  'Bitte warten Sie, während wir Ihre E-Mail-Adresse verifizieren.',

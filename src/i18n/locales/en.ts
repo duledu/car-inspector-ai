@@ -66,12 +66,13 @@ const en = {
 
   // Auth error keys — returned as t() keys from the store
   'auth.error.unavailable':        'Authentication service temporarily unavailable. Please try again.',
-  'auth.error.invalidCredentials': 'Invalid email or password.',
+  'auth.error.invalidCredentials': 'Invalid email or password',
   'auth.error.emailInUse':         'An account with this email already exists.',
   'auth.error.validationLogin':    'Please enter a valid email and password.',
   'auth.error.validationRegister': 'Please fill in all required fields correctly.',
-  'auth.error.serverError':        'Something went wrong on our end. Please try again.',
-  'auth.error.networkError':       'Unable to connect to server. Check your internet connection.',
+  'auth.error.serverError':        'Something went wrong. Please try again.',
+  'auth.error.networkError':       'Something went wrong. Please try again.',
+  'auth.error.genericLogin':       'Something went wrong. Please try again.',
   'auth.error.loginFailed':        'Sign in failed.',
   'auth.error.registerFailed':     'Registration failed.',
   'auth.error.googleDenied':       'Google sign-in was cancelled.',
@@ -105,6 +106,14 @@ const en = {
   'auth.resetPassword.expired':        'This reset link has expired. Please request a new one.',
   'auth.resetPassword.error':          'Invalid or already used reset link. Please request a new one.',
   'auth.resetPassword.noToken':        'No reset token found. Please use the link from your email.',
+
+  'auth.verifyRequired.title':          'Verify your email',
+  'auth.verifyRequired.body':           'Please verify your email address before accessing your account. Check your inbox for the verification link we sent when you registered.',
+  'auth.verifyRequired.resendButton':   'Resend verification email',
+  'auth.verifyRequired.resendSending':  'Sending…',
+  'auth.verifyRequired.resendSent':     'Verification email sent — check your inbox.',
+  'auth.verifyRequired.resendError':    'Failed to send. Please try again.',
+  'auth.verifyRequired.signOut':        'Sign out',
 
   'auth.verifyEmail.verifyingTitle':   'Verifying your email…',
   'auth.verifyEmail.verifyingBody':    'Please wait while we verify your email address.',

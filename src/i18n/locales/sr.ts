@@ -72,6 +72,7 @@ const sr = {
   'auth.error.validationRegister':'Popunite sva obavezna polja ispravno.',
   'auth.error.serverError':       'Nešto nije u redu na našem kraju. Pokušajte ponovo.',
   'auth.error.networkError':      'Nije moguće povezati se sa serverom. Proverite internet vezu.',
+  'auth.error.genericLogin':      'Nešto nije u redu. Pokušajte ponovo.',
   'auth.error.loginFailed':       'Prijava nije uspela.',
   'auth.error.registerFailed':    'Registracija nije uspela.',
   'auth.error.googleDenied':      'Google prijava je otkazana.',
@@ -105,6 +106,14 @@ const sr = {
   'auth.resetPassword.expired':          'Ovaj link je istekao. Zatražite novi.',
   'auth.resetPassword.error':            'Nevažeći ili već upotrebljeni link. Zatražite novi.',
   'auth.resetPassword.noToken':          'Link za resetovanje nije pronađen. Koristite link iz emaila.',
+
+  'auth.verifyRequired.title':          'Potvrdite email',
+  'auth.verifyRequired.body':           'Molimo potvrdite vašu email adresu pre pristupa nalogu.',
+  'auth.verifyRequired.resendButton':   'Ponovo pošalji verifikacioni email',
+  'auth.verifyRequired.resendSending':  'Slanje…',
+  'auth.verifyRequired.resendSent':     'Verifikacioni email je poslat — proverite inbox.',
+  'auth.verifyRequired.resendError':    'Slanje nije uspelo. Pokušajte ponovo.',
+  'auth.verifyRequired.signOut':        'Odjavi se',
 
   'auth.verifyEmail.verifyingTitle': 'Potvrđivanje emaila…',
   'auth.verifyEmail.verifyingBody':  'Molimo sačekajte dok potvrđujemo vašu email adresu.',
