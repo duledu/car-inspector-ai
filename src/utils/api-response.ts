@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 interface ErrorResponseOptions {
   status: number
@@ -17,6 +17,14 @@ export function apiError(error: string, options: ErrorResponseOptions) {
     },
     { status: options.status }
   )
+}
+
+export async function parseJsonBody(req: NextRequest): Promise<{ ok: true; data: unknown } | { ok: false; response: NextResponse }> {
+  try {
+    return { ok: true, data: await req.json() }
+  } catch {
+    return { ok: false, response: apiError('Invalid JSON body', { status: 400, code: 'INVALID_JSON' }) }
+  }
 }
 
 export function logApiError(

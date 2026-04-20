@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { requireAdmin } from '@/lib/admin/admin-guard'
 import { DEFAULT_ANNOUNCEMENT } from '@/lib/admin/announcement-defaults'
-import { apiError, logApiError } from '@/utils/api-response'
+import { normalizeAnnouncementContent } from '@/lib/email/localized-template-content'
+import { apiError, logApiError, parseJsonBody } from '@/utils/api-response'
 import type { AppAnnouncementContent } from '@/lib/email/types/email-template.types'
 
 const SLUG = 'default'
@@ -10,7 +11,7 @@ const SLUG = 'default'
 async function loadAnnouncement(): Promise<AppAnnouncementContent> {
   const row = await prisma.appAnnouncement.findUnique({ where: { slug: SLUG } })
   if (!row) return DEFAULT_ANNOUNCEMENT
-  return row.content as unknown as AppAnnouncementContent
+  return normalizeAnnouncementContent(row.content)
 }
 
 export async function GET(req: NextRequest) {
@@ -31,12 +32,14 @@ export async function PUT(req: NextRequest) {
   if (!guard.success) return guard.response
 
   try {
-    const body = await req.json().catch(() => null)
+    const bodyResult = await parseJsonBody(req)
+    if (!bodyResult.ok) return bodyResult.response
+    const body = bodyResult.data as Record<string, unknown>
     if (!body?.content || typeof body.content !== 'object') {
       return apiError('Invalid request body', { status: 422, code: 'VALIDATION_ERROR' })
     }
 
-    const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...body.content }
+    const content = normalizeAnnouncementContent(body.content)
 
     const json = content as unknown as Parameters<typeof prisma.appAnnouncement.upsert>[0]['create']['content']
 

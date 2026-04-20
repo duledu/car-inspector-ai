@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin, DEFAULT_ADMIN_TEST_EMAIL } from '@/lib/admin/admin-guard'
-import { DEFAULT_ANNOUNCEMENT } from '@/lib/admin/announcement-defaults'
+import { normalizeAnnouncementContent } from '@/lib/email/localized-template-content'
 import { buildDynamicAppUpdateTemplate } from '@/lib/email/templates/app-update-template'
 import { sendEmail } from '@/lib/email/send-email'
-import { apiError, logApiError } from '@/utils/api-response'
-import type { AppAnnouncementContent } from '@/lib/email/types/email-template.types'
+import { apiError, logApiError, parseJsonBody } from '@/utils/api-response'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -13,8 +12,10 @@ export async function POST(req: NextRequest) {
   if (!guard.success) return guard.response
 
   try {
-    const body = await req.json().catch(() => ({}))
-    const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
+    const bodyResult = await parseJsonBody(req)
+    if (!bodyResult.ok) return bodyResult.response
+    const body = bodyResult.data as Record<string, unknown>
+    const content = normalizeAnnouncementContent(body.content)
     const lang = typeof body?.language === 'string' ? body.language : undefined
 
     const requestedRecipient = typeof body?.testEmail === 'string' ? body.testEmail.trim().toLowerCase() : ''

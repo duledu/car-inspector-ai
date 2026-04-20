@@ -4,6 +4,7 @@ import { buildMarketingEmailTemplate } from '@/lib/email/templates/marketing-ema
 import { localizeMarketingContent, resolveMarketingLang } from '@/lib/email/marketing-i18n'
 import type { SupportedLang } from '@/i18n/shared'
 import type { MarketingCampaignContent } from '@/lib/email/types/email-template.types'
+import { EMAIL_RE, MAX_MANUAL_RECIPIENTS } from './bulk-email-sender'
 import type { BulkSendResult, RecipientMode } from './bulk-email-sender'
 
 interface MarketingRecipient {
@@ -19,13 +20,14 @@ export interface SendMarketingEmailsOptions {
   recipientMode?: RecipientMode
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const BATCH_SIZE = 15
 
 function normalizeManualEmails(raw: string[]): string[] {
   return raw
     .filter((email): email is string => typeof email === 'string')
     .map(email => email.trim().toLowerCase())
     .filter(email => EMAIL_RE.test(email))
+    .slice(0, MAX_MANUAL_RECIPIENTS)
 }
 
 export async function sendMarketingEmails(opts: SendMarketingEmailsOptions): Promise<BulkSendResult> {
@@ -77,29 +79,32 @@ export async function sendMarketingEmails(opts: SendMarketingEmailsOptions): Pro
   }
 
   const templateByLang = new Map<SupportedLang, ReturnType<typeof buildMarketingEmailTemplate>>()
-  let sent = 0
+  let sent   = 0
   let failed = 0
 
-  for (const recipient of unique.values()) {
-    let template = templateByLang.get(recipient.lang)
-    if (!template) {
-      const localized = localizeMarketingContent(content, recipient.lang)
-      template = buildMarketingEmailTemplate(localized.content, localized.lang)
-      templateByLang.set(recipient.lang, template)
-    }
+  const all = [...unique.values()]
 
-    const result = await sendEmail({
-      to:      recipient.email,
-      subject: template.subject,
-      html:    template.html,
-      text:    template.text,
-    })
-
-    if (result.success) {
-      sent++
-    } else {
-      failed++
-      console.error(`[marketing-email] ${recipient.source} delivery failed:`, result.error)
+  for (let i = 0; i < all.length; i += BATCH_SIZE) {
+    const batch   = all.slice(i, i + BATCH_SIZE)
+    const results = await Promise.all(
+      batch.map(recipient => {
+        let template = templateByLang.get(recipient.lang)
+        if (!template) {
+          const localized = localizeMarketingContent(content, recipient.lang)
+          template = buildMarketingEmailTemplate(localized.content, localized.lang)
+          templateByLang.set(recipient.lang, template)
+        }
+        return sendEmail({ to: recipient.email, subject: template.subject, html: template.html, text: template.text })
+          .then(result => ({ result, source: recipient.source }))
+      }),
+    )
+    for (const { result, source } of results) {
+      if (result.success) {
+        sent++
+      } else {
+        failed++
+        console.error(`[marketing-email] ${source} delivery failed:`, result.error)
+      }
     }
   }
 

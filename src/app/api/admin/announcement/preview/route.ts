@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/admin-guard'
-import { DEFAULT_ANNOUNCEMENT } from '@/lib/admin/announcement-defaults'
+import { normalizeAnnouncementContent } from '@/lib/email/localized-template-content'
 import { buildDynamicAppUpdateTemplate } from '@/lib/email/templates/app-update-template'
-import { apiError, logApiError } from '@/utils/api-response'
-import type { AppAnnouncementContent } from '@/lib/email/types/email-template.types'
+import { apiError, logApiError, parseJsonBody } from '@/utils/api-response'
 
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)
   if (!guard.success) return guard.response
 
   try {
-    const body = await req.json().catch(() => null)
-    const content: AppAnnouncementContent = { ...DEFAULT_ANNOUNCEMENT, ...(body?.content ?? {}) }
+    const bodyResult = await parseJsonBody(req)
+    if (!bodyResult.ok) return bodyResult.response
+    const body = bodyResult.data as Record<string, unknown>
+    const content = normalizeAnnouncementContent(body.content)
     const lang = typeof body?.language === 'string' ? body.language : undefined
     const { html } = buildDynamicAppUpdateTemplate(content, lang)
     return NextResponse.json({ data: { html } })

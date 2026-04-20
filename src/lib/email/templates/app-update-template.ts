@@ -1,6 +1,7 @@
 import { buildBaseEmailTemplate } from './base-email-template'
 import { escHtml, interpolate } from './template-utils'
 import { getAppUpdateStrings } from '@/lib/email/email-i18n'
+import { resolveAnnouncementContent } from '@/lib/email/localized-template-content'
 import type { AppUpdateTemplateProps, AppAnnouncementContent, EmailCardItem } from '../types/email-template.types'
 
 const UPDATE_CARDS: EmailCardItem[] = [
@@ -34,6 +35,10 @@ export function buildAppUpdateTemplate(opts: AppUpdateTemplateProps): { html: st
 }
 
 export function buildDynamicAppUpdateTemplate(content: AppAnnouncementContent, lang?: string): { html: string; text: string; subject: string } {
+  const localized = resolveAnnouncementContent(content, lang)
+  content = localized.content
+  lang = localized.lang
+
   const cards: EmailCardItem[] = [
     { icon: content.card1Icon, title: content.card1Title, description: content.card1Description },
     { icon: content.card2Icon, title: content.card2Title, description: content.card2Description },

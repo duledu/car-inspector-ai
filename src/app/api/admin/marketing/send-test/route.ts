@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin, DEFAULT_ADMIN_TEST_EMAIL } from '@/lib/admin/admin-guard'
-import { DEFAULT_MARKETING_CAMPAIGN } from '@/lib/admin/announcement-defaults'
+import { normalizeMarketingContent } from '@/lib/email/localized-template-content'
 import { buildMarketingEmailTemplate } from '@/lib/email/templates/marketing-email-template'
 import { localizeMarketingContent } from '@/lib/email/marketing-i18n'
 import { sendEmail } from '@/lib/email/send-email'
-import { apiError, logApiError } from '@/utils/api-response'
-import type { MarketingCampaignContent } from '@/lib/email/types/email-template.types'
+import { apiError, logApiError, parseJsonBody } from '@/utils/api-response'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -14,8 +13,10 @@ export async function POST(req: NextRequest) {
   if (!guard.success) return guard.response
 
   try {
-    const body    = await req.json().catch(() => ({}))
-    const content: MarketingCampaignContent = { ...DEFAULT_MARKETING_CAMPAIGN, ...(body?.content ?? {}) }
+    const bodyResult = await parseJsonBody(req)
+    if (!bodyResult.ok) return bodyResult.response
+    const body = bodyResult.data as Record<string, unknown>
+    const content = normalizeMarketingContent(body.content)
     const language = typeof body?.language === 'string' ? body.language : 'en'
 
     const requestedRecipient = typeof body?.testEmail === 'string' ? body.testEmail.trim().toLowerCase() : ''

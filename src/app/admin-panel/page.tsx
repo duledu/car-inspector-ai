@@ -6,7 +6,18 @@ import { useUserStore } from '@/store'
 import { adminApi } from '@/services/api/admin.api'
 import type { BulkSendResult } from '@/services/api/admin.api'
 import { DEFAULT_ANNOUNCEMENT, DEFAULT_MARKETING_CAMPAIGN } from '@/lib/admin/announcement-defaults'
-import type { AppAnnouncementContent, MarketingCampaignContent } from '@/lib/email/types/email-template.types'
+import {
+  getAnnouncementEditorContent,
+  getMarketingEditorContent,
+  setAnnouncementLocalizedField,
+  setMarketingLocalizedField,
+} from '@/lib/email/localized-template-content'
+import type {
+  AppAnnouncementContent,
+  AppAnnouncementLocalizedFields,
+  MarketingCampaignContent,
+  MarketingCampaignLocalizedFields,
+} from '@/lib/email/types/email-template.types'
 import type { RecipientMode } from '@/lib/admin/bulk-email-sender'
 import { LANG_META, SUPPORTED_LANGS } from '@/i18n/shared'
 import type { SupportedLang } from '@/i18n/shared'
@@ -28,16 +39,16 @@ const S = {
   badge:       { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 20, fontSize: 11, fontWeight: 700, color: '#f87171', letterSpacing: '0.08em', textTransform: 'uppercase' as const },
   tabs:        { display: 'flex', gap: 4, padding: '16px 32px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' } as React.CSSProperties,
   tab:         (active: boolean): React.CSSProperties => ({ padding: '10px 18px', fontSize: 13, fontWeight: 600, color: active ? '#22d3ee' : 'rgba(255,255,255,0.45)', background: 'transparent', border: 'none', borderBottom: active ? '2px solid #22d3ee' : '2px solid transparent', cursor: 'pointer', marginBottom: -1 }),
-  body:        { padding: '28px 32px', maxWidth: 1400, margin: '0 auto' } as React.CSSProperties,
-  sectionHead: { fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.35)', marginBottom: 16 },
-  card:        { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '24px' } as React.CSSProperties,
-  row:         { display: 'flex', gap: 24, flexWrap: 'wrap' as const } as React.CSSProperties,
-  label:       { display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 6, letterSpacing: '0.04em' } as React.CSSProperties,
-  input:       { width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#fff', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' },
-  textarea:    { width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#fff', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, fontFamily: 'inherit', lineHeight: 1.5 },
-  fieldGroup:  { marginBottom: 16 } as React.CSSProperties,
-  divider:     { height: 1, background: 'rgba(255,255,255,0.06)', margin: '20px 0' } as React.CSSProperties,
-  groupTitle:  { fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: 14 },
+  body:        { padding: '26px 32px 40px', maxWidth: 1760, margin: '0 auto' } as React.CSSProperties,
+  sectionHead: { fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.42)', marginBottom: 18 },
+  card:        { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '22px' } as React.CSSProperties,
+  row:         { display: 'flex', gap: 24, flexWrap: 'wrap' as const, alignItems: 'flex-start' } as React.CSSProperties,
+  label:       { display: 'block', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.62)', marginBottom: 7, letterSpacing: '0.04em' } as React.CSSProperties,
+  input:       { width: '100%', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#fff', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' },
+  textarea:    { width: '100%', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#fff', outline: 'none', resize: 'vertical' as const, boxSizing: 'border-box' as const, fontFamily: 'inherit', lineHeight: 1.55 },
+  fieldGroup:  { marginBottom: 14 } as React.CSSProperties,
+  divider:     { height: 1, background: 'rgba(255,255,255,0.07)', margin: '18px 0' } as React.CSSProperties,
+  groupTitle:  { fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.09em', textTransform: 'uppercase' as const, marginBottom: 14 },
   btn:         (variant: 'primary' | 'ghost' | 'danger' | 'active'): React.CSSProperties => ({
     padding: '10px 20px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none',
     background: variant === 'primary' ? '#22d3ee' : variant === 'active' ? 'rgba(34,211,238,0.12)' : variant === 'danger' ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.06)',
@@ -225,21 +236,21 @@ function RightPanel(props: Readonly<RightPanelProps>) {
   const manualCount = parseManualEmails(props.manualEmailsRaw).length
 
   return (
-    <div style={{ flex: 1, minWidth: 320 }}>
-      <div style={{ ...S.card, position: 'sticky', top: 24 }}>
+    <div style={{ flex: '3 1 760px', minWidth: 'min(680px, 100%)' }}>
+      <div style={{ ...S.card, position: 'sticky', top: 18, padding: 14 }}>
 
         {/* Preview */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <p style={{ ...S.groupTitle, margin: 0 }}>Preview</p>
-          <button style={{ ...S.btn('ghost'), padding: '7px 14px', fontSize: 12, opacity: props.previewing ? 0.5 : 1 }} onClick={props.onPreview} disabled={props.previewing}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 12 }}>
+          <p style={{ ...S.groupTitle, margin: 0, color: 'rgba(255,255,255,0.68)' }}>Preview</p>
+          <button style={{ ...S.btn('ghost'), padding: '9px 16px', fontSize: 12, opacity: props.previewing ? 0.5 : 1 }} onClick={props.onPreview} disabled={props.previewing}>
             {props.previewing ? 'Rendering…' : '↻ Refresh'}
           </button>
         </div>
 
         {props.previewHtml ? (
-          <iframe ref={iframeRef} srcDoc={props.previewHtml} style={{ width: '100%', height: 560, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }} title="Email preview" sandbox="allow-same-origin" />
+          <iframe ref={iframeRef} srcDoc={props.previewHtml} style={{ width: '100%', height: 'calc(100vh - 118px)', minHeight: 760, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, background: '#06070a' }} title="Email preview" sandbox="allow-same-origin" />
         ) : (
-          <div style={{ height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+          <div style={{ height: 'calc(100vh - 118px)', minHeight: 760, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 8, color: 'rgba(255,255,255,0.28)', fontSize: 13 }}>
             <span style={{ fontSize: 26, marginBottom: 8 }}>👁</span>
             Click Refresh to render
           </div>
@@ -267,12 +278,12 @@ function RightPanel(props: Readonly<RightPanelProps>) {
           onRawChange={props.onManualEmailsChange}
           mode={props.recipientMode}
           onModeChange={props.onRecipientModeChange}
-          showLanguage={true}
+          showLanguage={false}
           manualLanguage={props.manualLanguage}
           onManualLanguageChange={props.onManualLanguageChange}
           languageNote={props.campaignType === 'marketing'
-            ? 'DB users receive emails in their own preferred language. Manual recipients use this selected language. Admin-edited content takes priority; this language is used as fallback for empty fields.'
-            : 'Controls system labels (footer, button fallback text) in the rendered email.'}
+            ? 'DB users receive their preferred language. Manual recipients, preview, and test send use this selected language. Empty localized fields fall back to the default template field.'
+            : 'DB users receive their preferred language. Manual recipients, preview, and test send use this selected language. Empty localized fields fall back to the default template field.'}
         />
 
         <div style={S.divider} />
@@ -303,12 +314,12 @@ function RightPanel(props: Readonly<RightPanelProps>) {
 
 function AnnouncementFormFields({ form, onChange }: Readonly<{
   form: AppAnnouncementContent
-  onChange: (f: AppAnnouncementContent) => void
+  onChange: (key: keyof AppAnnouncementLocalizedFields, value: string) => void
 }>) {
-  const set = useCallback((key: keyof AppAnnouncementContent) => (v: string) => onChange({ ...form, [key]: v }), [form, onChange])
+  const set = useCallback((key: keyof AppAnnouncementLocalizedFields) => (v: string) => onChange(key, v), [onChange])
 
   return (
-    <div style={{ flex: '0 0 520px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ flex: '2 1 480px', minWidth: 'min(460px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={S.card}>
         <p style={S.groupTitle}>Email Metadata</p>
         <Field label="Subject" value={form.subject} onChange={set('subject')} />
@@ -331,20 +342,6 @@ function AnnouncementFormFields({ form, onChange }: Readonly<{
       </div>
 
       <div style={S.card}>
-        <p style={S.groupTitle}>Feature Cards</p>
-        {([1, 2, 3, 4] as const).map(n => (
-          <div key={n} style={{ marginBottom: n < 4 ? 16 : 0 }}>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8, fontWeight: 600 }}>Card {n}</p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: '0 0 64px' }}><Field label="Icon" value={form[`card${n}Icon`]} onChange={set(`card${n}Icon`)} /></div>
-              <div style={{ flex: 1 }}><Field label="Title" value={form[`card${n}Title`]} onChange={set(`card${n}Title`)} /></div>
-            </div>
-            <Field label="Description" value={form[`card${n}Description`]} onChange={set(`card${n}Description`)} />
-          </div>
-        ))}
-      </div>
-
-      <div style={S.card}>
         <p style={S.groupTitle}>Secondary Section (optional)</p>
         <Field label="Section title" value={form.secondaryTitle} onChange={set('secondaryTitle')} placeholder="Leave empty to hide" />
         <TextArea label="Section body" value={form.secondaryBody} onChange={set('secondaryBody')} rows={3} />
@@ -360,16 +357,41 @@ function AnnouncementFormFields({ form, onChange }: Readonly<{
   )
 }
 
+function AnnouncementFeatureCardsFields({ form, onChange }: Readonly<{
+  form: AppAnnouncementContent
+  onChange: (key: keyof AppAnnouncementLocalizedFields, value: string) => void
+}>) {
+  const set = useCallback((key: keyof AppAnnouncementLocalizedFields) => (v: string) => onChange(key, v), [onChange])
+
+  return (
+    <div style={{ ...S.card, marginTop: 24 }}>
+      <p style={{ ...S.groupTitle, color: 'rgba(255,255,255,0.58)' }}>Feature Cards</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+        {([1, 2, 3, 4] as const).map(n => (
+          <div key={n} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: 16, background: 'rgba(255,255,255,0.018)' }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.44)', margin: '0 0 12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Card {n}</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: '0 0 64px' }}><Field label="Icon" value={form[`card${n}Icon`]} onChange={set(`card${n}Icon`)} /></div>
+              <div style={{ flex: 1 }}><Field label="Title" value={form[`card${n}Title`]} onChange={set(`card${n}Title`)} /></div>
+            </div>
+            <Field label="Description" value={form[`card${n}Description`]} onChange={set(`card${n}Description`)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Marketing form fields ────────────────────────────────────────────────────
 
 function MarketingFormFields({ form, onChange }: Readonly<{
   form: MarketingCampaignContent
-  onChange: (f: MarketingCampaignContent) => void
+  onChange: (key: keyof MarketingCampaignLocalizedFields, value: string) => void
 }>) {
-  const set = useCallback((key: keyof MarketingCampaignContent) => (v: string) => onChange({ ...form, [key]: v }), [form, onChange])
+  const set = useCallback((key: keyof MarketingCampaignLocalizedFields) => (v: string) => onChange(key, v), [onChange])
 
   return (
-    <div style={{ flex: '0 0 520px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ flex: '2 1 480px', minWidth: 'min(460px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={S.card}>
         <p style={{ margin: '0 0 14px', fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
           All fields are fully editable. Localized defaults exist for en, sr, de, mk, and sq — leave a field empty to use the localized default for the recipient's language.
@@ -450,12 +472,41 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
   }
 
   const campaignName = campaignType === 'announcement' ? announcementForm.campaignName : marketingForm.campaignName
+  const announcementEditorForm = getAnnouncementEditorContent(announcementForm, manualLanguage)
+  const marketingEditorForm    = getMarketingEditorContent(marketingForm, manualLanguage)
+
+  const clearGeneratedState = useCallback(() => {
+    setPreviewHtml(null)
+    setTestResult(null)
+    setBulkResult(null)
+    setBulkError(null)
+  }, [])
+
+  const handleAnnouncementFieldChange = useCallback((key: keyof AppAnnouncementLocalizedFields, value: string) => {
+    clearGeneratedState()
+    setAnnouncementForm(prev => setAnnouncementLocalizedField(prev, manualLanguage, key, value))
+  }, [clearGeneratedState, manualLanguage])
+
+  const handleMarketingFieldChange = useCallback((key: keyof MarketingCampaignLocalizedFields, value: string) => {
+    clearGeneratedState()
+    setMarketingForm(prev => setMarketingLocalizedField(prev, manualLanguage, key, value))
+  }, [clearGeneratedState, manualLanguage])
+
+  const handleLanguageChange = useCallback((lang: SupportedLang) => {
+    setManualLanguage(lang)
+    clearGeneratedState()
+  }, [clearGeneratedState])
 
   const handleSave = async () => {
     setSaving(true); setSaveMsg(null)
     try {
-      if (campaignType === 'announcement') await adminApi.saveAnnouncement(announcementForm)
-      else await adminApi.saveMarketing(marketingForm)
+      if (campaignType === 'announcement') {
+        const saved = await adminApi.saveAnnouncement(announcementForm)
+        setAnnouncementForm(saved)
+      } else {
+        const saved = await adminApi.saveMarketing(marketingForm)
+        setMarketingForm(saved)
+      }
       setSaveMsg('Saved.')
     } catch (error) {
       setSaveMsg(getErrorMessage(error, 'Save failed.'))
@@ -469,8 +520,8 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     setPreviewing(true)
     try {
       const html = campaignType === 'announcement'
-        ? await adminApi.previewAnnouncement(announcementForm, manualLanguage)
-        : await adminApi.previewMarketing(marketingForm, manualLanguage)
+        ? await adminApi.previewAnnouncement(announcementEditorForm, manualLanguage)
+        : await adminApi.previewMarketing(marketingEditorForm, manualLanguage)
       setPreviewHtml(html)
     } catch (error) {
       setPreviewHtml(`<p style="color:#f87171;padding:20px;font-family:sans-serif;">${getErrorMessage(error, 'Preview failed.')}</p>`)
@@ -483,8 +534,8 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     setTestSending(true); setTestResult(null); setBulkError(null)
     try {
       const r = campaignType === 'announcement'
-        ? await adminApi.sendAnnouncementTest(announcementForm, testEmail || undefined, manualLanguage)
-        : await adminApi.sendMarketingTest(marketingForm, testEmail || undefined, manualLanguage)
+        ? await adminApi.sendAnnouncementTest(announcementEditorForm, testEmail || undefined, manualLanguage)
+        : await adminApi.sendMarketingTest(marketingEditorForm, testEmail || undefined, manualLanguage)
       setTestResult(`✓ Sent to ${r.sentTo}`)
     } catch (error) {
       setTestResult(`Error: ${getErrorMessage(error, 'Test send failed.')}`)
@@ -541,19 +592,22 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
       )}
 
       {/* Campaign type toggle + campaign name + save */}
-      <div style={{ ...S.card, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 4, border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ ...S.card, marginBottom: 24, padding: '18px 20px', display: 'flex', alignItems: 'flex-end', gap: 18, flexWrap: 'wrap' }}>
+        <div style={{ flex: '0 0 auto' }}>
+          <label style={S.label}>Template</label>
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 4, border: '1px solid rgba(255,255,255,0.07)' }}>
           {(['announcement', 'marketing'] as CampaignType[]).map(type => (
             <button key={type} onClick={() => switchCampaign(type)}
               style={{ padding: '8px 18px', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: campaignType === type ? 'rgba(34,211,238,0.12)' : 'transparent', color: campaignType === type ? '#22d3ee' : 'rgba(255,255,255,0.4)' }}>
               {type === 'announcement' ? '📢 App Update' : '✉ Marketing'}
             </button>
           ))}
+          </div>
         </div>
 
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div style={{ flex: '1 1 280px', minWidth: 260, maxWidth: 420 }}>
           <label style={S.label}>Campaign name (internal)</label>
-          <input style={{ ...S.input, maxWidth: 340 }}
+          <input style={S.input}
             value={campaignName}
             onChange={e => campaignType === 'announcement'
               ? setAnnouncementForm(p => ({ ...p, campaignName: e.target.value }))
@@ -561,8 +615,23 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, paddingTop: 16 }}>
-          <button style={{ ...S.btn('ghost'), opacity: saving ? 0.5 : 1 }} onClick={handleSave} disabled={saving}>
+        <div style={{ flex: '0 0 220px' }}>
+          <label style={S.label}>Editing language</label>
+          <select
+            style={S.input}
+            value={manualLanguage}
+            onChange={e => handleLanguageChange(e.target.value as SupportedLang)}
+          >
+            {SUPPORTED_LANGS.map(lang => (
+              <option key={lang} value={lang} style={{ background: '#0d1420', color: '#fff' }}>
+                {LANG_META[lang].full}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, minHeight: 38 }}>
+          <button style={{ ...S.btn('ghost'), minWidth: 92, opacity: saving ? 0.5 : 1 }} onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
           </button>
           {saveMsg && <span style={{ fontSize: 12, color: saveMsg === 'Saved.' ? '#34d399' : '#f87171' }}>{saveMsg}</span>}
@@ -572,8 +641,8 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
       {/* Two-column editor */}
       <div style={S.row}>
         {campaignType === 'announcement'
-          ? <AnnouncementFormFields form={announcementForm} onChange={setAnnouncementForm} />
-          : <MarketingFormFields    form={marketingForm}    onChange={setMarketingForm} />
+          ? <AnnouncementFormFields form={announcementEditorForm} onChange={handleAnnouncementFieldChange} />
+          : <MarketingFormFields    form={marketingEditorForm}    onChange={handleMarketingFieldChange} />
         }
 
         <RightPanel
@@ -591,7 +660,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
           recipientMode={recipientMode}
           onRecipientModeChange={setRecipientMode}
           manualLanguage={manualLanguage}
-          onManualLanguageChange={setManualLanguage}
+          onManualLanguageChange={handleLanguageChange}
           onBulkSendClick={handleBulkSendClick}
           bulkSending={bulkSending}
           bulkResult={bulkResult}
@@ -600,6 +669,10 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
           dbUserCount={dbUserCount}
         />
       </div>
+
+      {campaignType === 'announcement' && (
+        <AnnouncementFeatureCardsFields form={announcementEditorForm} onChange={handleAnnouncementFieldChange} />
+      )}
     </div>
   )
 }

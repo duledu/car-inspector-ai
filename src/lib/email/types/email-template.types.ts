@@ -1,3 +1,5 @@
+import type { SupportedLang } from '@/i18n/shared'
+
 export interface EmailCardItem {
   icon: string
   title: string
@@ -22,7 +24,7 @@ export interface BaseEmailTemplateProps {
   secondaryCtaUrl?: string
 }
 
-export interface AppAnnouncementContent {
+interface AppAnnouncementBaseContent {
   campaignName:      string
   subject:           string
   previewText:       string
@@ -56,6 +58,12 @@ export interface AppAnnouncementContent {
   signatureLine:     string
 }
 
+export type AppAnnouncementLocalizedFields = Omit<AppAnnouncementBaseContent, 'campaignName'>
+
+export interface AppAnnouncementContent extends AppAnnouncementBaseContent {
+  localizations?: Partial<Record<SupportedLang, Partial<AppAnnouncementLocalizedFields>>>
+}
+
 export interface VerifyEmailTemplateProps {
   name: string
   verifyUrl: string
@@ -76,7 +84,7 @@ export interface AppUpdateTemplateProps {
   previewText?: string
 }
 
-export interface MarketingCampaignContent {
+interface MarketingCampaignBaseContent {
   campaignName:      string
   subject:           string
   previewText:       string
@@ -91,4 +99,10 @@ export interface MarketingCampaignContent {
   secondaryCtaLabel: string
   secondaryCtaUrl:   string
   footerNote:        string
+}
+
+export type MarketingCampaignLocalizedFields = Omit<MarketingCampaignBaseContent, 'campaignName'>
+
+export interface MarketingCampaignContent extends MarketingCampaignBaseContent {
+  localizations?: Partial<Record<SupportedLang, Partial<MarketingCampaignLocalizedFields>>>
 }
