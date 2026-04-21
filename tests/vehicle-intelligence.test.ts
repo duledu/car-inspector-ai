@@ -6,10 +6,11 @@
 
 import { normalizeVehicle }    from '../src/lib/vehicle/normalize'
 import { matchIssues }         from '../src/lib/vehicle/matcher'
-import { buildKbResearchSections, deduplicateAiSections } from '../src/modules/research/research.service'
+import { buildKbResearchSections, deduplicateAiSections, VehicleResearchService } from '../src/modules/research/research.service'
 import { allIssues } from '../data/vehicle-issues'
 import type { VehicleIssue }   from '../src/lib/vehicle/types'
 import type { ResearchParams } from '../src/modules/research/research.service'
+import { pricingService } from '../src/modules/pricing/pricing.service'
 
 // ─── Normalize ────────────────────────────────────────────────────────────────
 
@@ -517,6 +518,63 @@ describe('buildKbResearchSections - model-specific overview content', () => {
     expect(new Set(audi)).not.toEqual(new Set(bmw))
     expect(new Set(audi)).not.toEqual(new Set(golf))
     expect(new Set(bmw)).not.toEqual(new Set(golf))
+  })
+})
+
+describe('VehicleResearchService — fallback source classification', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('uses knowledge-base source without limited mode when AI is unavailable but KB data exists', async () => {
+    jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue({
+      providerId: 'test-provider',
+      source: 'test-provider',
+      confidence: 'medium',
+      minPrice: 8000,
+      maxPrice: 10000,
+      avgPrice: 9000,
+      listingCount: 12,
+    })
+
+    const service = new VehicleResearchService('')
+    const result = await service.research(base({
+      make: 'Volkswagen',
+      model: 'Golf',
+      year: 2016,
+      fuelType: 'diesel',
+      engineCc: 1968,
+      transmission: 'DSG',
+    }))
+
+    expect(result.dataSource).toBe('knowledge_base')
+    expect(result.fallbackReason).toBe('missing_ai_config')
+    expect(result.limitedMode).toBe(false)
+    expect(result.sections.commonProblems.items.length).toBeGreaterThan(0)
+  })
+
+  it('keeps limited mode only for generic fallback when there is no model-specific data', async () => {
+    jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue({
+      providerId: 'test-provider',
+      source: 'test-provider',
+      confidence: 'medium',
+      minPrice: 3000,
+      maxPrice: 5000,
+      avgPrice: 4000,
+      listingCount: 5,
+    })
+
+    const service = new VehicleResearchService('')
+    const result = await service.research(base({
+      make: 'Honda',
+      model: 'Civic',
+      year: 2018,
+      fuelType: 'petrol',
+    }))
+
+    expect(result.dataSource).toBe('generic_fallback')
+    expect(result.fallbackReason).toBe('no_model_data')
+    expect(result.limitedMode).toBe(true)
   })
 })
 

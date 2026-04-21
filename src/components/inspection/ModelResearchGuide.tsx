@@ -744,7 +744,7 @@ function ResearchResults({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* Limited mode banner */}
-      {result.limitedMode && <LimitedModeBanner />}
+      {result.limitedMode && result.dataSource === 'generic_fallback' && <LimitedModeBanner />}
 
       {/* Result header card */}
       <div style={{

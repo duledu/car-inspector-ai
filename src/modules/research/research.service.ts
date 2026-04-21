@@ -37,6 +37,10 @@ export interface ResearchOutput extends VehicleResearchResult {
   kbMatchCount:  number
 }
 
+function fallbackReasonFor(aiConfigured: boolean): VehicleResearchResult['fallbackReason'] {
+  return aiConfigured ? 'ai_unavailable' : 'missing_ai_config'
+}
+
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function normalizeLocale(locale?: string): string {
@@ -496,6 +500,7 @@ function buildKbFallbackResult(params: ResearchParams, kbIssues: MatchedIssue[])
   return {
     vehicleKey,
     generatedAt: new Date().toISOString(),
+    dataSource: 'knowledge_base',
     confidence: kbIssues.length >= 3 ? 'medium' : 'low',
     overallRiskLevel: kbIssues.some(issue => issue.severity === 'critical') ? 'high' : 'moderate',
     summary: top
@@ -594,9 +599,10 @@ export class VehicleResearchService {
     // ── Build final result ───────────────────────────────────────────────────
     let base: VehicleResearchResult
     let limitedMode = false
+    const aiConfigured = Boolean(this.anthropicApiKey)
 
     if (researchOutcome.status === 'fulfilled') {
-      base = researchOutcome.value
+      base = { ...researchOutcome.value, dataSource: 'ai_live', fallbackReason: undefined }
       // KB is first-class output: prepend deterministic vehicle-specific issues, then keep non-duplicated AI enrichment.
       if (kbIssues.length > 0 && base.sections) {
         base = { ...base, sections: mergeKbSections(base.sections, kbIssues, params.locale) }
@@ -604,8 +610,19 @@ export class VehicleResearchService {
       console.log('[research] Anthropic OK')
     } else {
       console.warn('[research] AI failed — using knowledge base:', researchOutcome.reason)
-      base        = kbIssues.length > 0 ? buildKbFallbackResult(params, kbIssues) : generateFallbackResult(params)
-      limitedMode = true
+      if (kbIssues.length > 0) {
+        base = {
+          ...buildKbFallbackResult(params, kbIssues),
+          fallbackReason: fallbackReasonFor(aiConfigured),
+        }
+      } else {
+        base = {
+          ...generateFallbackResult(params),
+          dataSource: 'generic_fallback',
+          fallbackReason: 'no_model_data',
+        }
+        limitedMode = true
+      }
     }
 
     // Pricing service overrides / enriches priceContext

@@ -25,21 +25,44 @@ const STATUS_COLOR: Record<string, string> = {
 
 /* ── Segmented control ── */
 function Segmented<T extends string>({
-  options, value, onChange,
-}: Readonly<{ options: ReadonlyArray<{ label: string; value: T }>; value: T; onChange: (v: T) => void }>) {
+  options, value, onChange, allowWrap = false, minButtonWidth,
+}: Readonly<{
+  options: ReadonlyArray<{ label: string; value: T }>
+  value: T
+  onChange: (v: T) => void
+  allowWrap?: boolean
+  minButtonWidth?: number
+}>) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{
+      display: 'flex',
+      gap: 4,
+      flexWrap: allowWrap ? 'wrap' : 'nowrap',
+      background: 'rgba(255,255,255,0.03)',
+      borderRadius: 10,
+      padding: 3,
+      border: '1px solid rgba(255,255,255,0.07)',
+    }}>
       {options.map(opt => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
           style={{
-            flex: 1, padding: '8px 0', fontSize: 12, fontWeight: value === opt.value ? 700 : 400,
+            flex: allowWrap ? `1 1 ${minButtonWidth ?? 96}px` : 1,
+            minWidth: allowWrap ? (minButtonWidth ?? 96) : undefined,
+            maxWidth: allowWrap ? '100%' : undefined,
+            padding: allowWrap ? '8px 10px' : '8px 0',
+            fontSize: 12, fontWeight: value === opt.value ? 700 : 400,
             borderRadius: 8, border: value === opt.value ? '1px solid rgba(34,211,238,0.25)' : '1px solid transparent',
             background: value === opt.value ? 'rgba(34,211,238,0.1)' : 'transparent',
             color: value === opt.value ? '#22d3ee' : 'rgba(255,255,255,0.35)',
-            cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'all 0.15s', whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+            transition: 'all 0.15s',
+            whiteSpace: allowWrap ? 'normal' : 'nowrap',
+            overflowWrap: 'anywhere',
+            lineHeight: 1.25,
           }}
         >
           {opt.label}
@@ -262,12 +285,14 @@ export default function VehiclePage() {
             </div>
 
             {/* Row 4: Transmission / Body type */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 14 }}>
               <Field label={t('vehicle.transmission')}>
                 <Segmented
                   options={TRANSMISSION_OPTIONS as unknown as Array<{ label: string; value: string }>}
                   value={form.transmission ?? ''}
                   onChange={v => set({ transmission: v ? v as Transmission : undefined })}
+                  allowWrap
+                  minButtonWidth={84}
                 />
               </Field>
               <Field label={t('vehicle.bodyType')}>

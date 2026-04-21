@@ -491,6 +491,10 @@ export interface VehicleResearchResult {
   confidence: ConfidenceLevel
   summary: string
   overallRiskLevel: 'low' | 'moderate' | 'high'
+  /** Primary source behind the displayed guide */
+  dataSource?: 'ai_live' | 'knowledge_base' | 'generic_fallback'
+  /** Why a non-live fallback was used */
+  fallbackReason?: 'missing_ai_config' | 'ai_unavailable' | 'no_model_data'
   priceContext?: PriceContext
   sections: {
     commonProblems: ResearchSection
