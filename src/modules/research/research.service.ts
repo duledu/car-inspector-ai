@@ -217,6 +217,34 @@ Respond ONLY with valid JSON. No markdown, no code fences.
 Generate 3-5 items per section. Be specific to the ${vehicleDesc}.`
 }
 
+function shouldLocalizeResearch(locale?: string): boolean {
+  return normalizeLocale(locale) !== 'en'
+}
+
+function buildLocalizationPrompt(result: VehicleResearchResult, locale?: string): string {
+  return `You are a professional automotive localization editor.
+
+${languageInstruction(locale)}
+
+Translate ONLY the user-facing string values in this vehicle research JSON:
+- summary
+- disclaimer
+- priceContext.evaluationLabel
+- priceContext.summary
+- sections.*.title
+- sections.*.items.*.title
+- sections.*.items.*.description
+
+Rules:
+- Preserve the JSON structure exactly
+- Preserve ids, property names, timestamps, numeric values, enum values, tags, severity values, confidence values, dataSource, fallbackReason, vehicleKey, and priceContext.evaluation
+- If a user-facing string is already in the requested language, keep it natural and do not anglicize it
+- Return ONLY valid JSON with the same structure
+
+JSON:
+${JSON.stringify(result)}`
+}
+
 // ─── Price context builder — merges pricing-service result ────────────────────
 
 function buildPriceContext(
@@ -513,10 +541,9 @@ function buildKbFallbackResult(params: ResearchParams, kbIssues: MatchedIssue[])
 
 async function callAnthropic(
   apiKey: string,
-  params: ResearchParams,
+  prompt: string,
   timeoutMs: number,
-  kbIssues: MatchedIssue[] = [],
-): Promise<VehicleResearchResult> {
+): Promise<Record<string, unknown>> {
   const controller = new AbortController()
   const timer      = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -532,7 +559,7 @@ async function callAnthropic(
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
-        messages: [{ role: 'user', content: buildPrompt(params, kbIssues) }],
+        messages: [{ role: 'user', content: prompt }],
       }),
     })
 
@@ -544,18 +571,62 @@ async function callAnthropic(
     const json    = await response.json()
     const raw: string = json.content?.[0]?.text ?? ''
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-    const parsed  = JSON.parse(cleaned) as VehicleResearchResult
-    // Warn if sections are incomplete but do not throw — a partial AI result is
-    // better than falling back to the English-only static knowledge base.
-    if (!parsed.sections || typeof parsed.sections !== 'object') {
-      throw new Error('Anthropic response missing sections object entirely')
-    }
-    if (!parsed.sections.commonProblems) {
-      console.warn('[research] Anthropic response missing commonProblems section — using partial result')
-    }
+    const parsed  = JSON.parse(cleaned) as Record<string, unknown>
     return parsed
   } finally {
     clearTimeout(timer)
+  }
+}
+
+async function generateResearchResult(
+  apiKey: string,
+  params: ResearchParams,
+  timeoutMs: number,
+  kbIssues: MatchedIssue[] = [],
+): Promise<VehicleResearchResult> {
+  const parsed = await callAnthropic(apiKey, buildPrompt(params, kbIssues), timeoutMs) as VehicleResearchResult
+    // Warn if sections are incomplete but do not throw — a partial AI result is
+    // better than falling back to the English-only static knowledge base.
+  if (!parsed.sections || typeof parsed.sections !== 'object') {
+    throw new Error('Anthropic response missing sections object entirely')
+  }
+  if (!parsed.sections.commonProblems) {
+    console.warn('[research] Anthropic response missing commonProblems section — using partial result')
+  }
+  return parsed
+}
+
+async function localizeResearchResult(
+  apiKey: string,
+  result: VehicleResearchResult,
+  locale?: string,
+): Promise<VehicleResearchResult> {
+  if (!shouldLocalizeResearch(locale)) return result
+
+  const localized = await callAnthropic(apiKey, buildLocalizationPrompt(result, locale), 12000) as VehicleResearchResult
+  if (!localized.sections || typeof localized.sections !== 'object') {
+    throw new Error('Localized research response missing sections object')
+  }
+
+  return {
+    ...result,
+    summary: localized.summary ?? result.summary,
+    disclaimer: localized.disclaimer ?? result.disclaimer,
+    priceContext: result.priceContext
+      ? {
+          ...result.priceContext,
+          evaluationLabel: localized.priceContext?.evaluationLabel ?? result.priceContext.evaluationLabel,
+          summary: localized.priceContext?.summary ?? result.priceContext.summary,
+        }
+      : localized.priceContext,
+    sections: {
+      commonProblems:      localized.sections.commonProblems      ?? result.sections.commonProblems,
+      highPriorityChecks:  localized.sections.highPriorityChecks  ?? result.sections.highPriorityChecks,
+      visualAttention:     localized.sections.visualAttention     ?? result.sections.visualAttention,
+      mechanicalWatchouts: localized.sections.mechanicalWatchouts ?? result.sections.mechanicalWatchouts,
+      testDriveFocus:      localized.sections.testDriveFocus      ?? result.sections.testDriveFocus,
+      costAwareness:       localized.sections.costAwareness       ?? result.sections.costAwareness,
+    },
   }
 }
 
@@ -638,18 +709,26 @@ export class VehicleResearchService {
       console.warn('[pricing] No price context available')
     }
 
+    if (this.anthropicApiKey && shouldLocalizeResearch(params.locale)) {
+      try {
+        base = await localizeResearchResult(this.anthropicApiKey, base, params.locale)
+      } catch (err) {
+        console.warn('[research] Final localization pass failed — returning assembled result as-is:', err)
+      }
+    }
+
     return { ...base, limitedMode, kbIssues, kbMatchCount: kbIssues.length }
   }
 
   private async callWithRetry(params: ResearchParams, kbIssues: MatchedIssue[] = []): Promise<VehicleResearchResult> {
     try {
-      return await callAnthropic(this.anthropicApiKey, params, 12000, kbIssues)
+      return await generateResearchResult(this.anthropicApiKey, params, 12000, kbIssues)
     } catch (err) {
       const isTimeout = err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'))
       console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying with extended timeout`)
     }
     // Second attempt: longer timeout to handle slow model responses
-    return await callAnthropic(this.anthropicApiKey, params, 18000, kbIssues)
+    return await generateResearchResult(this.anthropicApiKey, params, 18000, kbIssues)
   }
 }
 

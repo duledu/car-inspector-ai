@@ -578,6 +578,142 @@ describe('VehicleResearchService — fallback source classification', () => {
   })
 })
 
+describe('VehicleResearchService — localization pass', () => {
+  const pricingResult = {
+    providerId: 'test-provider',
+    source: 'test-provider',
+    confidence: 'medium' as const,
+    minPrice: 8000,
+    maxPrice: 10000,
+    avgPrice: 9000,
+    listingCount: 12,
+  }
+
+  const englishAiResult = {
+    vehicleKey: '2016 Volkswagen Golf 2.0L',
+    generatedAt: '2026-04-22T00:00:00.000Z',
+    confidence: 'high',
+    overallRiskLevel: 'moderate',
+    summary: 'English summary.',
+    priceContext: {
+      marketRangeFrom: 8000,
+      marketRangeTo: 10000,
+      avgPrice: 9000,
+      evaluation: 'fair',
+      evaluationLabel: 'Fair market value',
+      summary: 'English price summary.',
+      isEstimated: true,
+      source: 'AI estimate',
+      confidence: 'medium',
+    },
+    sections: {
+      commonProblems:      { id: 'commonProblems', title: 'Česti problemi', items: [{ title: 'Timing chain stretch', description: 'English body text.', severity: 'high', tags: ['COMMON_ISSUE'] }] },
+      highPriorityChecks:  { id: 'highPriorityChecks', title: 'Prioritetne provere', items: [] },
+      visualAttention:     { id: 'visualAttention', title: 'Vizuelne tačke pažnje', items: [] },
+      mechanicalWatchouts: { id: 'mechanicalWatchouts', title: 'Mehaničke provere', items: [] },
+      testDriveFocus:      { id: 'testDriveFocus', title: 'Fokus na test vožnji', items: [] },
+      costAwareness:       { id: 'costAwareness', title: 'Troškovi i pregovori', items: [] },
+    },
+    disclaimer: 'English disclaimer.',
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('localizes final assembled research content when Serbian is selected', async () => {
+    jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
+
+    const originalFetch = global.fetch
+    ;(global as typeof globalThis & { fetch: jest.Mock }).fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          content: [{ text: JSON.stringify(englishAiResult) }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          content: [{
+            text: JSON.stringify({
+              ...englishAiResult,
+              summary: 'Sažetak na srpskom.',
+              priceContext: {
+                ...englishAiResult.priceContext,
+                evaluationLabel: 'U okviru tržišta',
+                summary: 'Sažetak cene na srpskom.',
+              },
+              sections: {
+                ...englishAiResult.sections,
+                commonProblems: {
+                  ...englishAiResult.sections.commonProblems,
+                  items: [{ title: 'Istezanje lanca razvoda', description: 'Tekst kartice na srpskom.', severity: 'high', tags: ['COMMON_ISSUE'] }],
+                },
+              },
+              disclaimer: 'Odricanje odgovornosti na srpskom.',
+            }),
+          }],
+        }),
+      }) as unknown as typeof fetch
+
+    try {
+      const service = new VehicleResearchService('test-key')
+      const result = await service.research(base({
+        make: 'Volkswagen',
+        model: 'Golf',
+        year: 2016,
+        fuelType: 'diesel',
+        engineCc: 1968,
+        locale: 'sr',
+      }))
+
+      expect(global.fetch).toHaveBeenCalledTimes(2)
+      expect(result.summary).toBe('Sažetak na srpskom.')
+      expect(result.priceContext?.summary).toBe('Sažetak cene na srpskom.')
+      expect(result.sections.commonProblems.items[0]?.title).toBe('Istezanje lanca razvoda')
+      expect(result.sections.commonProblems.items[0]?.description).toBe('Tekst kartice na srpskom.')
+      expect(result.disclaimer).toBe('Odricanje odgovornosti na srpskom.')
+    } finally {
+      ;(global as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
+    }
+  })
+
+  it('skips the localization pass when English is selected', async () => {
+    jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
+
+    const originalFetch = global.fetch
+    ;(global as typeof globalThis & { fetch: jest.Mock }).fetch = jest
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          content: [{ text: JSON.stringify(englishAiResult) }],
+        }),
+      }) as unknown as typeof fetch
+
+    try {
+      const service = new VehicleResearchService('test-key')
+      const result = await service.research(base({
+        make: 'Volkswagen',
+        model: 'Golf',
+        year: 2016,
+        fuelType: 'diesel',
+        engineCc: 1968,
+        locale: 'en',
+      }))
+
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+      expect(result.summary).toBe('English summary.')
+      expect(result.sections.commonProblems.items[0]?.description).toContain('The EA288 2.0 TDI uses a timing chain')
+      expect(result.disclaimer).toBe('English disclaimer.')
+    } finally {
+      ;(global as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
+    }
+  })
+})
+
 function base(overrides: Partial<ResearchParams> & { make: string; model: string; year: number }): ResearchParams {
   return {
     locale: 'en',
