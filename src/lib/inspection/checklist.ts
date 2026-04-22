@@ -18,6 +18,16 @@ export type NormalizableChecklistItem = {
   updatedAt?: Date | string | null
 }
 
+export type InspectionCompletionCategory = Exclude<ChecklistCategory, 'PRE_SCREENING'>
+
+export type InspectionCompletionSummary = {
+  isComplete: boolean
+  answeredCount: number
+  totalCount: number
+  missingCategories: InspectionCompletionCategory[]
+  categoryProgress: Record<InspectionCompletionCategory, { answered: number; total: number; complete: boolean }>
+}
+
 export const COMPACT_INSPECTION_CHECKLIST: ChecklistSeedItem[] = [
   { category: 'EXTERIOR', itemKey: 'ext_paint', itemLabel: 'Paint, body panels and repair signs' },
   { category: 'EXTERIOR', itemKey: 'ext_rust', itemLabel: 'Rust on body, sills and underbody' },
@@ -136,5 +146,37 @@ export function getChecklistDiagnostics(items: NormalizableChecklistItem[]) {
       status: item.status,
       hasInstructionKey: true,
     })),
+  }
+}
+
+export function getInspectionCompletion(items: NormalizableChecklistItem[]): InspectionCompletionSummary {
+  const normalized = normalizeChecklistItems(items)
+  const requiredCategories = [...new Set(COMPACT_INSPECTION_CHECKLIST.map((item) => item.category))] as InspectionCompletionCategory[]
+
+  const categoryProgress = requiredCategories.reduce((acc, category) => {
+    const expectedItems = COMPACT_INSPECTION_CHECKLIST.filter((item) => item.category === category)
+    const answered = expectedItems.filter((seed) => {
+      const match = normalized.find((item) => item.category === category && item.itemKey === seed.itemKey)
+      return match?.status === 'OK' || match?.status === 'WARNING' || match?.status === 'PROBLEM'
+    }).length
+
+    acc[category] = {
+      answered,
+      total: expectedItems.length,
+      complete: expectedItems.length > 0 && answered === expectedItems.length,
+    }
+    return acc
+  }, {} as Record<InspectionCompletionCategory, { answered: number; total: number; complete: boolean }>)
+
+  const totalCount = Object.values(categoryProgress).reduce((sum, category) => sum + category.total, 0)
+  const answeredCount = Object.values(categoryProgress).reduce((sum, category) => sum + category.answered, 0)
+  const missingCategories = requiredCategories.filter((category) => !categoryProgress[category].complete)
+
+  return {
+    isComplete: missingCategories.length === 0 && totalCount > 0,
+    answeredCount,
+    totalCount,
+    missingCategories,
+    categoryProgress,
   }
 }

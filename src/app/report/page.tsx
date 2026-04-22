@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
 import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
-import type { RiskScore } from '@/types'
+import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
+import { calculatePreliminaryRiskScore } from '@/modules/scoring'
+import type { RiskScore, ScoreCalculationInput } from '@/types'
 import AppShell from '../AppShell'
 
 // ─── Verdict config (colours only — labels resolved via t()) ─────────────────
@@ -300,38 +302,196 @@ function deriveNextSteps(
 export default function ReportPage() {
   const { t, i18n }                    = useTranslation()
   const { activeVehicle }              = useVehicleStore()
-  const { aiResults }                  = useInspectionStore()
+  const { session, aiResults, checklistItems, testDriveRatings } = useInspectionStore()
   const { hasAccess }                  = usePaymentStore()
 
-  const [riskScore,   setRiskScore]   = useState<RiskScore | null>(null)
+  const [riskScore,   setRiskScore]   = useState<(Omit<RiskScore, 'id' | 'createdAt'> | RiskScore) | null>(null)
   const [loading,     setLoading]     = useState(false)
   const [calculating, setCalculating] = useState(false)
   const [calcError,   setCalcError]   = useState<string | null>(null)
   const [pdfLoading,  setPdfLoading]  = useState(false)
   const [pdfError,    setPdfError]    = useState<string | null>(null)
+  const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
+  const [preliminaryRequested, setPreliminaryRequested] = useState(false)
+  const [vehicleStoreHydrated, setVehicleStoreHydrated] = useState(() => useVehicleStore.persist.hasHydrated())
+  const [inspectionStoreHydrated, setInspectionStoreHydrated] = useState(() => useInspectionStore.persist.hasHydrated())
+  const [reportUnavailable, setReportUnavailable] = useState(false)
 
   const vehicleId  = activeVehicle?.id ?? ''
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
+  const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
+  const normalizedChecklist = useMemo(() => normalizeChecklistItems(checklistItems), [checklistItems])
+  const inspectionCompletion = useMemo(() => getInspectionCompletion(normalizedChecklist), [normalizedChecklist])
+
+  const derivedTestDriveRatings = useMemo(() => {
+    const ratings: Record<string, number> = {}
+
+    Object.entries(testDriveRatings).forEach(([key, value]) => {
+      ratings[key] = value.rating
+    })
+
+    if (Object.keys(ratings).length > 0) return ratings
+
+    normalizedChecklist
+      .filter((item) => item.category === 'TEST_DRIVE' && item.status !== 'PENDING')
+      .forEach((item) => {
+        ratings[item.itemKey] =
+          item.status === 'OK' ? 1 :
+          item.status === 'WARNING' ? 2 :
+          3
+      })
+
+    return ratings
+  }, [normalizedChecklist, testDriveRatings])
+
+  const sectionProgress = useMemo(() => {
+    const missingCategoryLabels = inspectionCompletion.missingCategories.map((category) => {
+      if (category === 'DOCUMENTS') return t('phase.VIN_DOCS')
+      return t(`phase.${category}`)
+    })
+    return {
+      total: inspectionCompletion.totalCount,
+      done: inspectionCompletion.answeredCount,
+      percent: inspectionCompletion.totalCount > 0
+        ? Math.round((inspectionCompletion.answeredCount / inspectionCompletion.totalCount) * 100)
+        : 0,
+      missing: missingCategoryLabels,
+      isComplete: inspectionCompletion.isComplete,
+      completedDimensions: {
+        ai: aiResults.length > 0,
+        exterior: inspectionCompletion.categoryProgress.EXTERIOR.answered > 0,
+        interior: inspectionCompletion.categoryProgress.INTERIOR.answered > 0,
+        mechanical: inspectionCompletion.categoryProgress.MECHANICAL.answered > 0,
+        testDrive: inspectionCompletion.categoryProgress.TEST_DRIVE.answered > 0 || Object.keys(derivedTestDriveRatings).length > 0,
+        documents: inspectionCompletion.categoryProgress.DOCUMENTS.answered > 0,
+        vin: false,
+      },
+      hasAnyData: aiResults.length > 0 || inspectionCompletion.answeredCount > 0,
+    }
+  }, [aiResults.length, derivedTestDriveRatings, inspectionCompletion, t])
+
+  const preliminaryInput = useMemo<ScoreCalculationInput>(() => ({
+    aiFindings: aiResults.flatMap((result) => result.findings),
+    checklistItems: normalizedChecklist,
+    vinData: null,
+    testDriveRatings: derivedTestDriveRatings,
+    hasPremiumHistory: false,
+  }), [aiResults, normalizedChecklist, derivedTestDriveRatings])
 
   useEffect(() => {
+    const unsubVehicleHydrate = useVehicleStore.persist.onHydrate(() => setVehicleStoreHydrated(false))
+    const unsubVehicleFinish = useVehicleStore.persist.onFinishHydration(() => setVehicleStoreHydrated(true))
+    const unsubInspectionHydrate = useInspectionStore.persist.onHydrate(() => setInspectionStoreHydrated(false))
+    const unsubInspectionFinish = useInspectionStore.persist.onFinishHydration(() => setInspectionStoreHydrated(true))
+
+    setVehicleStoreHydrated(useVehicleStore.persist.hasHydrated())
+    setInspectionStoreHydrated(useInspectionStore.persist.hasHydrated())
+
+    return () => {
+      unsubVehicleHydrate()
+      unsubVehicleFinish()
+      unsubInspectionHydrate()
+      unsubInspectionFinish()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const params = new URLSearchParams(window.location.search)
+      setPreliminaryRequested(params.get('mode') === 'preliminary')
+    } catch (err) {
+      console.error('[report] failed to read query params', err)
+      setPreliminaryRequested(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!storesHydrated) return
     if (!vehicleId) return
     setLoading(true)
     inspectionApi.getScore(vehicleId)
-      .then(s  => { setRiskScore(s); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [vehicleId])
+      .then(s  => {
+        setRiskScore(s)
+        setIsPreliminaryScore(false)
+        setReportUnavailable(false)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error('[report] failed to load persisted score', err)
+        if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
+          setReportUnavailable(true)
+          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+        }
+        setLoading(false)
+      })
+  }, [storesHydrated, t, vehicleId])
+
+  useEffect(() => {
+    if (!storesHydrated) return
+    if (activeVehicle || !session?.vehicleId) return
+
+    useVehicleStore.getState().fetchVehicle(session.vehicleId).catch((err) => {
+      console.error('[report] failed to recover active vehicle from inspection session', err, { sessionVehicleId: session.vehicleId })
+      if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
+        setReportUnavailable(true)
+        setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+      }
+    })
+  }, [activeVehicle, session?.vehicleId, storesHydrated, t])
+
+  useEffect(() => {
+    if (!storesHydrated) return
+    if (loading || riskScore) return
+    if (!preliminaryRequested) return
+    handleCalculatePreliminary()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, riskScore, preliminaryRequested, storesHydrated, vehicleId])
 
   const handleCalculate = async () => {
-    if (!vehicleId) return
+    if (!vehicleId || !sectionProgress.isComplete) return
     setCalculating(true)
     setCalcError(null)
     try {
       const s = await inspectionApi.calculateScore(vehicleId)
       setRiskScore(s)
+      setIsPreliminaryScore(false)
+      setReportUnavailable(false)
     } catch (err: unknown) {
-      setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
+      if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
+        setReportUnavailable(true)
+        setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+      } else {
+        setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
+      }
     } finally {
       setCalculating(false)
+    }
+  }
+
+  const handleCalculatePreliminary = () => {
+    if (!vehicleId) {
+      console.error('[report] preliminary report requested without active vehicle')
+      setCalcError(t('report.noVehicleSub'))
+      return
+    }
+    if (!sectionProgress.hasAnyData) {
+      console.error('[report] not enough data for preliminary report', { vehicleId, sectionProgress })
+      setCalcError(t('report.notEnoughData', { defaultValue: 'Nema dovoljno podataka za izvestaj.' }))
+      setRiskScore(null)
+      setIsPreliminaryScore(false)
+      return
+    }
+    setCalcError(null)
+    try {
+      const preliminary = calculatePreliminaryRiskScore(vehicleId, preliminaryInput, sectionProgress.completedDimensions)
+      setRiskScore(preliminary)
+      setIsPreliminaryScore(true)
+    } catch (err) {
+      console.error('[report] failed to calculate preliminary report', err, { vehicleId, preliminaryInput, sectionProgress })
+      setCalcError(t('report.preliminaryFailed', { defaultValue: 'Preliminarni izvestaj trenutno nije mogao da se generise.' }))
+      setRiskScore(null)
+      setIsPreliminaryScore(false)
     }
   }
 
@@ -360,17 +520,33 @@ export default function ReportPage() {
   }
 
   // ── No vehicle ──
+  if (!storesHydrated) {
+    return (
+      <AppShell>
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
+          {t('report.loading')}
+        </div>
+      </AppShell>
+    )
+  }
+
   if (!activeVehicle) {
     return (
       <AppShell>
         <EmptyReport
           icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
-          title={t('report.noVehicle')}
-          sub={t('report.noVehicleSub')}
+          title={reportUnavailable
+            ? t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' })
+            : t('report.noVehicle')}
+          sub={reportUnavailable
+            ? t('report.unavailableSub', { defaultValue: 'Podaci trenutno nisu dostupni.' })
+            : t('report.noVehicleSub')}
         />
         <div style={{ textAlign: 'center', marginTop: 4 }}>
-          <Link href="/vehicle" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 22px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-            {t('report.goToVehicles')}
+          <Link href={reportUnavailable ? '/inspection' : '/vehicle'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 22px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            {reportUnavailable
+              ? t('report.continueInspection', { defaultValue: 'Nastavi pregled' })
+              : t('report.goToVehicles')}
           </Link>
         </div>
       </AppShell>
@@ -412,25 +588,151 @@ export default function ReportPage() {
         {/* ── No score yet ── */}
         {!loading && !riskScore && (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
-            <EmptyReport
-              icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
-              title={t('report.noScore')}
-              sub={t('report.noScoreSub')}
-            />
-            <div style={{ padding: '0 24px 28px', display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
-                {t('report.backToInspection')}
-              </Link>
-              <button onClick={handleCalculate} disabled={calculating}
-                style={{ padding: '10px 24px', background: calculating ? 'rgba(34,211,238,0.5)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
-                {calculating ? t('report.calculating') : t('report.calculateScore')}
+            {sectionProgress.isComplete ? (
+              <>
+                <EmptyReport
+                  icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
+                  title={t('report.noScore', { defaultValue: 'Ocena jos nije izracunata' })}
+                  sub={t('report.noScoreSub', { defaultValue: 'Pregled je zavrsen. Izracunajte finalnu ocenu pouzdanosti za ovaj izvestaj.' })}
+                />
+                <div style={{ padding: '0 24px 28px', display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
+                    {t('report.backToInspection')}
+                  </Link>
+                  <button onClick={handleCalculate} disabled={calculating}
+                    style={{ padding: '10px 24px', background: calculating ? 'rgba(34,211,238,0.5)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    {calculating ? t('report.calculating') : t('report.calculateScore')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <EmptyReport
+                  icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
+                  title={preliminaryRequested && !sectionProgress.hasAnyData
+                    ? t('report.preliminaryUnavailableTitle', { defaultValue: 'Preliminarni izvestaj trenutno nije dostupan' })
+                    : t('report.noScorePendingTitle', { defaultValue: 'Ocena jos nije dostupna' })}
+                  sub={preliminaryRequested && !sectionProgress.hasAnyData
+                    ? t('report.preliminaryUnavailableSub', { defaultValue: 'Nema dovoljno unetih podataka za generisanje preliminarnog izvestaja.' })
+                    : t('report.noScorePendingSub', { defaultValue: 'Pregled nije u potpunosti zavrsen. Mozete generisati preliminarni izvestaj, ali nedostajuce stavke mogu uticati na tacnost i potpunost rezultata.' })}
+                />
+                <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(255,255,255,0.02))', border: '1px solid rgba(34,211,238,0.12)', borderRadius: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                      {t('report.progressComplete', {
+                        defaultValue: 'Zavrseno: {{done}} od {{total}} stavki',
+                        done: sectionProgress.done,
+                        total: sectionProgress.total,
+                      })}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#22d3ee', whiteSpace: 'nowrap' }}>
+                        {t('report.progressPercent', {
+                          defaultValue: '{{percent}}% zavrseno',
+                          percent: sectionProgress.percent,
+                        })}
+                      </span>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10, boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.35)' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${sectionProgress.percent}%`,
+                        background: 'linear-gradient(90deg, #22d3ee 0%, #67e8f9 60%, #a5f3fc 100%)',
+                        boxShadow: '0 0 18px rgba(34,211,238,0.35)',
+                        borderRadius: 999,
+                        transition: 'width 0.35s ease',
+                      }} />
+                    </div>
+                    {sectionProgress.missing.length > 0 && (
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>
+                        {t('report.progressMissing', {
+                          defaultValue: 'Nedostaju: {{sections}}',
+                          sections: sectionProgress.missing.join(', ').toLowerCase(),
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={handleCalculatePreliminary}
+                      disabled={false}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        padding: '10px 18px',
+                        minWidth: 240,
+                        background: 'linear-gradient(135deg, #67e8f9, #22d3ee)',
+                        border: '1px solid rgba(103,232,249,0.32)',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: '#041014',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        boxShadow: '0 10px 26px rgba(34,211,238,0.18)',
+                      }}>
+                      {t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })}
+                    </button>
+                    <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 18px', background: 'transparent', color: 'rgba(255,255,255,0.72)', borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: 'none', minWidth: 180, border: '1px solid rgba(255,255,255,0.1)' }}>
+                      {t('report.continueInspection', { defaultValue: 'Nastavi pregled' })}
+                    </Link>
+                  </div>
+
+                  {!sectionProgress.hasAnyData && (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', textAlign: 'center' }}>
+                      {preliminaryRequested
+                        ? t('report.notEnoughData', { defaultValue: 'Nema dovoljno podataka za izvestaj.' })
+                        : t('report.noScoreNoInputs', { defaultValue: 'Unesite barem jedan deo pregleda da biste dobili preliminarnu ocenu.' })}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {!loading && riskScore && (!verdict || !svcLabel) && (
+          <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '22px 20px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fca5a5', marginBottom: 6 }}>
+              {t('report.renderIssue', { defaultValue: 'Izvestaj trenutno nije mogao pravilno da se prikaze.' })}
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.56)', lineHeight: 1.6, marginBottom: 14 }}>
+              {t('report.renderIssueSub', { defaultValue: 'Neki podaci nedostaju ili nisu u ocekivanom formatu. Pokusajte ponovo ili nastavite pregled.' })}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                onClick={isPreliminaryScore ? handleCalculatePreliminary : handleCalculate}
+                style={{ padding: '10px 18px', background: 'linear-gradient(135deg, #67e8f9, #22d3ee)', color: '#041014', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                {isPreliminaryScore
+                  ? t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })
+                  : t('report.calculateScore')}
               </button>
+              <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}>
+                {t('report.continueInspection', { defaultValue: 'Nastavi pregled' })}
+              </Link>
             </div>
           </div>
         )}
 
         {riskScore && verdict && svcLabel && (
           <>
+            {isPreliminaryScore && (
+              <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(255,255,255,0.025))', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 16, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#22d3ee', marginBottom: 6 }}>
+                  {t('report.preliminaryTitle', { defaultValue: 'Preliminarni izvestaj' })}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+                  {t('report.preliminarySubtitle', { defaultValue: 'Ovaj izvestaj je generisan na osnovu delimicno unetih podataka i ne predstavlja konacnu procenu vozila.' })}
+                </div>
+                <div style={{ fontSize: 11.75, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55, marginTop: 7 }}>
+                  {t('report.preliminaryNote', { defaultValue: 'Za potpunu i pouzdanu ocenu, potrebno je zavrsiti sve korake pregleda.' })}
+                </div>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55, marginTop: 6 }}>
+                  {t('report.preliminarySupport', { defaultValue: 'Nedostajuce sekcije mogu znacajno uticati na tacnost i preporuku.' })}
+                </div>
+              </div>
+            )}
             {/* ══════════════════════════════════════════════════════════
                 1. SUMMARY — score ring, verdict, service history badge
                ══════════════════════════════════════════════════════════ */}
@@ -446,7 +748,9 @@ export default function ReportPage() {
 
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 }}>
-                    {t('report.aiConfidenceScore')}
+                    {isPreliminaryScore
+                      ? t('report.preliminaryBadge', { defaultValue: 'Preliminarna ocena' })
+                      : t('report.aiConfidenceScore')}
                   </div>
                   {/* Verdict pill */}
                   <div style={{ display: 'inline-flex', padding: '5px 14px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 20, fontSize: 14, fontWeight: 700, color: verdict.color, marginBottom: 10 }}>
@@ -472,18 +776,38 @@ export default function ReportPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, minWidth: 190 }}>
-                  <button onClick={handleDownloadPdf} disabled={pdfLoading}
-                    style={{ minHeight: 44, padding: '10px 15px', background: pdfLoading ? 'rgba(34,211,238,0.55)' : 'linear-gradient(135deg, #67e8f9, #22d3ee)', border: '1px solid rgba(103,232,249,0.42)', borderRadius: 9, fontSize: 12, fontWeight: 800, color: '#041014', cursor: pdfLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 12px 28px rgba(34,211,238,0.16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, whiteSpace: 'normal', lineHeight: 1.18 }}>
+                  <button onClick={handleDownloadPdf} disabled={pdfLoading || isPreliminaryScore}
+                    style={{ minHeight: 44, padding: '10px 15px', background: pdfLoading || isPreliminaryScore ? 'rgba(34,211,238,0.55)' : 'linear-gradient(135deg, #67e8f9, #22d3ee)', border: '1px solid rgba(103,232,249,0.42)', borderRadius: 9, fontSize: 12, fontWeight: 800, color: '#041014', cursor: pdfLoading || isPreliminaryScore ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 12px 28px rgba(34,211,238,0.16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, whiteSpace: 'normal', lineHeight: 1.18 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    {pdfLoading ? t('report.pdf.loading') : t('report.pdf.cta')}
+                    {isPreliminaryScore
+                      ? t('report.pdf.preliminaryDisabled', { defaultValue: 'Zavrsite pregled za PDF izvestaj' })
+                      : pdfLoading ? t('report.pdf.loading') : t('report.pdf.cta')}
                   </button>
-                  <button onClick={handleCalculate} disabled={calculating}
-                    style={{ minHeight: 38, padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, fontSize: 12, color: 'rgba(255,255,255,0.56)', cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
-                    {calculating ? t('report.recalculating') : t('report.recalculate')}
-                  </button>
+                  {isPreliminaryScore ? (
+                    <Link
+                      href="/inspection"
+                      style={{ minHeight: 42, padding: '10px 18px', background: 'linear-gradient(135deg, #67e8f9, #22d3ee)', border: '1px solid rgba(103,232,249,0.4)', borderRadius: 9, fontSize: 12.5, fontWeight: 800, color: '#041014', textDecoration: 'none', fontFamily: 'var(--font-sans)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 28px rgba(34,211,238,0.16)' }}>
+                      {t('report.completeInspection', { defaultValue: 'Zavrsi pregled' })}
+                    </Link>
+                  ) : (
+                    <button onClick={handleCalculate} disabled={calculating}
+                      style={{ minHeight: 38, padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 9, fontSize: 12, color: calculating ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.56)', cursor: calculating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {calculating ? t('report.recalculating') : t('report.recalculate')}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
+
+            {isPreliminaryScore && (
+              <div style={{ marginTop: -4, display: 'flex', justifyContent: 'flex-end' }}>
+                <Link
+                  href="/inspection"
+                  style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.58)', textDecoration: 'none', padding: '2px 0' }}>
+                  {t('report.reviewMissingItems', { defaultValue: 'Pregledaj nedostajuce stavke' })}
+                </Link>
+              </div>
+            )}
 
             {pdfError && (
               <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 9, fontSize: 13, color: '#f87171' }}>

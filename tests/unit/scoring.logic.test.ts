@@ -4,7 +4,7 @@
 // Run: npx jest tests/unit/scoring.logic.test.ts
 // =============================================================================
 
-import { calculateRiskScore, getScoreColor, getVerdictLabel } from '../../src/modules/scoring/scoring.logic'
+import { calculatePreliminaryRiskScore, calculateRiskScore, getScoreColor, getVerdictLabel } from '../../src/modules/scoring/scoring.logic'
 import type { ScoreCalculationInput, AIFinding, ChecklistItem } from '../../src/types'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -112,6 +112,44 @@ describe('calculateRiskScore', () => {
     const vehicleId = 'test-vehicle-abc'
     const result = calculateRiskScore(vehicleId, emptyInput)
     expect(result.vehicleId).toBe(vehicleId)
+  })
+})
+
+describe('calculatePreliminaryRiskScore', () => {
+  test('reweights only completed sections for the preliminary score', () => {
+    const partialInput: ScoreCalculationInput = {
+      ...emptyInput,
+      checklistItems: [
+        makeChecklistItem({ id: 'ext-1', category: 'EXTERIOR', itemKey: 'ext_paint', status: 'OK' }),
+        makeChecklistItem({ id: 'ext-2', category: 'EXTERIOR', itemKey: 'ext_rust', status: 'OK' }),
+        makeChecklistItem({ id: 'doc-1', category: 'DOCUMENTS', itemKey: 'doc_service', status: 'OK' }),
+      ],
+    }
+
+    const finalLike = calculateRiskScore('vehicle-1', partialInput)
+    const preliminary = calculatePreliminaryRiskScore('vehicle-1', partialInput, {
+      exterior: true,
+      documents: true,
+    })
+
+    expect(preliminary.buyScore).toBeGreaterThan(finalLike.buyScore)
+    expect(preliminary.serviceHistoryStatus).toBe('FULL')
+  })
+
+  test('does not apply service-history penalties before that input exists', () => {
+    const partialInput: ScoreCalculationInput = {
+      ...emptyInput,
+      checklistItems: [
+        makeChecklistItem({ id: 'ext-1', category: 'EXTERIOR', itemKey: 'ext_paint', status: 'WARNING' }),
+      ],
+    }
+
+    const preliminary = calculatePreliminaryRiskScore('vehicle-1', partialInput, {
+      exterior: true,
+    })
+
+    expect(preliminary.serviceHistoryStatus).toBe('PARTIAL')
+    expect(preliminary.riskFlags).not.toContain('NO_SERVICE_HISTORY')
   })
 })
 

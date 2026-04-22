@@ -7,6 +7,12 @@
 function requireEnv(key: string): string {
   const value = process.env[key]
   const isBuild = process.env.NEXT_PHASE === 'phase-production-build'
+  if (key === 'DATABASE_URL') {
+    if (!value && process.env.NODE_ENV === 'production' && !isBuild) {
+      console.error('[env] DATABASE_URL is not set. Database-backed features will be unavailable.')
+    }
+    return value ?? ''
+  }
   if (!value && process.env.NODE_ENV === 'production' && !isBuild) {
     throw new Error(`Required environment variable "${key}" is not set.`)
   }

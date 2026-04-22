@@ -68,6 +68,8 @@ export const SCORE_WEIGHTS = {
   documents: 2,
 } as const
 
+export type ScoreDimensionKey = keyof RiskScore['dimensions']
+
 // ─── Verdict Thresholds ───────────────────────────────────────────────────────
 export const VERDICT_THRESHOLDS = {
   STRONG_BUY: 80,
@@ -535,6 +537,79 @@ export function calculateRiskScore(
     verdict,
     dimensions,
     hasPremiumData: input.hasPremiumHistory,
+    reasonsFor,
+    reasonsAgainst,
+    riskFlags,
+    negotiationHints,
+    serviceHistoryStatus: serviceStatus,
+  }
+}
+
+export function calculatePreliminaryRiskScore(
+  vehicleId: string,
+  input: ScoreCalculationInput,
+  completedDimensions: Partial<Record<ScoreDimensionKey, boolean>>
+): Omit<RiskScore, 'id' | 'createdAt'> {
+  const dimensions = calculateAllDimensions(input)
+
+  const includedDimensions = Object.entries(dimensions).filter(
+    ([key]) => completedDimensions[key as ScoreDimensionKey]
+  ) as Array<[ScoreDimensionKey, RiskScore['dimensions'][ScoreDimensionKey]]>
+
+  if (includedDimensions.length === 0) {
+    return calculateRiskScore(vehicleId, input)
+  }
+
+  const totalWeight = includedDimensions.reduce((sum, [, dim]) => sum + safeNumber(dim.weight, 0), 0)
+  const safeTotalWeight = safeNumber(totalWeight, 0) > 0 ? safeNumber(totalWeight, 0) : 100
+
+  const weightedSum = includedDimensions.reduce((sum, [, dim]) => {
+    return sum + clampScore(dim.score, 0, 100, 50) * (safeNumber(dim.weight, 0) / safeTotalWeight)
+  }, 0)
+
+  let buyScore = clampScore(weightedSum, 10, 96, 50)
+
+  const hasServiceInput = safeArray<ChecklistItem>(input.checklistItems).some(
+    (item) => item?.itemKey === 'doc_service' && item.status !== 'PENDING'
+  )
+  const serviceStatus = hasServiceInput
+    ? safeServiceHistoryStatus(input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems))
+    : 'PARTIAL'
+  const svcEffect = hasServiceInput
+    ? serviceHistoryEffect(serviceStatus)
+    : { delta: 0, flags: [], hints: [] }
+  buyScore = clampScore(buyScore + svcEffect.delta, 10, 96, 50)
+
+  const hasVinInput = !!completedDimensions.vin
+  const dmgEffect = hasVinInput
+    ? damagePenalty(input.vinData, input.hasPremiumHistory)
+    : { delta: 0, flags: [], hints: [] }
+  buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
+
+  let verdict = determineVerdict(buyScore)
+  const riskFlags = [...svcEffect.flags, ...dmgEffect.flags]
+  verdict = enforceVerdictCaps(
+    verdict,
+    serviceStatus,
+    hasVinInput ? input.vinData : null,
+    dmgEffect.flags,
+  )
+
+  const reasonInput: ScoreCalculationInput = {
+    ...input,
+    vinData: hasVinInput ? input.vinData : null,
+    hasPremiumHistory: hasVinInput ? input.hasPremiumHistory : false,
+  }
+  const { reasonsFor, reasonsAgainst } = generateReasons(reasonInput, serviceStatus, riskFlags)
+  const negotiationHints = [...svcEffect.hints, ...dmgEffect.hints].slice(0, 5)
+
+  return {
+    vehicleId,
+    buyScore,
+    riskScore: clampScore(100 - buyScore, 4, 90, 50),
+    verdict,
+    dimensions,
+    hasPremiumData: hasVinInput && input.hasPremiumHistory,
     reasonsFor,
     reasonsAgainst,
     riskFlags,

@@ -306,7 +306,7 @@ export function PWAProvider() {
 
   return (
     <>
-      {pathname !== '/inspection' && <InstallPrompt />}
+      {pathname !== '/inspection' && <InstallPrompt routeKey={pathname} />}
       {updateReady && (
         <UpdatePrompt
           isUpdating={isUpdating}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
+import { isDatabaseUnavailableError } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { scoringService } from '@/modules/scoring'
 import { apiError, logApiError } from '@/utils/api-response'
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest, { params }: { params: { vehicleId: s
     const score = await scoringService.getLatest(params.vehicleId)
     return NextResponse.json({ data: score })
   } catch (err) {
+    if (isDatabaseUnavailableError(err)) {
+      return apiError('Database unavailable', { status: 503, code: 'DATABASE_UNAVAILABLE' })
+    }
     logApiError('inspection/score/[vehicleId]', 'getLatest', err, { vehicleId: params.vehicleId })
     return apiError('Failed to fetch score', { status: 500, code: 'INTERNAL_ERROR' })
   }

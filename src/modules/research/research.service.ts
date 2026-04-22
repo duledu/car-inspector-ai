@@ -221,6 +221,17 @@ function shouldLocalizeResearch(locale?: string): boolean {
   return normalizeLocale(locale) !== 'en'
 }
 
+function buildLocalizedReviewFallback(params: ResearchParams): VehicleResearchResult {
+  return generateFallbackResult({
+    make: params.make,
+    model: params.model,
+    year: params.year,
+    engine: params.engine,
+    trim: params.trim,
+    locale: params.locale,
+  })
+}
+
 function buildLocalizationPrompt(result: VehicleResearchResult, locale?: string): string {
   return `You are a professional automotive localization editor.
 
@@ -584,7 +595,7 @@ async function generateResearchResult(
   timeoutMs: number,
   kbIssues: MatchedIssue[] = [],
 ): Promise<VehicleResearchResult> {
-  const parsed = await callAnthropic(apiKey, buildPrompt(params, kbIssues), timeoutMs) as VehicleResearchResult
+  const parsed = await callAnthropic(apiKey, buildPrompt(params, kbIssues), timeoutMs) as unknown as VehicleResearchResult
     // Warn if sections are incomplete but do not throw — a partial AI result is
     // better than falling back to the English-only static knowledge base.
   if (!parsed.sections || typeof parsed.sections !== 'object') {
@@ -603,7 +614,7 @@ async function localizeResearchResult(
 ): Promise<VehicleResearchResult> {
   if (!shouldLocalizeResearch(locale)) return result
 
-  const localized = await callAnthropic(apiKey, buildLocalizationPrompt(result, locale), 12000) as VehicleResearchResult
+  const localized = await callAnthropic(apiKey, buildLocalizationPrompt(result, locale), 12000) as unknown as VehicleResearchResult
   if (!localized.sections || typeof localized.sections !== 'object') {
     throw new Error('Localized research response missing sections object')
   }
@@ -709,11 +720,24 @@ export class VehicleResearchService {
       console.warn('[pricing] No price context available')
     }
 
-    if (this.anthropicApiKey && shouldLocalizeResearch(params.locale)) {
-      try {
-        base = await localizeResearchResult(this.anthropicApiKey, base, params.locale)
-      } catch (err) {
-        console.warn('[research] Final localization pass failed — returning assembled result as-is:', err)
+    if (shouldLocalizeResearch(params.locale)) {
+      if (this.anthropicApiKey) {
+        try {
+          base = await localizeResearchResult(this.anthropicApiKey, base, params.locale)
+        } catch (err) {
+          console.warn('[research] Final localization pass failed — using localized generic fallback:', err)
+          base = {
+            ...buildLocalizedReviewFallback(params),
+            priceContext: base.priceContext,
+          }
+        }
+      } else {
+        // Without a live localization provider, prefer a fully localized generic
+        // guide over leaking mixed-language KB prose into non-English results.
+        base = {
+          ...buildLocalizedReviewFallback(params),
+          priceContext: base.priceContext,
+        }
       }
     }
 

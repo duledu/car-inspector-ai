@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/config/prisma'
-import { normalizeChecklistItems } from '@/lib/inspection/checklist'
+import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { calculateRiskScore, clampScore } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
 import type { AIResult, ChecklistItem } from '.prisma/client'
@@ -66,21 +66,40 @@ export class ScoringService {
       return findings as AIFinding[]
     })
 
+    const normalizedChecklist = normalizeChecklistItems((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
+      id: item.id,
+      sessionId: item.sessionId,
+      category: item.category as any,
+      itemKey: item.itemKey,
+      itemLabel: item.itemLabel,
+      status: item.status as any,
+      notes: item.notes,
+      photoUrl: item.photoUrl,
+    })))
+
+    const completion = getInspectionCompletion(normalizedChecklist)
+    if (!completion.isComplete) {
+      const error = new Error('INSPECTION_INCOMPLETE')
+      ;(error as Error & { details?: unknown }).details = completion
+      throw error
+    }
+
     const hasPremium = !!purchase
+    const testDriveRatings = normalizedChecklist
+      .filter((item) => item.category === 'TEST_DRIVE' && item.status !== 'PENDING')
+      .reduce<Record<string, number>>((acc, item) => {
+        acc[item.itemKey] =
+          item.status === 'OK' ? 1 :
+          item.status === 'WARNING' ? 2 :
+          3
+        return acc
+      }, {})
+
     const input: ScoreCalculationInput = {
       aiFindings,
-      checklistItems: normalizeChecklistItems((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
-        id: item.id,
-        sessionId: item.sessionId,
-        category: item.category as any,
-        itemKey: item.itemKey,
-        itemLabel: item.itemLabel,
-        status: item.status as any,
-        notes: item.notes,
-        photoUrl: item.photoUrl,
-      }))),
+      checklistItems: normalizedChecklist,
       vinData: hasPremium && vinHistory ? (vinHistory.normalizedData as any) : null,
-      testDriveRatings: {},
+      testDriveRatings,
       hasPremiumHistory: hasPremium,
     }
 
@@ -147,6 +166,23 @@ export class ScoringService {
    * Fetch the most recent persisted risk score for a vehicle.
    */
   async getLatest(vehicleId: string): Promise<RiskScore | null> {
+    const session = await prisma.inspectionSession.findFirst({
+      where: { vehicleId },
+      include: { checklistItems: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    const completion = getInspectionCompletion((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
+      id: item.id,
+      sessionId: item.sessionId,
+      category: item.category as any,
+      itemKey: item.itemKey,
+      itemLabel: item.itemLabel,
+      status: item.status as any,
+      notes: item.notes,
+      photoUrl: item.photoUrl,
+    })))
+    if (!completion.isComplete) return null
+
     const score = await prisma.riskScore.findFirst({
       where: { vehicleId },
       orderBy: { createdAt: 'desc' },

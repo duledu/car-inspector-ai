@@ -8,7 +8,7 @@ import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
-import { getChecklistDiagnostics } from '@/lib/inspection/checklist'
+import { getChecklistDiagnostics, getInspectionCompletion } from '@/lib/inspection/checklist'
 import AppShell from '../AppShell'
 
 // ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
@@ -661,13 +661,15 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
 }
 
 // ─── Checklist Phase ──────────────────────────────────────────────────────────
-function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
+function ChecklistPhase({ items, isLoading, sectionCategory, onStatus, onNotes }: Readonly<{
   items: ChecklistRow[]
   isLoading: boolean
+  sectionCategory?: ChecklistCategory
   onStatus: (id: string, st: ItemStatus) => void
   onNotes:  (id: string, notes: string) => void
 }>) {
   const { t } = useTranslation()
+  const isConditionSection = sectionCategory === 'EXTERIOR' || sectionCategory === 'INTERIOR'
 
   // ── Notes state ──────────────────────────────────────────────────────────────
   // Initialise from persisted notes on mount; draft state is the source of truth in-UI
@@ -808,7 +810,19 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
                 {(['OK', 'WARNING', 'PROBLEM'] as ItemStatus[]).map(st => {
                   const cfg = STATUS_CFG[st]
                   const sel = item.status === st
-                  const labels: Record<string, string> = { OK: t('inspection.statusOK'), WARNING: t('inspection.statusWarning'), PROBLEM: t('inspection.statusIssue') }
+                  const labels: Record<ItemStatus, string> = isConditionSection
+                    ? {
+                        PENDING: '',
+                        OK: t('inspection.condition.good'),
+                        WARNING: t('inspection.condition.fair'),
+                        PROBLEM: t('inspection.condition.poor'),
+                      }
+                    : {
+                        PENDING: '',
+                        OK: t('inspection.diagnostic.ok'),
+                        WARNING: t('inspection.diagnostic.warning'),
+                        PROBLEM: t('inspection.diagnostic.problem'),
+                      }
                   return (
                     <button
                       key={st}
@@ -843,7 +857,19 @@ function ChecklistPhase({ items, isLoading, onStatus, onNotes }: Readonly<{
 }
 
 // ─── Risk Analysis ─────────────────────────────────────────────────────────────
-function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
+function RiskAnalysisPhase({
+  photos,
+  inspectionComplete,
+  answeredCount,
+  totalCount,
+  missingSections,
+}: Readonly<{
+  photos: PhotoEntry[]
+  inspectionComplete: boolean
+  answeredCount: number
+  totalCount: number
+  missingSections: string[]
+}>) {
   const { t }    = useTranslation()
   const total        = PHOTO_ANGLES.length
   const analyzed     = photos.filter(p => p.aiResult && !p.aiPending)
@@ -942,24 +968,92 @@ function RiskAnalysisPhase({ photos }: Readonly<{ photos: PhotoEntry[] }>) {
       {photos.length > 0 && <PhotoAnalysisDisclaimer style={{ marginBottom: 16 }} />}
 
       <div style={{ padding: '12px 0 4px' }}>
-        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
-          {t('inspection.allPhasesComplete')}
-        </div>
-        <Link
-          href="/report"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '15px 0',
-            background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
-            color: '#050810', borderRadius: 14, fontSize: 15, fontWeight: 800,
-            textDecoration: 'none', letterSpacing: '-0.2px',
-            boxShadow: '0 4px 24px rgba(34,211,238,0.36), inset 0 1px 0 rgba(255,255,255,0.25)',
-            width: '100%',
-          }}
-        >
-          {t('inspection.viewAIReport')}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </Link>
+        {inspectionComplete ? (
+          <>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
+              {t('inspection.allPhasesComplete')}
+            </div>
+            <Link
+              href="/report"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '15px 0',
+                background: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
+                color: '#050810', borderRadius: 14, fontSize: 15, fontWeight: 800,
+                textDecoration: 'none', letterSpacing: '-0.2px',
+                boxShadow: '0 4px 24px rgba(34,211,238,0.36), inset 0 1px 0 rgba(255,255,255,0.25)',
+                width: '100%',
+              }}
+            >
+              {t('inspection.viewAIReport')}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </Link>
+          </>
+        ) : (
+          <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, rgba(34,211,238,0.05), rgba(255,255,255,0.02))', border: '1px solid rgba(34,211,238,0.1)', borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+              {t('report.noScorePendingTitle', { defaultValue: 'Ocena jos nije dostupna' })}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.55 }}>
+              {t('report.noScorePendingSub', { defaultValue: 'Pregled nije u potpunosti zavrsen. Mozete generisati preliminarni izvestaj, ali nedostajuce stavke mogu uticati na tacnost i potpunost rezultata.' })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.78)' }}>
+                {t('report.progressComplete', {
+                  defaultValue: 'Zavrseno: {{done}} od {{total}} stavki',
+                  done: answeredCount,
+                  total: totalCount,
+                })}
+              </div>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#22d3ee', whiteSpace: 'nowrap' }}>
+                {t('report.progressPercent', {
+                  defaultValue: '{{percent}}% zavrseno',
+                  percent: totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0,
+                })}
+              </span>
+            </div>
+            <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.35)' }}>
+              <div style={{
+                height: '100%',
+                width: `${totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0}%`,
+                background: 'linear-gradient(90deg, #22d3ee 0%, #67e8f9 60%, #a5f3fc 100%)',
+                boxShadow: '0 0 18px rgba(34,211,238,0.35)',
+                borderRadius: 999,
+                transition: 'width 0.35s ease',
+              }} />
+            </div>
+            {missingSections.length > 0 && (
+              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                {t('report.progressMissing', {
+                  defaultValue: 'Nedostaju: {{sections}}',
+                  sections: missingSections.join(', ').toLowerCase(),
+                })}
+              </div>
+            )}
+            <Link
+              href="/report?mode=preliminary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginTop: 4,
+                padding: '13px 0',
+                background: 'linear-gradient(135deg, #67e8f9 0%, #22d3ee 100%)',
+                color: '#041014',
+                borderRadius: 12,
+                fontSize: 13.5,
+                fontWeight: 800,
+                textDecoration: 'none',
+                letterSpacing: '-0.15px',
+                boxShadow: '0 10px 26px rgba(34,211,238,0.18)',
+              }}
+            >
+              {t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1070,10 +1164,15 @@ export default function InspectionPage() {
   const phaseIdx  = PHASES.findIndex(p => p.phase === currentPhase)
   const phaseCfg  = PHASES[phaseIdx]
   const items     = phaseCfg?.category ? getItemsByCategory(phaseCfg.category) : []
-  const checked   = checklistItems.filter(i => i.status !== 'PENDING').length
-  const total     = checklistItems.length
+  const inspectionCompletion = useMemo(() => getInspectionCompletion(checklistItems), [checklistItems])
+  const checked   = inspectionCompletion.answeredCount
+  const total     = inspectionCompletion.totalCount
   const progress  = total > 0 ? Math.round((checked / total) * 100) : 0
   const checklistDiagnostics = useMemo(() => getChecklistDiagnostics(checklistItems), [checklistItems])
+  const missingSectionLabels = useMemo(
+    () => inspectionCompletion.missingCategories.map((category) => category === 'DOCUMENTS' ? t('phase.VIN_DOCS') : t(`phase.${category}`)),
+    [inspectionCompletion.missingCategories, t],
+  )
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return
@@ -1395,12 +1494,26 @@ export default function InspectionPage() {
           )}
 
           {/* RISK_ANALYSIS */}
-          {currentPhase === 'RISK_ANALYSIS' && <RiskAnalysisPhase photos={photos} />}
+          {currentPhase === 'RISK_ANALYSIS' && (
+            <RiskAnalysisPhase
+              photos={photos}
+              inspectionComplete={inspectionCompletion.isComplete}
+              answeredCount={inspectionCompletion.answeredCount}
+              totalCount={inspectionCompletion.totalCount}
+              missingSections={missingSectionLabels}
+            />
+          )}
 
           {/* All checklist phases */}
           {currentPhase !== 'AI_PHOTOS' && currentPhase !== 'RISK_ANALYSIS' && currentPhase !== 'PRE_SCREENING' && (
             <>
-              <ChecklistPhase items={items} isLoading={isLoadingChecklist} onStatus={handleStatus} onNotes={handleNotes} />
+              <ChecklistPhase
+                items={items}
+                isLoading={isLoadingChecklist}
+                sectionCategory={phaseCfg?.category}
+                onStatus={handleStatus}
+                onNotes={handleNotes}
+              />
             </>
           )}
         </div>
@@ -1448,7 +1561,7 @@ export default function InspectionPage() {
               transition: 'box-shadow 0.2s ease, transform 0.1s ease',
             }}
           >
-            {phaseIdx === PHASES.length - 2 ? t('inspection.finishAndScore') : t('common.continue')}
+            {phaseIdx === PHASES.length - 2 ? t('inspection.finishAndScore') : t('inspection.startCta')}
             {!isLast && (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             )}

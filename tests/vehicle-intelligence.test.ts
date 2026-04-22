@@ -621,7 +621,40 @@ describe('VehicleResearchService — localization pass', () => {
     jest.restoreAllMocks()
   })
 
-  it('localizes final assembled research content when Serbian is selected', async () => {
+  it.each([
+    {
+      locale: 'sr',
+      summary: 'Sažetak na srpskom.',
+      priceSummary: 'Sažetak cene na srpskom.',
+      title: 'Istezanje lanca razvoda',
+      description: 'Tekst kartice na srpskom.',
+      disclaimer: 'Odricanje odgovornosti na srpskom.',
+    },
+    {
+      locale: 'de',
+      summary: 'Deutsche Zusammenfassung.',
+      priceSummary: 'Deutsche Preiszusammenfassung.',
+      title: 'Steuerkettenlaengung',
+      description: 'Deutscher Kartentext.',
+      disclaimer: 'Deutscher Haftungsausschluss.',
+    },
+    {
+      locale: 'mk',
+      summary: 'Rezime na makedonski.',
+      priceSummary: 'Rezime za cenata na makedonski.',
+      title: 'Istegnat lanec na razvod',
+      description: 'Tekst na karticka na makedonski.',
+      disclaimer: 'Odrikuvanje na odgovornost na makedonski.',
+    },
+    {
+      locale: 'sq',
+      summary: 'Permbledhje ne shqip.',
+      priceSummary: 'Permbledhje e cmimit ne shqip.',
+      title: 'Zgjatja e zinxhirit te kohes',
+      description: 'Tekst kartele ne shqip.',
+      disclaimer: 'Mohim pergjegjesie ne shqip.',
+    },
+  ])('localizes final assembled research content for %s', async ({ locale, summary, priceSummary, title, description, disclaimer }) => {
     jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
 
     const originalFetch = global.fetch
@@ -639,20 +672,20 @@ describe('VehicleResearchService — localization pass', () => {
           content: [{
             text: JSON.stringify({
               ...englishAiResult,
-              summary: 'Sažetak na srpskom.',
+              summary,
               priceContext: {
                 ...englishAiResult.priceContext,
-                evaluationLabel: 'U okviru tržišta',
-                summary: 'Sažetak cene na srpskom.',
+                evaluationLabel: locale === 'de' ? 'Marktgerechter Preis' : locale === 'mk' ? 'Vo ramki na pazarot' : locale === 'sq' ? 'Brenda tregut' : 'U okviru tržišta',
+                summary: priceSummary,
               },
               sections: {
                 ...englishAiResult.sections,
                 commonProblems: {
                   ...englishAiResult.sections.commonProblems,
-                  items: [{ title: 'Istezanje lanca razvoda', description: 'Tekst kartice na srpskom.', severity: 'high', tags: ['COMMON_ISSUE'] }],
+                  items: [{ title, description, severity: 'high', tags: ['COMMON_ISSUE'] }],
                 },
               },
-              disclaimer: 'Odricanje odgovornosti na srpskom.',
+              disclaimer,
             }),
           }],
         }),
@@ -666,15 +699,15 @@ describe('VehicleResearchService — localization pass', () => {
         year: 2016,
         fuelType: 'diesel',
         engineCc: 1968,
-        locale: 'sr',
+        locale,
       }))
 
       expect(global.fetch).toHaveBeenCalledTimes(2)
-      expect(result.summary).toBe('Sažetak na srpskom.')
-      expect(result.priceContext?.summary).toBe('Sažetak cene na srpskom.')
-      expect(result.sections.commonProblems.items[0]?.title).toBe('Istezanje lanca razvoda')
-      expect(result.sections.commonProblems.items[0]?.description).toBe('Tekst kartice na srpskom.')
-      expect(result.disclaimer).toBe('Odricanje odgovornosti na srpskom.')
+      expect(result.summary).toBe(summary)
+      expect(result.priceContext?.summary).toBe(priceSummary)
+      expect(result.sections.commonProblems.items[0]?.title).toBe(title)
+      expect(result.sections.commonProblems.items[0]?.description).toBe(description)
+      expect(result.disclaimer).toBe(disclaimer)
     } finally {
       ;(global as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
     }
@@ -711,6 +744,25 @@ describe('VehicleResearchService — localization pass', () => {
     } finally {
       ;(global as typeof globalThis & { fetch: typeof fetch }).fetch = originalFetch
     }
+  })
+
+  it.each(['sr', 'de', 'mk', 'sq'])('uses localized generic fallback instead of English KB prose when live localization is unavailable for %s', async (locale) => {
+    jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
+
+    const service = new VehicleResearchService('')
+    const result = await service.research(base({
+      make: 'Volkswagen',
+      model: 'Golf',
+      year: 2016,
+      fuelType: 'diesel',
+      engineCc: 1968,
+      locale,
+    }))
+
+    expect(result.priceContext?.summary).toBeTruthy()
+    expect(result.summary).not.toContain('live AI enrichment is unavailable')
+    expect(result.disclaimer).not.toContain('Live AI enrichment was unavailable')
+    expect(result.sections.commonProblems.items[0]?.description ?? '').not.toContain('The EA288 2.0 TDI uses a timing chain')
   })
 })
 

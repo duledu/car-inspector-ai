@@ -734,11 +734,6 @@ function ResearchResults({
   const risk = RISK_CONFIG[result.overallRiskLevel] ?? RISK_CONFIG.moderate
   const sectionOrder: (keyof VehicleResearchResult['sections'])[] = [
     'commonProblems',
-    'highPriorityChecks',
-    'visualAttention',
-    'mechanicalWatchouts',
-    'testDriveFocus',
-    'costAwareness',
   ]
 
   return (
@@ -804,7 +799,7 @@ function ResearchResults({
       }}>
         <span style={{ color: 'rgba(255,255,255,0.45)', flexShrink: 0, marginTop: 1 }}>{Icons.info}</span>
         <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>
-          {result.disclaimer}
+          {t('inspection.prepReportDisclaimer', { defaultValue: result.disclaimer })}
         </p>
       </div>
 
