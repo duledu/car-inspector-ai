@@ -1,13 +1,24 @@
 // =============================================================================
-// Scoring Logic — Unit Tests
+// Scoring Logic - Unit Tests
 // Tests the pure scoring logic with no DB or API dependencies.
 // Run: npx jest tests/unit/scoring.logic.test.ts
 // =============================================================================
 
-import { calculatePreliminaryRiskScore, calculateRiskScore, getScoreColor, getVerdictLabel } from '../../src/modules/scoring/scoring.logic'
-import type { ScoreCalculationInput, AIFinding, ChecklistItem } from '../../src/types'
+import {
+  calculatePreliminaryRiskScore,
+  calculateRiskScore,
+  getScoreColor,
+  getVerdictLabel,
+  normalizeNegotiationHints,
+} from '../../src/modules/scoring/scoring.logic'
+import type { ScoreCalculationInput, AIFinding, ChecklistItem, VehicleHistoryResult } from '../../src/types'
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
+const EURO = '\u20AC'
+const EN_DASH = '\u2013'
+const EM_DASH = '\u2014'
+
+const euroAmount = (amount: number) => `${EURO}${amount.toLocaleString('en-US')}`
+const euroRange = (min: number, max: number) => `${euroAmount(min)}${EN_DASH}${euroAmount(max)}`
 
 const makeAIFinding = (overrides: Partial<AIFinding> = {}): AIFinding => ({
   id: 'f1',
@@ -35,9 +46,27 @@ const emptyInput: ScoreCalculationInput = {
   vinData: null,
   testDriveRatings: {},
   hasPremiumHistory: false,
+  askingPrice: null,
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+const makeVinHistory = (overrides: Partial<VehicleHistoryResult> = {}): VehicleHistoryResult => ({
+  vin: 'WVWZZZ1JZXW000001',
+  make: 'Volkswagen',
+  model: 'Golf',
+  year: 2018,
+  accidentCount: 0,
+  mileageHistory: [],
+  damageHistory: [],
+  ownershipHistory: [],
+  theftStatus: 'clean',
+  outstandingFinance: false,
+  totalLoss: false,
+  recalls: [],
+  riskFlags: [],
+  dataSource: 'test',
+  fetchedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+  ...overrides,
+})
 
 describe('calculateRiskScore', () => {
   test('returns a score between 10 and 96', () => {
@@ -47,7 +76,7 @@ describe('calculateRiskScore', () => {
     expect(result.riskScore).toBe(100 - result.buyScore)
   })
 
-  test('no findings → strong buy territory', () => {
+  test('no findings keep the result in strong-buy territory', () => {
     const result = calculateRiskScore('vehicle-1', emptyInput)
     expect(result.buyScore).toBeGreaterThan(60)
   })
@@ -94,9 +123,7 @@ describe('calculateRiskScore', () => {
   })
 
   test('verdict is STRONG_BUY when score >= 80', () => {
-    // Clean vehicle with no issues at all
     const result = calculateRiskScore('v1', emptyInput)
-    // Score will be high, verify verdict matches threshold
     if (result.buyScore >= 80) {
       expect(result.verdict).toBe('STRONG_BUY')
     }
@@ -112,6 +139,113 @@ describe('calculateRiskScore', () => {
     const vehicleId = 'test-vehicle-abc'
     const result = calculateRiskScore(vehicleId, emptyInput)
     expect(result.vehicleId).toBe(vehicleId)
+  })
+
+  test('very cheap cars keep negotiation ranges realistic and under the 30% cap', () => {
+    const result = calculateRiskScore('very-cheap', {
+      ...emptyInput,
+      askingPrice: 500,
+      serviceHistoryStatus: 'NONE',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+    })
+
+    expect(result.negotiationHints).toContain(
+      `No verified service history ${EM_DASH} negotiate a price reduction of ${euroRange(20, 70)}.`
+    )
+    expect(result.negotiationHints.some((hint) => hint.includes(euroAmount(150)))).toBe(false)
+  })
+
+  test('1,000 EUR cars use a realistic service-history negotiation range', () => {
+    const result = calculateRiskScore('one-thousand', {
+      ...emptyInput,
+      askingPrice: 1_000,
+      serviceHistoryStatus: 'NONE',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+    })
+
+    expect(result.negotiationHints).toContain(
+      `No verified service history ${EM_DASH} negotiate a price reduction of ${euroRange(50, 150)}.`
+    )
+  })
+
+  test('2,000 EUR cars stay around a 5-15% realistic discount band', () => {
+    const result = calculateRiskScore('two-thousand', {
+      ...emptyInput,
+      askingPrice: 2_000,
+      serviceHistoryStatus: 'NONE',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+    })
+
+    expect(result.negotiationHints).toContain(
+      `No verified service history ${EM_DASH} negotiate a price reduction of ${euroRange(100, 300)}.`
+    )
+  })
+
+  test('5,000 EUR cars scale to a moderate negotiation range', () => {
+    const result = calculateRiskScore('five-thousand', {
+      ...emptyInput,
+      askingPrice: 5_000,
+      serviceHistoryStatus: 'NONE',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+    })
+
+    expect(result.negotiationHints).toContain(
+      `No verified service history ${EM_DASH} negotiate a price reduction of ${euroRange(250, 600)}.`
+    )
+  })
+
+  test('10,000 EUR cars remain price-aware and reasonable', () => {
+    const result = calculateRiskScore('ten-thousand', {
+      ...emptyInput,
+      askingPrice: 10_000,
+      serviceHistoryStatus: 'SUSPICIOUS',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+    })
+
+    expect(result.negotiationHints).toContain(`Negotiate a price reduction of ${euroRange(600, 1_350)}.`)
+  })
+
+  test('20,000 EUR cars scale up cleanly while staying within hard caps', () => {
+    const result = calculateRiskScore('twenty-thousand', {
+      ...emptyInput,
+      askingPrice: 20_000,
+      serviceHistoryStatus: 'NONE',
+      checklistItems: [makeChecklistItem({ category: 'DOCUMENTS', itemKey: 'doc_service', status: 'PROBLEM' })],
+      vinData: makeVinHistory({ accidentCount: 3 }),
+      hasPremiumHistory: true,
+    })
+
+    expect(result.negotiationHints).toContain(
+      `No verified service history ${EM_DASH} negotiate a price reduction of ${euroRange(1_000, 2_400)}.`
+    )
+    expect(result.negotiationHints).toContain(
+      `3 recorded accidents ${EM_DASH} negotiate at least ${euroAmount(1_700)} off asking price.`
+    )
+  })
+})
+
+describe('normalizeNegotiationHints', () => {
+  test('preserves a valid mid/high-value range containing 2,000 EUR', () => {
+    expect(
+      normalizeNegotiationHints([`Negotiate a price reduction of ${euroRange(2_000, 3_200)}.`], 22_000)
+    ).toEqual([`Negotiate a price reduction of ${euroRange(2_000, 3_200)}.`])
+  })
+
+  test('removes generic placeholder and duplicate hints while keeping realistic advice', () => {
+    expect(
+      normalizeNegotiationHints([
+        '  Placeholder negotiation text  ',
+        `Negotiate a price reduction of ${euroRange(400, 900)}.`,
+        `Negotiate a price reduction of ${euroRange(400, 900)}.`,
+        'Use {{amount}} here',
+      ], 9_000)
+    ).toEqual([`Negotiate a price reduction of ${euroRange(400, 900)}.`])
+  })
+
+  test('drops obviously unrealistic negotiation hints for the vehicle price', () => {
+    expect(
+      normalizeNegotiationHints([`Negotiate a price reduction of ${euroRange(9_000, 12_000)}.`], 14_000)
+    ).toEqual([])
   })
 })
 
@@ -158,13 +292,16 @@ describe('getScoreColor', () => {
     expect(getScoreColor(80)).toBe('#00e676')
     expect(getScoreColor(100)).toBe('#00e676')
   })
+
   test('returns warning color for score 60-79', () => {
     expect(getScoreColor(60)).toBe('#ffaa00')
     expect(getScoreColor(79)).toBe('#ffaa00')
   })
+
   test('returns orange for score 40-59', () => {
     expect(getScoreColor(40)).toBe('#ff7700')
   })
+
   test('returns danger color for score < 40', () => {
     expect(getScoreColor(39)).toBe('#ff4757')
     expect(getScoreColor(0)).toBe('#ff4757')
@@ -173,12 +310,20 @@ describe('getScoreColor', () => {
 
 describe('getVerdictLabel', () => {
   test('maps each verdict to label + emoji + color', () => {
-    const sb = getVerdictLabel('STRONG_BUY')
-    expect(sb.label).toBe('Strong Buy')
-    expect(sb.emoji).toBe('✅')
+    const strongBuy = getVerdictLabel('STRONG_BUY')
+    expect(strongBuy.label).toBe('Strong Buy')
+    expect(strongBuy.emoji).toBe('\u2705')
 
-    const wa = getVerdictLabel('WALK_AWAY')
-    expect(wa.label).toBe('Walk Away')
-    expect(wa.emoji).toBe('❌')
+    const caution = getVerdictLabel('BUY_WITH_CAUTION')
+    expect(caution.label).toBe('Buy with Caution')
+    expect(caution.emoji).toBe('\u26A0\uFE0F')
+
+    const highRisk = getVerdictLabel('HIGH_RISK')
+    expect(highRisk.label).toBe('High Risk')
+    expect(highRisk.emoji).toBe('\uD83D\uDD36')
+
+    const walkAway = getVerdictLabel('WALK_AWAY')
+    expect(walkAway.label).toBe('Walk Away')
+    expect(walkAway.emoji).toBe('\u274C')
   })
 })

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
@@ -1062,6 +1063,7 @@ function RiskAnalysisPhase({
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function InspectionPage() {
   const { t, i18n }       = useTranslation()
+  const searchParams      = useSearchParams()
   const { activeVehicle } = useVehicleStore()
   const {
     session, currentPhase, checklistItems, isLoadingChecklist, error,
@@ -1074,6 +1076,14 @@ export default function InspectionPage() {
   const phaseCardRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef<InspectionPhase | null>(null)
   const previousVehicleIdRef = useRef<string | null>(null)
+  const appliedFocusRef = useRef<string | null>(null)
+  const focusPhase = useMemo<InspectionPhase | null>(() => {
+    const requestedPhase = searchParams.get('focus')
+    if (!requestedPhase) return null
+    return PHASES.some(({ phase }) => phase === requestedPhase)
+      ? requestedPhase as InspectionPhase
+      : null
+  }, [searchParams])
 
   useEffect(() => {
     if (!activeVehicle?.id) return
@@ -1121,6 +1131,17 @@ export default function InspectionPage() {
     }
     previousPhaseRef.current = currentPhase
   }, [currentPhase])
+
+  useEffect(() => {
+    if (!focusPhase) return
+    const focusKey = `${activeVehicle?.id ?? session?.vehicleId ?? 'no-vehicle'}:${focusPhase}`
+    if (appliedFocusRef.current === focusKey) return
+
+    if (currentPhase !== focusPhase) {
+      setPhase(focusPhase)
+    }
+    appliedFocusRef.current = focusKey
+  }, [activeVehicle?.id, currentPhase, focusPhase, session?.vehicleId, setPhase])
 
   // When the user reaches the RISK_ANALYSIS phase, persist all photo AI findings
   // to the DB so the scoring service can factor them in, and push into the store

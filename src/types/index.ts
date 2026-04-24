@@ -204,6 +204,7 @@ export interface ScoreCalculationInput {
   vinData?: VehicleHistoryResult | null
   testDriveRatings: Record<string, number>
   hasPremiumHistory: boolean
+  askingPrice?: number | null
   serviceHistoryStatus?: ServiceHistoryStatus  // explicit override; derived from checklist if absent
 }
 

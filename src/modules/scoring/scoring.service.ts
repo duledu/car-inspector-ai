@@ -35,7 +35,7 @@ export class ScoringService {
   async computeAndPersist(vehicleId: string, userId: string): Promise<RiskScore> {
     const vehicle = await prisma.vehicle.findFirst({
       where: { id: vehicleId, userId },
-      select: { id: true },
+      select: { id: true, askingPrice: true },
     })
     if (!vehicle) {
       throw new Error('VEHICLE_NOT_FOUND')
@@ -101,6 +101,7 @@ export class ScoringService {
       vinData: hasPremium && vinHistory ? (vinHistory.normalizedData as any) : null,
       testDriveRatings,
       hasPremiumHistory: hasPremium,
+      askingPrice: vehicle.askingPrice,
     }
 
     const scoreResult = calculateRiskScore(vehicleId, input)

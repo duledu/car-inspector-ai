@@ -45,6 +45,7 @@ export function useRiskScore(): UseRiskScoreReturn {
       vinData: null, // VIN data pulled server-side when premium
       testDriveRatings: tdRatings,
       hasPremiumHistory: hasPremium,
+      askingPrice: activeVehicle.askingPrice ?? null,
     }
 
     return calculateRiskScore(activeVehicle.id, input)

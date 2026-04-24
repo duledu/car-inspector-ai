@@ -79,6 +79,240 @@ export const VERDICT_THRESHOLDS = {
 
 // ─── Damage cost threshold (EUR) above which a repair is flagged ─────────────
 const HIGH_DAMAGE_COST_EUR = 3_000
+const MAX_NEGOTIATION_HINTS = 5
+const NEGOTIATION_PLACEHOLDER_RE = /\b(?:placeholder|tbd|to be determined|lorem ipsum|sample text|example only|generic advice)\b|{{.+?}}|\[\[?.+?\]?\]/i
+const EURO_SYMBOL = '\u20AC'
+const EN_DASH = '\u2013'
+const EM_DASH = '\u2014'
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function normalizeHintKey(value: string): string {
+  return normalizeWhitespace(value)
+    .replace(/[–—]/g, '-')
+    .replace(/\s*-\s*/g, '-')
+    .toLowerCase()
+}
+
+function formatEuroAmount(amount: number): string {
+  return Math.round(amount).toLocaleString('en-US')
+}
+
+function roundNegotiationAmount(amount: number): number {
+  const safeAmount = Math.max(0, amount)
+  const step =
+    safeAmount >= 2_000 ? 100 :
+    safeAmount >= 500 ? 50 :
+    25
+
+  return Math.max(step, Math.round(safeAmount / step) * step)
+}
+
+function coercePositivePrice(value: unknown): number | null {
+  const price = safeNumber(value, 0)
+  return price > 0 ? price : null
+}
+
+function buildNegotiationRange(
+  askingPrice: number | null,
+  fallbackMin: number,
+  fallbackMax: number,
+  minPercent: number,
+  maxPercent: number
+): { min: number; max: number } {
+  if (!askingPrice) {
+    return { min: fallbackMin, max: fallbackMax }
+  }
+
+  const min = roundNegotiationAmount(askingPrice * minPercent)
+  const tentativeMax = roundNegotiationAmount(askingPrice * maxPercent)
+  const minGap = min >= 2_000 ? 200 : min >= 500 ? 100 : 50
+  const max = Math.max(tentativeMax, min + minGap)
+
+  return { min, max }
+}
+
+function buildAccidentDiscount(askingPrice: number | null, accidentCount: number): number {
+  if (!askingPrice) return 1_500
+
+  const percent = Math.min(0.14, 0.03 + Math.max(0, accidentCount - 1) * 0.015)
+  return roundNegotiationAmount(askingPrice * Math.max(0.04, percent))
+}
+
+function extractEuroAmounts(text: string): number[] {
+  return Array.from(text.matchAll(/€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/g))
+    .map((match) => Number(match[1].replace(/,/g, '')))
+    .filter((amount) => Number.isFinite(amount) && amount > 0)
+}
+
+function hasInvalidNegotiationRange(text: string): boolean {
+  const rangeMatch = text.match(/€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)\s*[–-]\s*€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/)
+  if (!rangeMatch) return false
+
+  const min = Number(rangeMatch[1].replace(/,/g, ''))
+  const max = Number(rangeMatch[2].replace(/,/g, ''))
+  return !Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min >= max
+}
+
+function isHintRealistic(text: string, askingPrice: number | null): boolean {
+  if (hasInvalidNegotiationRange(text)) return false
+
+  const amounts = extractEuroAmounts(text)
+  if (amounts.length === 0 || !askingPrice) return true
+
+  const highestAmount = Math.max(...amounts)
+  const maxAllowedDiscount = Math.max(500, roundNegotiationAmount(askingPrice * 0.35))
+  return highestAmount <= maxAllowedDiscount
+}
+
+type NegotiationBand = 'low' | 'mid' | 'high'
+
+interface NegotiationProfile {
+  band: NegotiationBand
+  minPercent: number
+  maxPercent: number
+  step: number
+}
+
+function normalizeNegotiationHintKey(value: string): string {
+  return normalizeWhitespace(value)
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s*-\s*/g, '-')
+    .toLowerCase()
+}
+
+function getNegotiationProfile(askingPrice: number): NegotiationProfile {
+  if (askingPrice < 1_000) {
+    return { band: 'low', minPercent: 0.05, maxPercent: 0.15, step: 10 }
+  }
+  if (askingPrice < 3_000) {
+    return { band: 'low', minPercent: 0.05, maxPercent: 0.15, step: 25 }
+  }
+  if (askingPrice < 15_000) {
+    return { band: 'mid', minPercent: 0.05, maxPercent: 0.12, step: 50 }
+  }
+  return { band: 'high', minPercent: 0.03, maxPercent: 0.10, step: 100 }
+}
+
+function roundDiscountAmount(amount: number, step: number, direction: 'down' | 'nearest' | 'up' = 'nearest'): number {
+  const safeAmount = Math.max(0, amount)
+  if (safeAmount === 0) return 0
+
+  const scaled = safeAmount / step
+  const rounded =
+    direction === 'down' ? Math.floor(scaled) :
+    direction === 'up' ? Math.ceil(scaled) :
+    Math.round(scaled)
+
+  return Math.max(step, rounded * step)
+}
+
+function clampDiscountAmount(amount: number, askingPrice: number, step: number, direction: 'down' | 'nearest' | 'up' = 'nearest'): number {
+  const hardCap = Math.min(amount, askingPrice * 0.3, askingPrice - 1)
+  if (hardCap <= 0) return 0
+
+  const rounded = roundDiscountAmount(hardCap, step, direction)
+  const roundedCap = Math.floor(hardCap / step) * step
+  if (rounded > hardCap && roundedCap >= step) return roundedCap
+  return Math.min(rounded, hardCap)
+}
+
+function buildPriceAwareNegotiationRange(
+  askingPrice: number | null,
+  adjustment: { minPercentDelta?: number; maxPercentDelta?: number } = {}
+): { min: number; max: number } | null {
+  if (!askingPrice) return null
+
+  const profile = getNegotiationProfile(askingPrice)
+  const minPercent = Math.max(0.01, profile.minPercent + (adjustment.minPercentDelta ?? 0))
+  const maxPercent = Math.max(minPercent + 0.01, profile.maxPercent + (adjustment.maxPercentDelta ?? 0))
+  const minGap = profile.step * (profile.band === 'high' ? 2 : 1)
+
+  let min = clampDiscountAmount(askingPrice * minPercent, askingPrice, profile.step, 'down')
+  let max = clampDiscountAmount(askingPrice * maxPercent, askingPrice, profile.step, 'nearest')
+
+  if (min <= 0) min = profile.step
+  if (max <= min) {
+    max = clampDiscountAmount(min + minGap, askingPrice, profile.step, 'up')
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= min) {
+    return null
+  }
+
+  return { min, max }
+}
+
+function buildPriceAwareAccidentDiscount(askingPrice: number | null, accidentCount: number): number | null {
+  if (!askingPrice) return null
+
+  const profile = getNegotiationProfile(askingPrice)
+  const basePercent = profile.band === 'high' ? 0.085 : 0.08
+  const extraPercent = Math.max(0, accidentCount - 3) * 0.01
+  const discount = clampDiscountAmount(
+    askingPrice * Math.min(basePercent + extraPercent, 0.18),
+    askingPrice,
+    profile.step,
+    'nearest'
+  )
+
+  return discount > 0 ? discount : null
+}
+
+function extractNegotiationEuroAmounts(text: string): number[] {
+  return Array.from(text.matchAll(/\u20AC\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/g))
+    .map((match) => Number(match[1].replace(/,/g, '')))
+    .filter((amount) => Number.isFinite(amount) && amount > 0)
+}
+
+function hasInvalidPriceAwareNegotiationRange(text: string): boolean {
+  const rangeMatch = text.match(/\u20AC\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)\s*[\u2013-]\s*\u20AC\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/)
+  if (!rangeMatch) return false
+
+  const min = Number(rangeMatch[1].replace(/,/g, ''))
+  const max = Number(rangeMatch[2].replace(/,/g, ''))
+  return !Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min >= max
+}
+
+function isPriceAwareHintRealistic(text: string, askingPrice: number | null): boolean {
+  if (hasInvalidPriceAwareNegotiationRange(text)) return false
+
+  const amounts = extractNegotiationEuroAmounts(text)
+  if (amounts.length === 0 || !askingPrice) return true
+
+  const highestAmount = Math.max(...amounts)
+  const maxAllowedDiscount = Math.min(askingPrice * 0.3, askingPrice - 1)
+  return highestAmount < askingPrice && highestAmount <= maxAllowedDiscount
+}
+
+export function normalizeNegotiationHints(
+  hints: Array<string | null | undefined>,
+  askingPrice?: number | null
+): string[] {
+  const safePrice = coercePositivePrice(askingPrice)
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  for (const rawHint of safeArray<string | null | undefined>(hints)) {
+    if (typeof rawHint !== 'string') continue
+
+    const hint = normalizeWhitespace(rawHint)
+    if (!hint) continue
+    if (NEGOTIATION_PLACEHOLDER_RE.test(hint)) continue
+    if (!isPriceAwareHintRealistic(hint, safePrice)) continue
+
+    const key = normalizeNegotiationHintKey(hint)
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    normalized.push(hint)
+
+    if (normalized.length >= MAX_NEGOTIATION_HINTS) break
+  }
+
+  return normalized
+}
 
 // ─── AI Score Calculation ─────────────────────────────────────────────────────
 
@@ -276,7 +510,11 @@ interface ServiceHistoryEffect {
   hints: string[]
 }
 
-function serviceHistoryEffect(status: ServiceHistoryStatus): ServiceHistoryEffect {
+function serviceHistoryEffect(
+  status: ServiceHistoryStatus,
+  askingPrice?: number | null
+): ServiceHistoryEffect {
+  const safeAskingPrice = coercePositivePrice(askingPrice)
   switch (status) {
     case 'FULL':
       return { delta: 10, flags: [], hints: [] }
@@ -286,26 +524,95 @@ function serviceHistoryEffect(status: ServiceHistoryStatus): ServiceHistoryEffec
         flags: [],
         hints: ['Obtain full service records before finalising purchase.'],
       }
-    case 'NONE':
+    case 'NONE': {
+      const discount = buildNegotiationRange(safeAskingPrice, 1_000, 3_000, 0.05, 0.12)
       return {
         delta: -20,
         flags: ['NO_SERVICE_HISTORY'],
         hints: [
-          'No verified service history — negotiate a price reduction of €1,000–€3,000.',
+          `No verified service history — negotiate a price reduction of €${formatEuroAmount(discount.min)}–€${formatEuroAmount(discount.max)}.`,
           'Request an independent pre-purchase inspection as a condition of sale.',
           'Budget for an immediate full service if you proceed.',
         ],
       }
-    case 'SUSPICIOUS':
+    }
+    case 'SUSPICIOUS': {
+      const discount = buildNegotiationRange(safeAskingPrice, 2_000, 4_000, 0.08, 0.16)
       return {
         delta: -25,
         flags: ['POSSIBLE_FAKE_HISTORY'],
         hints: [
           'Suspicious or inconsistent service records — treat as no history.',
-          'Negotiate a price reduction of €2,000–€4,000.',
+          `Negotiate a price reduction of €${formatEuroAmount(discount.min)}–€${formatEuroAmount(discount.max)}.`,
           'Walk away unless the seller can provide verifiable original receipts.',
         ],
       }
+    }
+  }
+}
+
+function serviceHistoryEffectV2(
+  status: ServiceHistoryStatus,
+  askingPrice?: number | null
+): ServiceHistoryEffect {
+  const safeAskingPrice = coercePositivePrice(askingPrice)
+  const profile = safeAskingPrice ? getNegotiationProfile(safeAskingPrice) : null
+
+  switch (status) {
+    case 'FULL':
+      return { delta: 10, flags: [], hints: [] }
+    case 'PARTIAL':
+      return {
+        delta: -5,
+        flags: [],
+        hints: ['Obtain full service records before finalising purchase.'],
+      }
+    case 'NONE': {
+      const discount = buildPriceAwareNegotiationRange(safeAskingPrice, {
+        minPercentDelta:
+          profile?.band === 'high' ? 0.02 :
+          profile?.band === 'mid' ? 0.005 :
+          0,
+        maxPercentDelta:
+          profile?.band === 'high' ? 0.02 :
+          profile?.band === 'mid' ? 0.005 :
+          0,
+      })
+      return {
+        delta: -20,
+        flags: ['NO_SERVICE_HISTORY'],
+        hints: [
+          ...(discount
+            ? [`No verified service history ${EM_DASH} negotiate a price reduction of ${EURO_SYMBOL}${formatEuroAmount(discount.min)}${EN_DASH}${EURO_SYMBOL}${formatEuroAmount(discount.max)}.`]
+            : ['No verified service history. Negotiate based on the missing maintenance risk.']),
+          'Request an independent pre-purchase inspection as a condition of sale.',
+          'Budget for an immediate full service if you proceed.',
+        ],
+      }
+    }
+    case 'SUSPICIOUS': {
+      const discount = buildPriceAwareNegotiationRange(safeAskingPrice, {
+        minPercentDelta:
+          profile?.band === 'high' ? 0.025 :
+          profile?.band === 'mid' ? 0.01 :
+          0.01,
+        maxPercentDelta:
+          profile?.band === 'high' ? 0.02 :
+          profile?.band === 'mid' ? 0.015 :
+          0.02,
+      })
+      return {
+        delta: -25,
+        flags: ['POSSIBLE_FAKE_HISTORY'],
+        hints: [
+          `Suspicious or inconsistent service records ${EM_DASH} treat as no history.`,
+          ...(discount
+            ? [`Negotiate a price reduction of ${EURO_SYMBOL}${formatEuroAmount(discount.min)}${EN_DASH}${EURO_SYMBOL}${formatEuroAmount(discount.max)}.`]
+            : ['Negotiate a meaningful reduction to offset the history risk.']),
+          'Walk away unless the seller can provide verifiable original receipts.',
+        ],
+      }
+    }
   }
 }
 
@@ -319,7 +626,8 @@ interface DamageEffect {
 
 function damagePenalty(
   vinData: VehicleHistoryResult | null | undefined,
-  hasPremium: boolean
+  hasPremium: boolean,
+  askingPrice?: number | null
 ): DamageEffect {
   if (!hasPremium || !vinData) return { delta: 0, flags: [], hints: [] }
 
@@ -333,7 +641,8 @@ function damagePenalty(
   if (accidentCount >= 3) {
     delta -= 15
     flags.push('HIGH_DAMAGE_COUNT')
-    hints.push(`${accidentCount} recorded accidents — negotiate at least €1,500 off asking price.`)
+    const accidentDiscount = buildAccidentDiscount(coercePositivePrice(askingPrice), accidentCount)
+    hints.push(`${accidentCount} recorded accidents — negotiate at least €${formatEuroAmount(accidentDiscount)} off asking price.`)
   }
 
   // Cost-based penalty
@@ -349,6 +658,44 @@ function damagePenalty(
     delta -= 10
     flags.push('HIGH_REPAIR_HISTORY')
     hints.push(`High recorded repair costs (>${HIGH_DAMAGE_COST_EUR.toLocaleString()} EUR) — budget for potential recurring issues.`)
+  }
+
+  return { delta, flags, hints }
+}
+
+function damagePenaltyV2(
+  vinData: VehicleHistoryResult | null | undefined,
+  hasPremium: boolean,
+  askingPrice?: number | null
+): DamageEffect {
+  if (!hasPremium || !vinData) return { delta: 0, flags: [], hints: [] }
+
+  const flags: string[] = []
+  const hints: string[] = []
+  let delta = 0
+
+  logInvalidNumber('vin.accidentCount', vinData.accidentCount, 0)
+  const accidentCount = Math.max(0, Math.round(safeNumber(vinData.accidentCount, 0)))
+  if (accidentCount >= 3) {
+    delta -= 15
+    flags.push('HIGH_DAMAGE_COUNT')
+    const accidentDiscount = buildPriceAwareAccidentDiscount(coercePositivePrice(askingPrice), accidentCount)
+    if (accidentDiscount) {
+      hints.push(`${accidentCount} recorded accidents ${EM_DASH} negotiate at least ${EURO_SYMBOL}${formatEuroAmount(accidentDiscount)} off asking price.`)
+    }
+  }
+
+  const maxCostEur = safeArray<VehicleHistoryResult['damageHistory'][number]>(vinData.damageHistory).reduce((max, d) => {
+    if (!isValidFiniteNumber(d?.repairCostEstimate)) return max
+    const repairCost = safeNumber(d.repairCostEstimate, 0)
+    const eur = d.currency === 'RSD' ? repairCost / 117 : repairCost
+    return Math.max(max, eur)
+  }, 0)
+
+  if (maxCostEur > HIGH_DAMAGE_COST_EUR) {
+    delta -= 10
+    flags.push('HIGH_REPAIR_HISTORY')
+    hints.push(`High recorded repair costs (> ${HIGH_DAMAGE_COST_EUR.toLocaleString()} EUR) ${EM_DASH} budget for potential recurring issues.`)
   }
 
   return { delta, flags, hints }
@@ -514,11 +861,11 @@ export function calculateRiskScore(
 
   // 2. Service history modifier
   const serviceStatus = safeServiceHistoryStatus(input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems))
-  const svcEffect     = serviceHistoryEffect(serviceStatus)
+  const svcEffect     = serviceHistoryEffectV2(serviceStatus, input.askingPrice)
   buyScore = clampScore(buyScore + svcEffect.delta, 10, 96, 50)
 
   // 3. Damage penalty from VIN data
-  const dmgEffect = damagePenalty(input.vinData, input.hasPremiumHistory)
+  const dmgEffect = damagePenaltyV2(input.vinData, input.hasPremiumHistory, input.askingPrice)
   buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
 
   // 4. Determine base verdict then enforce caps
@@ -528,7 +875,10 @@ export function calculateRiskScore(
 
   // 5. Reasons + negotiation hints
   const { reasonsFor, reasonsAgainst } = generateReasons(input, serviceStatus, riskFlags)
-  const negotiationHints = [...svcEffect.hints, ...dmgEffect.hints].slice(0, 5)
+  const negotiationHints = normalizeNegotiationHints(
+    [...svcEffect.hints, ...dmgEffect.hints],
+    input.askingPrice
+  )
 
   return {
     vehicleId,
@@ -576,13 +926,13 @@ export function calculatePreliminaryRiskScore(
     ? safeServiceHistoryStatus(input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems))
     : 'PARTIAL'
   const svcEffect = hasServiceInput
-    ? serviceHistoryEffect(serviceStatus)
+    ? serviceHistoryEffectV2(serviceStatus, input.askingPrice)
     : { delta: 0, flags: [], hints: [] }
   buyScore = clampScore(buyScore + svcEffect.delta, 10, 96, 50)
 
   const hasVinInput = !!completedDimensions.vin
   const dmgEffect = hasVinInput
-    ? damagePenalty(input.vinData, input.hasPremiumHistory)
+    ? damagePenaltyV2(input.vinData, input.hasPremiumHistory, input.askingPrice)
     : { delta: 0, flags: [], hints: [] }
   buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
 
@@ -601,7 +951,10 @@ export function calculatePreliminaryRiskScore(
     hasPremiumHistory: hasVinInput ? input.hasPremiumHistory : false,
   }
   const { reasonsFor, reasonsAgainst } = generateReasons(reasonInput, serviceStatus, riskFlags)
-  const negotiationHints = [...svcEffect.hints, ...dmgEffect.hints].slice(0, 5)
+  const negotiationHints = normalizeNegotiationHints(
+    [...svcEffect.hints, ...dmgEffect.hints],
+    input.askingPrice
+  )
 
   return {
     vehicleId,
