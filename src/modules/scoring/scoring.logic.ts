@@ -1,5 +1,5 @@
-// =============================================================================
-// Scoring Module — Risk Score Engine
+﻿// =============================================================================
+// Scoring Module â€” Risk Score Engine
 // Pure business logic. No UI dependencies. Fully testable.
 // =============================================================================
 
@@ -14,7 +14,7 @@ import type {
   ServiceHistoryStatus,
 } from '@/types'
 
-// ─── Safe numeric helpers ─────────────────────────────────────────────────────
+// â”€â”€â”€ Safe numeric helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Coerce any value to a finite number.
@@ -56,7 +56,7 @@ function logInvalidNumber(context: string, value: unknown, fallback: number) {
   }
 }
 
-// ─── Weight Configuration ─────────────────────────────────────────────────────
+// â”€â”€â”€ Weight Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Weights must sum to 100
 export const SCORE_WEIGHTS = {
   ai: 25,
@@ -70,20 +70,21 @@ export const SCORE_WEIGHTS = {
 
 export type ScoreDimensionKey = keyof RiskScore['dimensions']
 
-// ─── Verdict Thresholds ───────────────────────────────────────────────────────
+// â”€â”€â”€ Verdict Thresholds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const VERDICT_THRESHOLDS = {
   STRONG_BUY: 80,
   BUY_WITH_CAUTION: 60,
   HIGH_RISK: 40,
 } as const
 
-// ─── Damage cost threshold (EUR) above which a repair is flagged ─────────────
+// â”€â”€â”€ Damage cost threshold (EUR) above which a repair is flagged â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HIGH_DAMAGE_COST_EUR = 3_000
 const MAX_NEGOTIATION_HINTS = 5
 const NEGOTIATION_PLACEHOLDER_RE = /\b(?:placeholder|tbd|to be determined|lorem ipsum|sample text|example only|generic advice)\b|{{.+?}}|\[\[?.+?\]?\]/i
 const EURO_SYMBOL = '\u20AC'
 const EN_DASH = '\u2013'
 const EM_DASH = '\u2014'
+const MIDDLE_DOT = '\u00B7'
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -91,7 +92,7 @@ function normalizeWhitespace(value: string): string {
 
 function normalizeHintKey(value: string): string {
   return normalizeWhitespace(value)
-    .replace(/[–—]/g, '-')
+    .replace(/[â€“â€”]/g, '-')
     .replace(/\s*-\s*/g, '-')
     .toLowerCase()
 }
@@ -147,13 +148,13 @@ function buildAccidentDiscount(askingPrice: number | null, accidentCount: number
 }
 
 function extractEuroAmounts(text: string): number[] {
-  return Array.from(text.matchAll(/€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/g))
+  return Array.from(text.matchAll(/â‚¬\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/g))
     .map((match) => Number(match[1].replace(/,/g, '')))
     .filter((amount) => Number.isFinite(amount) && amount > 0)
 }
 
 function hasInvalidNegotiationRange(text: string): boolean {
-  const rangeMatch = text.match(/€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)\s*[–-]\s*€\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/)
+  const rangeMatch = text.match(/â‚¬\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)\s*[â€“-]\s*â‚¬\s?(\d{1,3}(?:,\d{3})*|\d+(?:\.\d+)?)/)
   if (!rangeMatch) return false
 
   const min = Number(rangeMatch[1].replace(/,/g, ''))
@@ -319,7 +320,47 @@ export function normalizeNegotiationHints(
   return normalized
 }
 
-// ─── AI Score Calculation ─────────────────────────────────────────────────────
+function capScoreForCategoryIssues(
+  score: number,
+  issueCount: number,
+  issueRatio: number,
+  seriousIssueCount: number
+): { score: number; visualMaxScore?: number; hasMeaningfulIssues: boolean } {
+  if (issueCount <= 0) {
+    return { score, hasMeaningfulIssues: false }
+  }
+
+  let visualMaxScore = 89
+  if (seriousIssueCount >= 2 || issueRatio >= 0.5) {
+    visualMaxScore = 59
+  } else if (seriousIssueCount >= 1 || issueCount >= 3 || issueRatio >= 0.3) {
+    visualMaxScore = 74
+  }
+
+  return {
+    score: Math.min(score, visualMaxScore),
+    visualMaxScore,
+    hasMeaningfulIssues: true,
+  }
+}
+
+function getAIFindingImpactWeight(finding: AIFinding): number {
+  const text = normalizeWhitespace(`${finding.title} ${finding.description} ${finding.area}`).toLowerCase()
+
+  if (/(brake|airbag|abs|steering|suspension|wheel|tire|tyre|engine|gearbox|transmission|oil leak|coolant|fuel leak|structural|frame|chassis|crack|corrosion|rust|fire|flood|vin|document|odometer|mileage|tamper|recall|seatbelt|safety)/.test(text)) {
+    return 1.45
+  }
+  if (/(panel mismatch|panel gap|door misalign|impact|collision|bumper|headlight|taillight|glass|windshield|windscreen|dent|paint damage|repaint|paint mismatch)/.test(text)) {
+    return 1.15
+  }
+  if (/(scratch|scuff|chip|trim|cosmetic|upholstery|stain|paint)/.test(text)) {
+    return 0.85
+  }
+
+  return finding.severity === 'critical' ? 1.2 : 1
+}
+
+// â”€â”€â”€ AI Score Calculation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateAIScore(
   findings: AIFinding[],
@@ -327,6 +368,10 @@ function calculateAIScore(
   issuePhotoCount?: number | null
 ): ScoreDimension {
   const safeFindings = safeArray<AIFinding>(findings).filter((f) => f && typeof f === 'object')
+  const safePhotoCount = Math.max(
+    coercePositiveCount(photoCount) ?? 0,
+    coercePositiveCount(issuePhotoCount) ?? 0
+  )
   const actionableFindings = safeFindings.filter((finding) => {
     logInvalidNumber('ai.confidence', finding.confidence, 55)
     const confidence = clampScore(finding.confidence, 0, 100, 55)
@@ -334,30 +379,46 @@ function calculateAIScore(
   })
 
   if (actionableFindings.length === 0) {
+    if (safePhotoCount === 0) {
+      return {
+        label: 'AI Photo Analysis',
+        score: 68,
+        weight: SCORE_WEIGHTS.ai,
+        explanation: 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.',
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
+      }
+    }
+
+    if (safePhotoCount < 5) {
+      return {
+        label: 'AI Photo Analysis',
+        score: 82,
+        weight: SCORE_WEIGHTS.ai,
+        explanation: 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.',
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 89, issueCount: 0, issueRatio: 0 },
+      }
+    }
+
     return {
       label: 'AI Photo Analysis',
-      score: 88,
+      score: 92,
       weight: SCORE_WEIGHTS.ai,
-      explanation: 'No AI findings. Photos appear clean.',
+      explanation: 'No obvious issues detected from available photos. Results are advisory only.',
     }
   }
 
-  let score = 100
+  let score = 96
   actionableFindings.forEach((finding) => {
     const confidence = clampScore(finding.confidence, 0, 100, 55)
-    const basePenalty = finding.severity === 'critical' ? 18 : 10
+    const basePenalty = finding.severity === 'critical' ? 20 : 11
     const confidenceFactor =
-      confidence >= 90 ? 1.35 :
-      confidence >= 75 ? 1.15 :
-      confidence >= 60 ? 0.95 :
-      0.65
-    score -= basePenalty * confidenceFactor
+      confidence >= 90 ? 1.3 :
+      confidence >= 75 ? 1.12 :
+      confidence >= 60 ? 0.92 :
+      0.55
+    score -= basePenalty * confidenceFactor * getAIFindingImpactWeight(finding)
   })
 
-  const safePhotoCount = Math.max(
-    coercePositiveCount(photoCount) ?? 0,
-    coercePositiveCount(issuePhotoCount) ?? 0
-  )
   const affectedPhotoCount = Math.min(
     safePhotoCount || actionableFindings.length,
     Math.max(
@@ -372,29 +433,61 @@ function calculateAIScore(
     (sum, finding) => sum + clampScore(finding.confidence, 0, 100, 55),
     0
   ) / actionableFindings.length
+  const highestConfidence = actionableFindings.reduce(
+    (max, finding) => Math.max(max, clampScore(finding.confidence, 0, 100, 55)),
+    0
+  )
 
-  score -= issueRatio * 34
+  score -= issueRatio * 30
+  score -= Math.max(0, affectedPhotoCount - 1) * 2.5
   if (averageConfidence >= 70) {
-    score -= issueRatio * 8
+    score -= issueRatio * 10
   }
 
   const concernCounts = actionableFindings.reduce<Record<string, number>>((acc, finding) => {
-    const key = normalizeWhitespace(`${finding.title}|${finding.area}`).toLowerCase()
+    const key = normalizeWhitespace(finding.title).toLowerCase()
     acc[key] = (acc[key] ?? 0) + 1
     return acc
   }, {})
   const repeatedConcernCount = Object.values(concernCounts).reduce((max, count) => Math.max(max, count), 0)
   if (repeatedConcernCount > 1) {
-    score -= (repeatedConcernCount - 1) * 6
+    score -= (repeatedConcernCount - 1) * 7
   }
 
+  const highImpactFinding = actionableFindings.some((finding) =>
+    getAIFindingImpactWeight(finding) >= 1.4 && clampScore(finding.confidence, 0, 100, 55) >= 70
+  )
+  const criticalHighConfidenceFinding = actionableFindings.some((finding) =>
+    finding.severity === 'critical' && clampScore(finding.confidence, 0, 100, 55) >= 75
+  )
+  const allIssuesMinorLike = actionableFindings.every((finding) =>
+    finding.severity === 'warning'
+    && clampScore(finding.confidence, 0, 100, 55) < 60
+    && getAIFindingImpactWeight(finding) <= 0.9
+  )
+
+  let visualMaxScore: number | undefined
   if (issueRatio >= 0.5) {
-    score = Math.min(score, averageConfidence >= 70 ? 55 : 59)
+    visualMaxScore = 59
   } else if (issueRatio >= 0.3) {
-    score = Math.min(score, averageConfidence >= 70 ? 68 : 72)
+    visualMaxScore = allIssuesMinorLike ? 74 : 68
+  }
+  if (repeatedConcernCount >= 3 && averageConfidence >= 70) {
+    visualMaxScore = Math.min(visualMaxScore ?? 68, 59)
+  }
+  if (criticalHighConfidenceFinding || highImpactFinding) {
+    visualMaxScore = Math.min(visualMaxScore ?? 74, 59)
+  }
+  if (highestConfidence >= 90 && actionableFindings.length >= 2) {
+    visualMaxScore = Math.min(visualMaxScore ?? 74, 59)
   }
 
-  const clampedScore = clampScore(score, 10, 100, 50)
+  const clampedScore = clampScore(
+    visualMaxScore !== undefined ? Math.min(score, visualMaxScore) : score,
+    10,
+    100,
+    50
+  )
 
   const topIssue = [...actionableFindings].sort((a, b) => {
     const sev: Record<string, number> = { critical: 3, warning: 2, info: 1 }
@@ -408,10 +501,17 @@ function calculateAIScore(
     score: clampedScore,
     weight: SCORE_WEIGHTS.ai,
     explanation: `Issues detected in ${issuePhotos} of ${totalPhotos} photos. Main concern: ${topIssue?.title ?? 'N/A'}. Confidence: ${clampScore(topIssue?.confidence, 0, 100, 0)}%. Further manual inspection recommended.`,
+    signals: {
+      hasMeaningfulIssues: true,
+      visualMaxScore,
+      issueCount: actionableFindings.length,
+      issueRatio,
+      confidence: averageConfidence,
+    },
   }
 }
 
-// ─── Checklist Score Calculation ──────────────────────────────────────────────
+// â”€â”€â”€ Checklist Score Calculation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateChecklistScore(
   items: ChecklistItem[],
@@ -422,7 +522,13 @@ function calculateChecklistScore(
   const categoryItems = safeArray<ChecklistItem>(items).filter((i) => i?.category === category)
 
   if (categoryItems.length === 0) {
-    return { label, score: 70, weight, explanation: 'Checklist not completed for this section.' }
+    return {
+      label,
+      score: 70,
+      weight,
+      explanation: 'Checklist not completed for this section.',
+      signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
+    }
   }
 
   const problemCount  = categoryItems.filter((i) => i.status === 'PROBLEM').length
@@ -431,24 +537,42 @@ function calculateChecklistScore(
   const totalAssessed = problemCount + warningCount + okCount
 
   if (totalAssessed === 0) {
-    return { label, score: 70, weight, explanation: 'No items assessed yet.' }
+    return {
+      label,
+      score: 70,
+      weight,
+      explanation: 'No items assessed yet.',
+      signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
+    }
   }
 
-  let score = 100
-  score -= problemCount * 12
-  score -= warningCount * 5
-  const completionBonus = (totalAssessed / categoryItems.length) * 10
-  score = Math.min(100, score + completionBonus)
+  const issueCount = warningCount + problemCount
+  const issueRatio = totalAssessed > 0 ? issueCount / totalAssessed : 0
+  const assessedRatio = categoryItems.length > 0 ? totalAssessed / categoryItems.length : 0
+
+  let score =
+    issueCount === 0
+      ? 88 + assessedRatio * 10
+      : 94 - (problemCount * 20) - (warningCount * 8) - (issueRatio * 16) - ((1 - assessedRatio) * 10)
+
+  const capped = capScoreForCategoryIssues(score, issueCount, issueRatio, problemCount)
+  score = capped.score
 
   return {
     label,
     score: clampScore(score, 10, 100, 70),
     weight,
-    explanation: `${okCount} OK · ${warningCount} warnings · ${problemCount} problems across ${categoryItems.length} items.`,
+    explanation: `${okCount} OK ${MIDDLE_DOT} ${warningCount} warnings ${MIDDLE_DOT} ${problemCount} problems across ${categoryItems.length} items.`,
+    signals: {
+      hasMeaningfulIssues: capped.hasMeaningfulIssues,
+      visualMaxScore: capped.visualMaxScore,
+      issueCount,
+      issueRatio,
+    },
   }
 }
 
-// ─── VIN / History Score ──────────────────────────────────────────────────────
+// â”€â”€â”€ VIN / History Score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateVINScore(
   history: VehicleHistoryResult | null | undefined,
@@ -460,10 +584,11 @@ function calculateVINScore(
       score: 65,
       weight: SCORE_WEIGHTS.vin,
       explanation: 'Basic VIN decoded only. Upgrade to premium for full history scoring.',
+      signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
     }
   }
 
-  let score = 100
+  let score = 97
   logInvalidNumber('vin.accidentCount', history.accidentCount, 0)
   const accidentCount = Math.max(0, Math.round(safeNumber(history.accidentCount, 0)))
   const mileageHistory = safeArray<VehicleHistoryResult['mileageHistory'][number]>(history.mileageHistory)
@@ -471,12 +596,14 @@ function calculateVINScore(
   const riskFlags = safeArray<string>(history.riskFlags)
 
   if (history.theftStatus === 'reported_stolen') score -= 100
-  if (history.totalLoss)           score -= 50
+  if (history.totalLoss)           score -= 55
   if (history.outstandingFinance)  score -= 30
-  score -= accidentCount * 12
+  score -= accidentCount * 13
 
   const mileageConsistent = isMileageConsistent(mileageHistory)
-  if (!mileageConsistent) score -= 25
+  if (!mileageConsistent) score -= 28
+  const openRecallCount = recalls.filter((r) => r?.status === 'incomplete').length
+  score -= openRecallCount * 6
 
   const flagPenalties: Record<string, number> = {
     MILEAGE_ROLLBACK: 30,
@@ -488,11 +615,45 @@ function calculateVINScore(
     score -= flagPenalties[flag] ?? 5
   })
 
+  const issueCount = accidentCount + openRecallCount + riskFlags.length
+  const seriousIssueCount =
+    (history.theftStatus === 'reported_stolen' ? 2 : 0)
+    + (history.totalLoss ? 2 : 0)
+    + (history.outstandingFinance ? 1 : 0)
+    + (!mileageConsistent ? 1 : 0)
+    + (accidentCount >= 3 ? 1 : 0)
+    + (riskFlags.some((flag) => flag === 'FLOOD_DAMAGE' || flag === 'MILEAGE_ROLLBACK') ? 1 : 0)
+  let visualMaxScore: number | undefined
+  if (history.theftStatus === 'reported_stolen') {
+    visualMaxScore = 25
+  } else if (history.totalLoss || history.outstandingFinance || !mileageConsistent || accidentCount >= 3) {
+    visualMaxScore = 59
+  } else if (accidentCount > 0 || openRecallCount > 0 || riskFlags.length > 0) {
+    visualMaxScore = 89
+  }
+  if (visualMaxScore !== undefined) {
+    score = Math.min(score, visualMaxScore)
+  }
+
   return {
     label: 'VIN & History',
     score: clampScore(score, 0, 100, 65),
     weight: SCORE_WEIGHTS.vin,
-    explanation: `${accidentCount} accident(s). ${recalls.filter((r) => r?.status === 'incomplete').length} open recall(s). Mileage: ${mileageConsistent ? 'consistent' : 'inconsistent'}.`,
+    explanation: `${accidentCount} accident(s). ${openRecallCount} open recall(s). Mileage: ${mileageConsistent ? 'consistent' : 'inconsistent'}.`,
+    signals: {
+      hasMeaningfulIssues:
+        accidentCount > 0
+        || openRecallCount > 0
+        || riskFlags.length > 0
+        || history.outstandingFinance
+        || history.totalLoss
+        || history.theftStatus === 'reported_stolen'
+        || !mileageConsistent,
+      visualMaxScore,
+      issueCount,
+      issueRatio: issueCount > 0 ? Math.min(1, issueCount / 5) : 0,
+      confidence: seriousIssueCount > 0 ? 85 : 60,
+    },
   }
 }
 
@@ -512,7 +673,7 @@ function isMileageConsistent(records: VehicleHistoryResult['mileageHistory'] | u
   return true
 }
 
-// ─── Test Drive Score ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Test Drive Score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateTestDriveScore(ratings: Record<string, number>): ScoreDimension {
   const values = Object.values(ratings && typeof ratings === 'object' ? ratings : {})
@@ -520,31 +681,49 @@ function calculateTestDriveScore(ratings: Record<string, number>): ScoreDimensio
     .filter((v) => v > 0)
 
   if (values.length === 0) {
-    return { label: 'Test Drive', score: 72, weight: SCORE_WEIGHTS.testDrive, explanation: 'Test drive not yet completed.' }
+    return {
+      label: 'Test Drive',
+      score: 72,
+      weight: SCORE_WEIGHTS.testDrive,
+      explanation: 'Test drive not yet completed.',
+      signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
+    }
   }
 
   const problemCount = values.filter((v) => v === 3).length
   const concernCount = values.filter((v) => v === 2).length
   const goodCount    = values.filter((v) => v === 1).length
 
-  let score = 100
-  score -= problemCount * 18
-  score -= concernCount * 8
-  score += goodCount    * 2
+  const issueCount = problemCount + concernCount
+  const issueRatio = values.length > 0 ? issueCount / values.length : 0
+
+  let score =
+    issueCount === 0
+      ? Math.min(98, 90 + (goodCount * 2))
+      : 94 - (problemCount * 22) - (concernCount * 10) + goodCount
+
+  const capped = capScoreForCategoryIssues(score, issueCount, issueRatio, problemCount)
+  score = capped.score
 
   return {
     label: 'Test Drive',
     score: clampScore(score, 0, 100, 72),
     weight: SCORE_WEIGHTS.testDrive,
-    explanation: `${goodCount} good · ${concernCount} concerns · ${problemCount} problems observed during test drive.`,
+    explanation: `${goodCount} good ${MIDDLE_DOT} ${concernCount} concerns ${MIDDLE_DOT} ${problemCount} problems observed during test drive.`,
+    signals: {
+      hasMeaningfulIssues: capped.hasMeaningfulIssues,
+      visualMaxScore: capped.visualMaxScore,
+      issueCount,
+      issueRatio,
+    },
   }
 }
 
-// ─── Service History Derivation ───────────────────────────────────────────────
+// â”€â”€â”€ Service History Derivation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Reads the 'doc_service' checklist item to determine service history status.
- * OK → FULL, WARNING → PARTIAL, PROBLEM → NONE, PENDING/missing → PARTIAL (cautious default).
+ * OK â†’ FULL, WARNING â†’ PARTIAL, PROBLEM â†’ NONE, PENDING/missing â†’ PARTIAL (cautious default).
  */
 export function deriveServiceHistoryStatus(items: ChecklistItem[]): ServiceHistoryStatus {
   const item = safeArray<ChecklistItem>(items).find((i) => i?.itemKey === 'doc_service')
@@ -555,7 +734,7 @@ export function deriveServiceHistoryStatus(items: ChecklistItem[]): ServiceHisto
   return 'PARTIAL'
 }
 
-// ─── Service History Score Modifier ──────────────────────────────────────────
+// â”€â”€â”€ Service History Score Modifier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ServiceHistoryEffect {
   delta: number
@@ -583,7 +762,7 @@ function serviceHistoryEffect(
         delta: -20,
         flags: ['NO_SERVICE_HISTORY'],
         hints: [
-          `No verified service history — negotiate a price reduction of €${formatEuroAmount(discount.min)}–€${formatEuroAmount(discount.max)}.`,
+          `No verified service history â€” negotiate a price reduction of â‚¬${formatEuroAmount(discount.min)}â€“â‚¬${formatEuroAmount(discount.max)}.`,
           'Request an independent pre-purchase inspection as a condition of sale.',
           'Budget for an immediate full service if you proceed.',
         ],
@@ -595,8 +774,8 @@ function serviceHistoryEffect(
         delta: -25,
         flags: ['POSSIBLE_FAKE_HISTORY'],
         hints: [
-          'Suspicious or inconsistent service records — treat as no history.',
-          `Negotiate a price reduction of €${formatEuroAmount(discount.min)}–€${formatEuroAmount(discount.max)}.`,
+          'Suspicious or inconsistent service records â€” treat as no history.',
+          `Negotiate a price reduction of â‚¬${formatEuroAmount(discount.min)}â€“â‚¬${formatEuroAmount(discount.max)}.`,
           'Walk away unless the seller can provide verifiable original receipts.',
         ],
       }
@@ -669,7 +848,7 @@ function serviceHistoryEffectV2(
   }
 }
 
-// ─── Damage Penalty (from VIN premium data) ───────────────────────────────────
+// â”€â”€â”€ Damage Penalty (from VIN premium data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface DamageEffect {
   delta: number
@@ -695,7 +874,7 @@ function damagePenalty(
     delta -= 15
     flags.push('HIGH_DAMAGE_COUNT')
     const accidentDiscount = buildAccidentDiscount(coercePositivePrice(askingPrice), accidentCount)
-    hints.push(`${accidentCount} recorded accidents — negotiate at least €${formatEuroAmount(accidentDiscount)} off asking price.`)
+    hints.push(`${accidentCount} recorded accidents â€” negotiate at least â‚¬${formatEuroAmount(accidentDiscount)} off asking price.`)
   }
 
   // Cost-based penalty
@@ -710,7 +889,7 @@ function damagePenalty(
   if (maxCostEur > HIGH_DAMAGE_COST_EUR) {
     delta -= 10
     flags.push('HIGH_REPAIR_HISTORY')
-    hints.push(`High recorded repair costs (>${HIGH_DAMAGE_COST_EUR.toLocaleString()} EUR) — budget for potential recurring issues.`)
+    hints.push(`High recorded repair costs (>${HIGH_DAMAGE_COST_EUR.toLocaleString()} EUR) â€” budget for potential recurring issues.`)
   }
 
   return { delta, flags, hints }
@@ -754,7 +933,7 @@ function damagePenaltyV2(
   return { delta, flags, hints }
 }
 
-// ─── Verdict Determination ────────────────────────────────────────────────────
+// â”€â”€â”€ Verdict Determination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function determineVerdict(buyScore: number): Verdict {
   const safeScore = clampScore(buyScore, 0, 100, 0)
@@ -767,8 +946,8 @@ function determineVerdict(buyScore: number): Verdict {
 /**
  * Enforces hard verdict caps based on service history and damage.
  *
- * - NONE/SUSPICIOUS history → cannot be STRONG_BUY
- * - NONE/SUSPICIOUS + any recorded damage → capped at HIGH_RISK
+ * - NONE/SUSPICIOUS history â†’ cannot be STRONG_BUY
+ * - NONE/SUSPICIOUS + any recorded damage â†’ capped at HIGH_RISK
  */
 function enforceVerdictCaps(
   verdict: Verdict,
@@ -783,7 +962,7 @@ function enforceVerdictCaps(
   const afterHistoryCap: Verdict =
     verdict === 'STRONG_BUY' ? 'BUY_WITH_CAUTION' : verdict
 
-  // No history + any recorded damage → cap at HIGH_RISK
+  // No history + any recorded damage â†’ cap at HIGH_RISK
   const hasDamage = safeNumber(vinData?.accidentCount, 0) > 0 || dmgFlags.length > 0
   if (hasDamage && afterHistoryCap === 'BUY_WITH_CAUTION') {
     return 'HIGH_RISK'
@@ -792,7 +971,7 @@ function enforceVerdictCaps(
   return afterHistoryCap
 }
 
-// ─── Reason Generator ────────────────────────────────────────────────────────
+// â”€â”€â”€ Reason Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateReasons(
   input: ScoreCalculationInput,
@@ -818,8 +997,8 @@ function generateReasons(
     if (ownerCount <= 2) for_.push(`Only ${ownerCount} previous owner(s)`)
   }
 
-  // Only claim "no anomalies" when there are truly no findings — not when warnings exist
-  if (aiFindings.length === 0 || aiFindings.every((f) => f.severity === 'info')) {
+  // Only claim "no anomalies" when there are truly no findings at all.
+  if (aiFindings.length === 0) {
     for_.push('No critical AI anomalies detected in photos')
   }
 
@@ -828,7 +1007,7 @@ function generateReasons(
 
   // Negative signals
   if (riskFlags.includes('NO_SERVICE_HISTORY')) {
-    against.push('No verified service history — major risk factor')
+    against.push('No verified service history â€” major risk factor')
   }
   if (riskFlags.includes('POSSIBLE_FAKE_HISTORY')) {
     against.push('Service records appear suspicious or inconsistent')
@@ -853,7 +1032,7 @@ function generateReasons(
     if (accidentCount > 0) against.push(`${accidentCount} accident(s) recorded in history`)
     const openRecalls = safeArray<VehicleHistoryResult['recalls'][number]>(vinData.recalls).filter((r) => r?.status === 'incomplete')
     if (openRecalls.length > 0) against.push(`${openRecalls.length} outstanding safety recall(s)`)
-    if (vinData.outstandingFinance) against.push('Outstanding finance found — legal risk')
+    if (vinData.outstandingFinance) against.push('Outstanding finance found â€” legal risk')
     if (!isMileageConsistent(vinData.mileageHistory)) against.push('Mileage inconsistency detected')
   }
   const problems = checklistItems.filter((i) => i.status === 'PROBLEM')
@@ -865,7 +1044,7 @@ function generateReasons(
   }
 }
 
-// ─── Internal dimension calculator ───────────────────────────────────────────
+// â”€â”€â”€ Internal dimension calculator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateAllDimensions(input: ScoreCalculationInput) {
   const { aiFindings, photoCount, issuePhotoCount, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
@@ -881,17 +1060,17 @@ function calculateAllDimensions(input: ScoreCalculationInput) {
   }
 }
 
-// ─── Main Public API ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * calculateRiskScore
- * Core scoring function. Pure logic — no DB calls, no API calls.
+ * Core scoring function. Pure logic â€” no DB calls, no API calls.
  *
  * Pipeline:
  *   1. Calculate dimension scores (weighted average)
- *   2. Apply service history modifier (±delta on final score)
+ *   2. Apply service history modifier (Â±delta on final score)
  *   3. Apply damage penalty from VIN data
- *   4. Enforce hard verdict caps (no history + damage → HIGH_RISK)
+ *   4. Enforce hard verdict caps (no history + damage â†’ HIGH_RISK)
  *   5. Generate risk flags, reasons, negotiation hints
  */
 export function calculateRiskScore(
@@ -1030,10 +1209,10 @@ export function calculatePreliminaryRiskScore(
  */
 export function getVerdictLabel(verdict: Verdict): { label: string; emoji: string; color: string } {
   const map: Record<Verdict, { label: string; emoji: string; color: string }> = {
-    STRONG_BUY:       { label: 'Strong Buy',       emoji: '✅', color: '#00e676' },
-    BUY_WITH_CAUTION: { label: 'Buy with Caution', emoji: '⚠️', color: '#ffaa00' },
-    HIGH_RISK:        { label: 'High Risk',         emoji: '🔶', color: '#ff7700' },
-    WALK_AWAY:        { label: 'Walk Away',         emoji: '❌', color: '#ff4757' },
+    STRONG_BUY:       { label: 'Strong Buy',       emoji: '\u2705', color: '#00e676' },
+    BUY_WITH_CAUTION: { label: 'Buy with Caution', emoji: '\u26A0\uFE0F', color: '#ffaa00' },
+    HIGH_RISK:        { label: 'High Risk',        emoji: '\uD83D\uDD36', color: '#ff7700' },
+    WALK_AWAY:        { label: 'Walk Away',        emoji: '\u274C', color: '#ff4757' },
   }
   return map[verdict]
 }
@@ -1050,3 +1229,8 @@ export function getScoreColor(score: number): string {
   if (safeScore >= 40) return '#ff7700'
   return '#ff4757'
 }
+
+
+
+
+

@@ -133,6 +133,7 @@ export interface AIFinding {
   description: string
   severity: AISeverity
   confidence: number // 0-100
+  recommendation?: string
   boundingBox?: { x: number; y: number; w: number; h: number }
 }
 
@@ -144,6 +145,8 @@ export interface AIAnalysisResult {
   overallScore: number // 0-100, higher = fewer problems
   modelVersion: string
   processingMs?: number
+  analyzedCount?: number
+  failedCount?: number
   createdAt: string
 }
 
@@ -166,11 +169,20 @@ export type Verdict = 'STRONG_BUY' | 'BUY_WITH_CAUTION' | 'HIGH_RISK' | 'WALK_AW
 
 export type ServiceHistoryStatus = 'FULL' | 'PARTIAL' | 'NONE' | 'SUSPICIOUS'
 
+export interface ScoreDimensionSignals {
+  hasMeaningfulIssues?: boolean
+  visualMaxScore?: number
+  issueCount?: number
+  issueRatio?: number
+  confidence?: number
+}
+
 export interface ScoreDimension {
   label: string
   score: number       // 0-100
   weight: number      // percentage weight in final calculation
   explanation: string
+  signals?: ScoreDimensionSignals
 }
 
 export interface RiskScore {

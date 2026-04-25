@@ -1,5 +1,5 @@
-// =============================================================================
-// Analyze Photo — POST /api/inspection/analyze-photo
+﻿// =============================================================================
+// Analyze Photo â€” POST /api/inspection/analyze-photo
 // Sends a car photo to OpenAI Vision (gpt-4o) and returns structured findings.
 // =============================================================================
 
@@ -55,7 +55,7 @@ const schema = z.object({
   }).optional(),
 })
 
-// ─── Prompt per angle ────────────────────────────────────────────────────────
+// â”€â”€â”€ Prompt per angle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function localeInstruction(locale: string): string {
   const language: Record<string, string> = {
@@ -78,23 +78,23 @@ function fallbackAnalysis(locale: string): { signal: string; detail: string } {
     },
     sr: {
       signal: 'Analiza nije dostupna',
-      detail: 'Nije moguće analizirati ovu fotografiju. Proverite vezu i pokušajte ponovo.',
+      detail: 'Nije moguÄ‡e analizirati ovu fotografiju. Proverite vezu i pokuÅ¡ajte ponovo.',
     },
     de: {
-      signal: 'Analyse nicht verfügbar',
-      detail: 'Dieses Bild konnte nicht analysiert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.',
+      signal: 'Analyse nicht verfÃ¼gbar',
+      detail: 'Dieses Bild konnte nicht analysiert werden. PrÃ¼fen Sie die Verbindung und versuchen Sie es erneut.',
     },
     mk: {
-      signal: 'Анализата не е достапна',
-      detail: 'Не можеше да се анализира оваа фотографија. Проверете ја врската и обидете се повторно.',
+      signal: 'ÐÐ½Ð°Ð»Ð¸Ð·Ð°Ñ‚Ð° Ð½Ðµ Ðµ Ð´Ð¾ÑÑ‚Ð°Ð¿Ð½Ð°',
+      detail: 'ÐÐµ Ð¼Ð¾Ð¶ÐµÑˆÐµ Ð´Ð° ÑÐµ Ð°Ð½Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð° Ð¾Ð²Ð°Ð° Ñ„Ð¾Ñ‚Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ñ˜Ð°. ÐŸÑ€Ð¾Ð²ÐµÑ€ÐµÑ‚Ðµ Ñ˜Ð° Ð²Ñ€ÑÐºÐ°Ñ‚Ð° Ð¸ Ð¾Ð±Ð¸Ð´ÐµÑ‚Ðµ ÑÐµ Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€Ð½Ð¾.',
     },
     sq: {
-      signal: 'Analiza nuk është e disponueshme',
-      detail: 'Nuk mundëm ta analizonim këtë fotografi. Kontrolloni lidhjen dhe provoni përsëri.',
+      signal: 'Analiza nuk Ã«shtÃ« e disponueshme',
+      detail: 'Nuk mundÃ«m ta analizonim kÃ«tÃ« fotografi. Kontrolloni lidhjen dhe provoni pÃ«rsÃ«ri.',
     },
     bg: {
-      signal: 'Анализът не е наличен',
-      detail: 'Не успяхме да анализираме тази снимка. Проверете връзката и опитайте отново.',
+      signal: 'ÐÐ½Ð°Ð»Ð¸Ð·ÑŠÑ‚ Ð½Ðµ Ðµ Ð½Ð°Ð»Ð¸Ñ‡ÐµÐ½',
+      detail: 'ÐÐµ ÑƒÑÐ¿ÑÑ…Ð¼Ðµ Ð´Ð° Ð°Ð½Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð°Ð¼Ðµ Ñ‚Ð°Ð·Ð¸ ÑÐ½Ð¸Ð¼ÐºÐ°. ÐŸÑ€Ð¾Ð²ÐµÑ€ÐµÑ‚Ðµ Ð²Ñ€ÑŠÐ·ÐºÐ°Ñ‚Ð° Ð¸ Ð¾Ð¿Ð¸Ñ‚Ð°Ð¹Ñ‚Ðµ Ð¾Ñ‚Ð½Ð¾Ð²Ð¾.',
     },
   }
   return messages[lang] ?? messages.en
@@ -115,24 +115,24 @@ function fallbackForFailure(locale: string, failure: AIProviderFailure): { signa
       UNKNOWN: fallback.detail,
     },
     sr: {
-      RATE_LIMIT: 'AI analiza fotografija je trenutno zauzeta. Pokušajte ponovo za trenutak.',
-      TIMEOUT: 'AI analiza fotografije je predugo trajala. Pokušajte ponovo kada je veza stabilna.',
-      CONFIG_ERROR: 'AI analiza fotografija je trenutno nedostupna. Ostatak izveštaja i dalje možete završiti.',
+      RATE_LIMIT: 'AI analiza fotografija je trenutno zauzeta. PokuÅ¡ajte ponovo za trenutak.',
+      TIMEOUT: 'AI analiza fotografije je predugo trajala. PokuÅ¡ajte ponovo kada je veza stabilna.',
+      CONFIG_ERROR: 'AI analiza fotografija je trenutno nedostupna. Ostatak izveÅ¡taja i dalje moÅ¾ete zavrÅ¡iti.',
     },
     de: {
       RATE_LIMIT: 'Die KI-Fotoanalyse ist momentan ausgelastet. Bitte versuchen Sie es gleich erneut.',
       TIMEOUT: 'Die KI-Fotoanalyse hat zu lange gedauert. Bitte versuchen Sie es bei stabiler Verbindung erneut.',
-      CONFIG_ERROR: 'Die KI-Fotoanalyse ist vorübergehend nicht verfügbar. Der restliche Bericht kann weiter erstellt werden.',
+      CONFIG_ERROR: 'Die KI-Fotoanalyse ist vorÃ¼bergehend nicht verfÃ¼gbar. Der restliche Bericht kann weiter erstellt werden.',
     },
     mk: {
-      RATE_LIMIT: 'AI анализата на фотографии е моментално зафатена. Обидете се повторно за кратко.',
-      TIMEOUT: 'AI анализата траеше предолго. Обидете се повторно кога врската е стабилна.',
-      CONFIG_ERROR: 'AI анализата на фотографии е привремено недостапна. Остатокот од извештајот може да продолжи.',
+      RATE_LIMIT: 'AI Ð°Ð½Ð°Ð»Ð¸Ð·Ð°Ñ‚Ð° Ð½Ð° Ñ„Ð¾Ñ‚Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ð¸ Ðµ Ð¼Ð¾Ð¼ÐµÐ½Ñ‚Ð°Ð»Ð½Ð¾ Ð·Ð°Ñ„Ð°Ñ‚ÐµÐ½Ð°. ÐžÐ±Ð¸Ð´ÐµÑ‚Ðµ ÑÐµ Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€Ð½Ð¾ Ð·Ð° ÐºÑ€Ð°Ñ‚ÐºÐ¾.',
+      TIMEOUT: 'AI Ð°Ð½Ð°Ð»Ð¸Ð·Ð°Ñ‚Ð° Ñ‚Ñ€Ð°ÐµÑˆÐµ Ð¿Ñ€ÐµÐ´Ð¾Ð»Ð³Ð¾. ÐžÐ±Ð¸Ð´ÐµÑ‚Ðµ ÑÐµ Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€Ð½Ð¾ ÐºÐ¾Ð³Ð° Ð²Ñ€ÑÐºÐ°Ñ‚Ð° Ðµ ÑÑ‚Ð°Ð±Ð¸Ð»Ð½Ð°.',
+      CONFIG_ERROR: 'AI Ð°Ð½Ð°Ð»Ð¸Ð·Ð°Ñ‚Ð° Ð½Ð° Ñ„Ð¾Ñ‚Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ð¸ Ðµ Ð¿Ñ€Ð¸Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¾ Ð½ÐµÐ´Ð¾ÑÑ‚Ð°Ð¿Ð½Ð°. ÐžÑÑ‚Ð°Ñ‚Ð¾ÐºÐ¾Ñ‚ Ð¾Ð´ Ð¸Ð·Ð²ÐµÑˆÑ‚Ð°Ñ˜Ð¾Ñ‚ Ð¼Ð¾Ð¶Ðµ Ð´Ð° Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶Ð¸.',
     },
     sq: {
-      RATE_LIMIT: 'Analiza AI e fotografive është përkohësisht e ngarkuar. Provoni përsëri pas pak.',
-      TIMEOUT: 'Analiza AI e fotografisë zgjati shumë. Provoni përsëri kur lidhja të jetë e qëndrueshme.',
-      CONFIG_ERROR: 'Analiza AI e fotografive është përkohësisht e padisponueshme. Raporti mund të vazhdojë.',
+      RATE_LIMIT: 'Analiza AI e fotografive Ã«shtÃ« pÃ«rkohÃ«sisht e ngarkuar. Provoni pÃ«rsÃ«ri pas pak.',
+      TIMEOUT: 'Analiza AI e fotografisÃ« zgjati shumÃ«. Provoni pÃ«rsÃ«ri kur lidhja tÃ« jetÃ« e qÃ«ndrueshme.',
+      CONFIG_ERROR: 'Analiza AI e fotografive Ã«shtÃ« pÃ«rkohÃ«sisht e padisponueshme. Raporti mund tÃ« vazhdojÃ«.',
     },
   }
   const localizedDetail = details[lang]?.[failure] ?? (lang === 'en' ? details.en[failure] : undefined) ?? fallback.detail
@@ -147,7 +147,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// ─── OpenAI error body parsing ────────────────────────────────────────────────
+// â”€â”€â”€ OpenAI error body parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OpenAIErrorDetail {
   status: number
@@ -174,7 +174,7 @@ function parseOpenAIError(body: string, status: number): OpenAIErrorDetail {
 // Maps the parsed OpenAI error to our internal failure enum.
 // More specific than failureFromStatus because it reads the error payload.
 function failureFromOpenAIError(detail: OpenAIErrorDetail): AIProviderFailure {
-  // Billing quota exhausted — no point retrying, user needs to top up the account.
+  // Billing quota exhausted â€” no point retrying, user needs to top up the account.
   if (detail.code === 'insufficient_quota' || detail.type === 'insufficient_quota') return 'CONFIG_ERROR'
   // Invalid or revoked API key
   if (detail.code === 'invalid_api_key' || detail.status === 401 || detail.status === 403) return 'CONFIG_ERROR'
@@ -210,7 +210,7 @@ function failureFromError(error: unknown): AIProviderFailure {
 }
 
 // Per-attempt timeout kept under the client's 35s window.
-// Only retry on 429 rate-limit — timeout and 5xx are returned immediately
+// Only retry on 429 rate-limit â€” timeout and 5xx are returned immediately
 // so the client can decide whether to retry rather than burning the full window.
 const OPENAI_ATTEMPT_TIMEOUT_MS = 28_000
 const OPENAI_MAX_ATTEMPTS = 2
@@ -234,7 +234,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
       lastStatus = response.status
 
       if (!response.ok) {
-        // Read and parse the error body once — the response stream can only be read once.
+        // Read and parse the error body once â€” the response stream can only be read once.
         const rawBody = await response.text()
         const errDetail = parseOpenAIError(rawBody, response.status)
         const failureType = failureFromOpenAIError(errDetail)
@@ -248,7 +248,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
           classifiedAs:   failureType,
         })
 
-        // Quota exhausted or invalid key — these are permanent; throw immediately,
+        // Quota exhausted or invalid key â€” these are permanent; throw immediately,
         // no retry will help.
         if (failureType === 'CONFIG_ERROR') {
           throw new Error('OPENAI_QUOTA_EXCEEDED')
@@ -256,22 +256,22 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
 
         // For genuine rate-limit (429), retry once if we have attempts left.
         if (response.status === 429 && attempt < OPENAI_MAX_ATTEMPTS) {
-          console.warn('[analyze-photo] rate-limit — retrying after backoff', { angle, attempt })
+          console.warn('[analyze-photo] rate-limit â€” retrying after backoff', { angle, attempt })
           clearTimeout(timeout)
           await sleep(1500)
           continue
         }
 
-        // All other non-ok responses (5xx, 400, etc.) — throw immediately.
+        // All other non-ok responses (5xx, 400, etc.) â€” throw immediately.
         throw new Error(`HTTP_${response.status}`)
       }
 
       return response
     } catch (error) {
       if (error instanceof Error && (error.message === 'OPENAI_QUOTA_EXCEEDED' || error.message.startsWith('HTTP_'))) {
-        throw error // already classified — propagate without wrapping
+        throw error // already classified â€” propagate without wrapping
       }
-      // Timeout (AbortError) or network failure — propagate immediately (no retry)
+      // Timeout (AbortError) or network failure â€” propagate immediately (no retry)
       const isTimeout = error instanceof DOMException && error.name === 'AbortError'
       console.warn('[analyze-photo] OpenAI call threw', {
         angle, attempt,
@@ -295,7 +295,7 @@ function extractJsonObject(text: string): string {
     try { JSON.parse(cleaned); return cleaned } catch { /* fall through to recovery */ }
   }
 
-  // Slice from first '{' to last '}' — handles leading/trailing commentary
+  // Slice from first '{' to last '}' â€” handles leading/trailing commentary
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
   if (start >= 0 && end > start) {
@@ -408,8 +408,8 @@ function legacySignal(analysis: StructuredPhotoAnalysis): string {
   const possible = analysis.possibleIssues[0]
   if (possible) return possible.issue.slice(0, 80)
   if (analysis.imageQuality === 'unusable') return 'Not inspectable'
-  if (analysis.imageQuality === 'poor') return 'Limited visibility — broad inspection only'
-  return 'No visible issues found'
+  if (analysis.imageQuality === 'poor') return 'Limited visibility - broad inspection only'
+  return 'No obvious issues detected in this view'
 }
 
 function legacyDetail(analysis: StructuredPhotoAnalysis): string {
@@ -499,7 +499,7 @@ No extra keys. No markdown fences. No prose outside the JSON.`
 
 }
 
-// Single-attempt OpenAI call — no retry logic. Used for the condensed recovery
+// Single-attempt OpenAI call â€” no retry logic. Used for the condensed recovery
 // path so we don't compound retries on top of an already-failed attempt.
 async function callOpenAIOnce(
   apiKey: string,
@@ -551,7 +551,7 @@ function buildSuccessPayload(analysis: StructuredPhotoAnalysis) {
   }
 }
 
-// ─── Route handler ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Route handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -607,13 +607,13 @@ export async function POST(req: NextRequest) {
       apiKeyPrefix: apiKey.startsWith('sk-') ? apiKey.slice(0, 7) : '(unexpected prefix)',
     })
 
-    // ── Shared image content block (reused in condensed retry) ────────────────
+    // â”€â”€ Shared image content block (reused in condensed retry) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const imageContent = {
       type: 'image_url' as const,
       image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: 'auto' as const },
     }
 
-    // callOpenAIWithRetry now throws on any non-ok response — no need to check response.ok here.
+    // callOpenAIWithRetry now throws on any non-ok response â€” no need to check response.ok here.
     // Use json_object mode (universally supported across all tiers) rather than json_schema strict
     // mode, which requires gpt-4o-2024-08-06+ and higher account tier and returns 400 otherwise.
     const response = await callOpenAIWithRetry(apiKey, {
@@ -639,11 +639,11 @@ export async function POST(req: NextRequest) {
       totalTokens:      usage.total_tokens      ?? '?',
     })
 
-    // ── Truncation recovery ──────────────────────────────────────────────────
+    // â”€â”€ Truncation recovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // If the model hit the token limit, attempt one condensed retry before giving up.
     // This avoids silent degradation when 800 tokens is not enough for a verbose result.
     if (finishReason === 'length') {
-      console.warn('[analyze-photo] truncation detected — attempting condensed recovery', {
+      console.warn('[analyze-photo] truncation detected â€” attempting condensed recovery', {
         angle,
         mimeType,
         contentLength: rawText.length,
@@ -680,11 +680,11 @@ export async function POST(req: NextRequest) {
           reason: condensedErr instanceof Error ? condensedErr.message : String(condensedErr),
         })
       }
-      // Both attempts truncated or condensed call failed — surface as parse failure
+      // Both attempts truncated or condensed call failed â€” surface as parse failure
       throw new Error('PROVIDER_RESPONSE_TRUNCATED')
     }
 
-    // ── Normal parse path ────────────────────────────────────────────────────
+    // â”€â”€ Normal parse path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const analysis = parseAIText(rawText)
     if (!analysis) {
       console.error('[analyze-photo] parse failed', { angle, rawText: rawText.slice(0, 200) })
@@ -726,7 +726,8 @@ export async function POST(req: NextRequest) {
           failureReason: failureType,
         },
       },
-      { status: 200 } // Return 200 so UI still renders — just shows the fallback
+      { status: 200 } // Return 200 so UI still renders â€” just shows the fallback
     )
   }
 }
+

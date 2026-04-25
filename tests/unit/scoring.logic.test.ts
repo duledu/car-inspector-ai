@@ -107,6 +107,18 @@ describe('calculateRiskScore', () => {
     expect(result.verdict).toBe('HIGH_RISK')
   })
 
+  test('any actionable AI finding suppresses all-clear reasons', () => {
+    const result = calculateRiskScore('mixed-ai', {
+      ...emptyInput,
+      aiFindings: [makeAIFinding({ severity: 'warning', confidence: 72, title: 'Paint damage' })],
+      photoCount: 6,
+      issuePhotoCount: 1,
+    })
+
+    expect(result.reasonsFor).not.toContain('No critical AI anomalies detected in photos')
+    expect(result.dimensions.ai.explanation).toContain('Issues detected in 1 of 6 photos.')
+  })
+
   test('ai analysis is capped out of green territory when issues affect 4 of 9 photos', () => {
     const findings = [
       makeAIFinding({ id: 'f1', title: 'Paint damage', severity: 'warning', confidence: 75 }),
@@ -126,6 +138,29 @@ describe('calculateRiskScore', () => {
     expect(result.dimensions.ai.explanation).toBe(
       'Issues detected in 4 of 9 photos. Main concern: Panel mismatch. Confidence: 75%. Further manual inspection recommended.'
     )
+    expect(result.dimensions.ai.signals?.visualMaxScore).toBeLessThanOrEqual(68)
+  })
+
+  test('sufficient clean photos can keep AI analysis in the high band', () => {
+    const result = calculateRiskScore('clean-photos', {
+      ...emptyInput,
+      photoCount: 8,
+    })
+
+    expect(result.dimensions.ai.score).toBeGreaterThanOrEqual(90)
+    expect(result.dimensions.ai.explanation).toBe(
+      'No obvious issues detected from available photos. Results are advisory only.'
+    )
+  })
+
+  test('no uploaded photos lowers AI confidence instead of showing a high safe score', () => {
+    const result = calculateRiskScore('no-photos', emptyInput)
+
+    expect(result.dimensions.ai.score).toBe(68)
+    expect(result.dimensions.ai.explanation).toBe(
+      'No photo analysis data available. Upload more clear photos for a reliable AI assessment.'
+    )
+    expect(result.dimensions.ai.signals?.visualMaxScore).toBe(74)
   })
 
   test('problem checklist items reduce score', () => {
@@ -135,6 +170,35 @@ describe('calculateRiskScore', () => {
     )
     const withProblems = calculateRiskScore('v1', { ...emptyInput, checklistItems: problemItems })
     expect(withProblems.buyScore).toBeLessThan(cleanResult.buyScore)
+  })
+
+  test('checklist categories with problems are capped out of green territory', () => {
+    const result = calculateRiskScore('ext-problems', {
+      ...emptyInput,
+      checklistItems: [
+        makeChecklistItem({ id: 'c1', category: 'EXTERIOR', status: 'PROBLEM' }),
+        makeChecklistItem({ id: 'c2', category: 'EXTERIOR', status: 'WARNING' }),
+        makeChecklistItem({ id: 'c3', category: 'EXTERIOR', status: 'OK' }),
+      ],
+    })
+
+    expect(result.dimensions.exterior.score).toBeLessThanOrEqual(74)
+    expect(result.dimensions.exterior.signals?.visualMaxScore).toBeLessThanOrEqual(74)
+  })
+
+  test('severe VIN/history issues cannot keep the category in a high score band', () => {
+    const result = calculateRiskScore('vin-risk', {
+      ...emptyInput,
+      vinData: makeVinHistory({
+        accidentCount: 3,
+        totalLoss: true,
+        outstandingFinance: true,
+      }),
+      hasPremiumHistory: true,
+    })
+
+    expect(result.dimensions.vin.score).toBeLessThanOrEqual(59)
+    expect(result.dimensions.vin.signals?.visualMaxScore).toBeLessThanOrEqual(59)
   })
 
   test('hasPremiumHistory=true adds bonus to score', () => {
