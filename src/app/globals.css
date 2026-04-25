@@ -40,6 +40,8 @@ html, body {
   --success:        #22c55e;
   --warning:        #f59e0b;
   --danger:         #ef4444;
+  --danger-hover:   #f87171;
+  --danger-active:  #dc2626;
 
   --text:           #f8fafc;
   --text-sub:       rgba(248,250,252,0.86);
@@ -61,6 +63,101 @@ html, body {
 
   --t-fast: 150ms ease;
   --t-base: 200ms ease;
+}
+
+.danger-link {
+  color: var(--danger) !important;
+  transition: color var(--t-fast), text-shadow var(--t-fast);
+}
+
+.danger-link:hover,
+.danger-link:focus-visible {
+  color: var(--danger-hover) !important;
+  text-shadow: 0 0 14px rgba(239, 68, 68, 0.22);
+}
+
+.danger-link:active {
+  color: var(--danger-active) !important;
+}
+
+.app-sidebar .nav-item--danger .danger-link,
+.app-sidebar .nav-item--danger .danger-link:visited,
+.app-sidebar .nav-item--danger .danger-link span,
+.app-sidebar .nav-item--danger .danger-link svg {
+  color: #ef4444 !important;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.app-sidebar .nav-item--danger .danger-link:hover,
+.app-sidebar .nav-item--danger .danger-link:hover span,
+.app-sidebar .nav-item--danger .danger-link:hover svg,
+.app-sidebar .nav-item--danger .danger-link:focus-visible,
+.app-sidebar .nav-item--danger .danger-link:focus-visible span,
+.app-sidebar .nav-item--danger .danger-link:focus-visible svg {
+  color: #f87171 !important;
+}
+
+.app-sidebar .nav-item--danger .danger-link:active,
+.app-sidebar .nav-item--danger .danger-link:active span,
+.app-sidebar .nav-item--danger .danger-link:active svg {
+  color: #dc2626 !important;
+}
+
+.app-sidebar .nav-item--danger button.sidebar-danger-link,
+.app-sidebar .nav-item--danger button.sidebar-danger-link .danger-link-label {
+  color: #ef4444 !important;
+  -webkit-text-fill-color: #ef4444 !important;
+  opacity: 1 !important;
+}
+
+.app-sidebar .nav-item--danger button.sidebar-danger-link:hover,
+.app-sidebar .nav-item--danger button.sidebar-danger-link:hover .danger-link-label,
+.app-sidebar .nav-item--danger button.sidebar-danger-link:focus-visible,
+.app-sidebar .nav-item--danger button.sidebar-danger-link:focus-visible .danger-link-label {
+  color: #f87171 !important;
+  -webkit-text-fill-color: #f87171 !important;
+}
+
+.app-sidebar .nav-item--danger button.sidebar-danger-link:active,
+.app-sidebar .nav-item--danger button.sidebar-danger-link:active .danger-link-label {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+}
+
+.account-delete-link:hover,
+.account-delete-link:focus-visible {
+  color: #fca5a5 !important;
+  text-shadow: 0 0 14px rgba(239, 68, 68, 0.22);
+}
+
+.account-delete-link:active {
+  color: var(--danger-active) !important;
+}
+
+.account-delete-link svg {
+  color: inherit;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.danger-link-label {
+  color: inherit;
+  transition: color var(--t-fast);
+}
+
+.user-profile-trigger {
+  transition: background-color var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+}
+
+.user-profile-trigger:hover,
+.user-profile-trigger:focus-visible {
+  background: rgba(34, 211, 238, 0.08);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.14);
+}
+
+.user-profile-trigger:active {
+  background: rgba(34, 211, 238, 0.12);
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────── */
@@ -185,6 +282,7 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
   -webkit-text-fill-color: #f1f5f9;
   -webkit-box-shadow: 0 0 0 1000px #0d1422 inset;
+  box-shadow: 0 0 0 1000px #0d1422 inset;
   transition: background-color 5000s ease-in-out 0s;
 }
 

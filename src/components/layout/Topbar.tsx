@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
@@ -104,7 +105,22 @@ export function Topbar() {
 
         {/* User avatar + name */}
         {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'default' }}>
+          <Link
+            href="/profile"
+            aria-label="Open profile"
+            className="user-profile-trigger"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              padding: '4px 6px',
+              margin: '-4px -6px',
+              borderRadius: 10,
+              transition: 'background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease',
+            }}
+          >
             <div
               style={{
                 width: 30,
@@ -132,7 +148,7 @@ export function Topbar() {
                 {user.role === 'USER' ? t('common.member') : user.role}
               </span>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Sign out */}

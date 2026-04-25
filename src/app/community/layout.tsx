@@ -3,11 +3,11 @@ import { buildPageMetadata, getLangFromCookies } from '@/lib/seo'
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLangFromCookies()
-  return buildPageMetadata('privacy', lang)
+  return { ...buildPageMetadata('community', lang), robots: { index: false, follow: false } }
 }
 
-export default function PrivacyLayout({
+export default function CommunityLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return children
+  return <>{children}</>
 }

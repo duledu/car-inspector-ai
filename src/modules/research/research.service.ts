@@ -1,6 +1,6 @@
 // =============================================================================
 // Vehicle Research Service
-// AI provider: Anthropic Claude (primary) → knowledge base fallback
+// AI provider: Anthropic Claude (primary) â†’ knowledge base fallback
 // Pricing: pricing.service runs in parallel, result merged into priceContext
 // =============================================================================
 
@@ -41,7 +41,7 @@ function fallbackReasonFor(aiConfigured: boolean): VehicleResearchResult['fallba
   return aiConfigured ? 'ai_unavailable' : 'missing_ai_config'
 }
 
-// ─── Prompt builder ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Prompt builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function normalizeLocale(locale?: string): string {
   return (locale ?? 'en').toLowerCase().split('-')[0]
@@ -51,6 +51,8 @@ function languageInstruction(locale?: string): string {
   switch (normalizeLocale(locale)) {
     case 'sr':
       return 'Respond in Serbian (Latin script). Use natural, professional automotive terminology used in Serbia. Keep all JSON keys exactly as specified in English.'
+    case 'bg':
+      return 'Respond in Bulgarian. Use professional automotive terminology natural for Bulgarian buyers. Keep all JSON keys exactly as specified in English.'
     case 'mk':
       return 'Respond in Macedonian. Use professional automotive terminology. Keep all JSON keys exactly as specified in English.'
     case 'de':
@@ -84,6 +86,14 @@ function sectionTitles(locale?: string): Record<string, string> {
       mechanicalWatchouts: 'Mehaničke provere',
       testDriveFocus:      'Fokus na test vožnji',
       costAwareness:       'Troškovi i pregovori',
+    }
+    case 'bg': return {
+      commonProblems:      'Чести проблеми',
+      highPriorityChecks:  'Приоритетни проверки',
+      visualAttention:     'Визуални зони за внимание',
+      mechanicalWatchouts: 'Механични рискове',
+      testDriveFocus:      'Фокус при тест драйв',
+      costAwareness:       'Разходи и преговори',
     }
     case 'mk': return {
       commonProblems:      'Чести проблеми',
@@ -138,7 +148,7 @@ function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): str
   const curr        = currency ?? 'EUR'
 
   const variantNote = engineSpec
-    ? `\nEngine variant: **${engineSpec}** — focus issues on THIS specific engine/gearbox combination.`
+    ? `\nEngine variant: **${engineSpec}** â€” focus issues on THIS specific engine/gearbox combination.`
     : ''
 
   const filterParts = [
@@ -148,7 +158,7 @@ function buildPrompt(params: ResearchParams, kbIssues: MatchedIssue[] = []): str
   ].filter(Boolean)
 
   const filterNote = filterParts.length > 0
-    ? `\nVehicle spec: ${filterParts.join(' | ')} — tailor known issues to this configuration.`
+    ? `\nVehicle spec: ${filterParts.join(' | ')} â€” tailor known issues to this configuration.`
     : ''
 
   const priceNote = askingPrice
@@ -180,14 +190,14 @@ Rules:
 - Translate all user-facing JSON string values into the requested language: summary, priceContext.evaluationLabel, priceContext.summary, section titles, item titles, item descriptions, and disclaimer
 - Do NOT translate JSON property names, enum values, ids, severity values, confidence values, or tag values
 
-IMPORTANT — priceContext:
-- Always populate priceContext — never omit it
+IMPORTANT â€” priceContext:
+- Always populate priceContext â€” never omit it
 - marketRangeFrom / marketRangeTo: realistic EUR integers for Serbia used-car market
 - evaluation: "low" (below market / suspiciously cheap), "fair" (within range), "high" (above market)
 - evaluationLabel: e.g. "Below market", "Fair market value", "Above market", "Estimate only"
 - summary: 1-2 sentences comparing asking price (or absence) to Serbia market
 - isEstimated: true
-- avgPrice: integer EUR — midpoint of the realistic range
+- avgPrice: integer EUR â€” midpoint of the realistic range
 ${askingPrice ? `- askingPrice: ${askingPrice}, currency: "${curr}"` : '- Omit askingPrice from priceContext'}
 
 Respond ONLY with valid JSON. No markdown, no code fences.
@@ -256,7 +266,7 @@ JSON:
 ${JSON.stringify(result)}`
 }
 
-// ─── Price context builder — merges pricing-service result ────────────────────
+// â”€â”€â”€ Price context builder â€” merges pricing-service result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function buildPriceContext(
   market: MarketPriceResult,
@@ -266,101 +276,125 @@ function buildPriceContext(
 ): PriceContext {
   const { minPrice, maxPrice, avgPrice, confidence, source, listingCount, filtersUsed } = market
 
-  const rangeStr = `€${minPrice.toLocaleString('de-DE')} – €${maxPrice.toLocaleString('de-DE')}`
+  const rangeStr = `â‚¬${minPrice.toLocaleString('de-DE')} â€“ â‚¬${maxPrice.toLocaleString('de-DE')}`
 
   let evaluation: PriceContext['evaluation']
   let evaluationLabel: string
   let summary: string
   const lang = normalizeLocale(locale)
 
-  if (askingPrice == null) {
-    evaluation      = 'fair'
-    evaluationLabel = lang === 'sr' ? 'Samo procena' : lang === 'mk' ? 'Само проценка' : lang === 'de' ? 'Nur Schätzung' : lang === 'sq' ? 'Vetëm vlerësim' : 'Estimate only'
-    summary = `Estimated Serbia market range for this vehicle: ${rangeStr} (avg €${avgPrice.toLocaleString('de-DE')}).`
-  } else if (askingPrice < minPrice * 0.9) {
-    evaluation      = 'low'
-    evaluationLabel = 'Below market, investigate why'
-    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is below the typical Serbia range of ${rangeStr}. Unusually low prices warrant extra scrutiny.`
-  } else if (askingPrice > maxPrice * 1.1) {
-    evaluation      = 'high'
-    evaluationLabel = 'Above market'
-    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} is above the typical Serbia range of ${rangeStr}. Negotiate or verify premium features justify the premium.`
-  } else {
-    evaluation      = 'fair'
-    evaluationLabel = 'Fair market value'
-    summary = `Asking price of €${askingPrice.toLocaleString('de-DE')} sits within the typical Serbia range of ${rangeStr}.`
-  }
-
-  if (lang !== 'en') {
-    const localizedLabels = {
-      estimate: lang === 'sr' ? 'Samo procena' : lang === 'mk' ? 'Само проценка' : lang === 'de' ? 'Nur Schätzung' : 'Vetëm vlerësim',
-      low:      lang === 'sr' ? 'Ispod tržišta - proveriti razlog' : lang === 'mk' ? 'Под пазарот - проверете ја причината' : lang === 'de' ? 'Unter Marktwert - Grund prüfen' : 'Nën treg - kontrolloni arsyen',
-      fair:     lang === 'sr' ? 'U okviru tržišta' : lang === 'mk' ? 'Во рамки на пазарот' : lang === 'de' ? 'Marktgerechter Preis' : 'Brenda tregut',
-      high:     lang === 'sr' ? 'Iznad tržišta' : lang === 'mk' ? 'Над пазарот' : lang === 'de' ? 'Über Marktwert' : 'Mbi treg',
-    }
-
-    if (askingPrice == null) {
-      evaluationLabel = localizedLabels.estimate
-      summary = lang === 'sr'
-        ? `Procenjen tržišni raspon u Srbiji za ovo vozilo: ${rangeStr} (prosek EUR ${avgPrice.toLocaleString('de-DE')}).`
-        : lang === 'mk'
-          ? `Проценет пазарен опсег во Србија за ова возило: ${rangeStr} (просек EUR ${avgPrice.toLocaleString('de-DE')}).`
-          : lang === 'de'
-            ? `Geschätzte Marktspanne in Serbien für dieses Fahrzeug: ${rangeStr} (Durchschnitt EUR ${avgPrice.toLocaleString('de-DE')}).`
-            : `Gama e vlerësuar e tregut në Serbi për këtë automjet: ${rangeStr} (mesatarja EUR ${avgPrice.toLocaleString('de-DE')}).`
-    } else if (evaluation === 'low') {
-      evaluationLabel = localizedLabels.low
-      summary = lang === 'sr'
-        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je ispod tipičnog raspona u Srbiji (${rangeStr}). Neuobičajeno niska cena zahteva dodatnu proveru.`
-        : lang === 'mk'
-          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е под типичниот опсег во Србија (${rangeStr}). Невообичаено ниска цена бара дополнителна проверка.`
-          : lang === 'de'
-            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt unter der typischen Spanne in Serbien (${rangeStr}). Ungewöhnlich niedrige Preise sollten genauer geprüft werden.`
-            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është nën gamën tipike në Serbi (${rangeStr}). Çmimet shumë të ulëta kërkojnë kontroll shtesë.`
-    } else if (evaluation === 'high') {
-      evaluationLabel = localizedLabels.high
-      summary = lang === 'sr'
-        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je iznad tipičnog raspona u Srbiji (${rangeStr}). Pregovarajte ili proverite da li oprema i stanje opravdavaju razliku.`
-        : lang === 'mk'
-          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е над типичниот опсег во Србија (${rangeStr}). Преговарајте или проверете дали опремата и состојбата ја оправдуваат разликата.`
-          : lang === 'de'
-            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt über der typischen Spanne in Serbien (${rangeStr}). Verhandeln Sie oder prüfen Sie, ob Ausstattung und Zustand den Aufpreis rechtfertigen.`
-            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është mbi gamën tipike në Serbi (${rangeStr}). Negocioni ose verifikoni nëse pajisjet dhe gjendja e justifikojnë diferencën.`
-    } else {
-      evaluationLabel = localizedLabels.fair
-      summary = lang === 'sr'
-        ? `Tražena cena od EUR ${askingPrice.toLocaleString('de-DE')} je u okviru tipičnog raspona u Srbiji (${rangeStr}).`
-        : lang === 'mk'
-          ? `Бараната цена од EUR ${askingPrice.toLocaleString('de-DE')} е во рамки на типичниот опсег во Србија (${rangeStr}).`
-          : lang === 'de'
-            ? `Der Angebotspreis von EUR ${askingPrice.toLocaleString('de-DE')} liegt innerhalb der typischen Spanne in Serbien (${rangeStr}).`
-            : `Çmimi i kërkuar prej EUR ${askingPrice.toLocaleString('de-DE')} është brenda gamës tipike në Serbi (${rangeStr}).`
-    }
-  }
-
-  const filtersMatched = filtersUsed
+  const fmtMoney = (value: number) => `€${value.toLocaleString('de-DE')}`
+  const rangeForLocale = `${fmtMoney(minPrice)} - ${fmtMoney(maxPrice)}`
+  const localizedMessages = {
+    en: {
+      estimate: 'Estimate only',
+      low: 'Below market, investigate why',
+      fair: 'Fair market value',
+      high: 'Above market',
+      summaryEstimate: `Estimated Serbia market range for this vehicle: ${rangeForLocale} (avg ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Asking price of ${fmtMoney(price)} is below the typical Serbia range of ${rangeForLocale}. Unusually low prices warrant extra scrutiny.`,
+      summaryFair: (price: number) => `Asking price of ${fmtMoney(price)} sits within the typical Serbia range of ${rangeForLocale}.`,
+      summaryHigh: (price: number) => `Asking price of ${fmtMoney(price)} is above the typical Serbia range of ${rangeForLocale}. Negotiate or verify premium features justify the premium.`,
+    },
+    sr: {
+      estimate: 'Samo procena',
+      low: 'Ispod tržišta - proveriti razlog',
+      fair: 'U okviru tržišta',
+      high: 'Iznad tržišta',
+      summaryEstimate: `Procenjen tržišni raspon u Srbiji za ovo vozilo: ${rangeForLocale} (prosek ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Tražena cena od ${fmtMoney(price)} je ispod tipičnog raspona u Srbiji (${rangeForLocale}). Neuobičajeno niska cena zahteva dodatnu proveru.`,
+      summaryFair: (price: number) => `Tražena cena od ${fmtMoney(price)} je u okviru tipičnog raspona u Srbiji (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Tražena cena od ${fmtMoney(price)} je iznad tipičnog raspona u Srbiji (${rangeForLocale}). Pregovarajte ili proverite da li oprema i stanje opravdavaju razliku.`,
+    },
+    de: {
+      estimate: 'Nur Schätzung',
+      low: 'Unter Marktwert - Grund prüfen',
+      fair: 'Marktgerechter Preis',
+      high: 'Über Marktwert',
+      summaryEstimate: `Geschätzte Marktspanne in Serbien für dieses Fahrzeug: ${rangeForLocale} (Durchschnitt ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt unter der typischen Spanne in Serbien (${rangeForLocale}). Ungewöhnlich niedrige Preise sollten genauer geprüft werden.`,
+      summaryFair: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt innerhalb der typischen Spanne in Serbien (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt über der typischen Spanne in Serbien (${rangeForLocale}). Verhandeln Sie oder prüfen Sie, ob Ausstattung und Zustand den Aufpreis rechtfertigen.`,
+    },
+    mk: {
+      estimate: 'Само проценка',
+      low: 'Под пазарот - проверете ја причината',
+      fair: 'Во рамки на пазарот',
+      high: 'Над пазарот',
+      summaryEstimate: `Проценет пазарен опсег во Србија за ова возило: ${rangeForLocale} (просек ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Бараната цена од ${fmtMoney(price)} е под типичниот опсег во Србија (${rangeForLocale}). Невообичаено ниска цена бара дополнителна проверка.`,
+      summaryFair: (price: number) => `Бараната цена од ${fmtMoney(price)} е во рамки на типичниот опсег во Србија (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Бараната цена од ${fmtMoney(price)} е над типичниот опсег во Србија (${rangeForLocale}). Преговарајте или проверете дали опремата и состојбата ја оправдуваат разликата.`,
+    },
+    sq: {
+      estimate: 'Vetëm vlerësim',
+      low: 'Nën treg - kontrolloni arsyen',
+      fair: 'Brenda tregut',
+      high: 'Mbi treg',
+      summaryEstimate: `Gama e vlerësuar e tregut në Serbi për këtë automjet: ${rangeForLocale} (mesatarja ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është nën gamën tipike në Serbi (${rangeForLocale}). Çmimet shumë të ulëta kërkojnë kontroll shtesë.`,
+      summaryFair: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është brenda gamës tipike në Serbi (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është mbi gamën tipike në Serbi (${rangeForLocale}). Negocioni ose verifikoni nëse pajisjet dhe gjendja e justifikojnë diferencën.`,
+    },
+    bg: {
+      estimate: 'Само оценка',
+      low: 'Под пазара - проверете причината',
+      fair: 'В рамките на пазара',
+      high: 'Над пазара',
+      summaryEstimate: `Оцененият пазарен диапазон в Сърбия за този автомобил е ${rangeForLocale} (средно ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Исканата цена от ${fmtMoney(price)} е под типичния диапазон в Сърбия (${rangeForLocale}). Необичайно ниската цена изисква допълнителна проверка.`,
+      summaryFair: (price: number) => `Исканата цена от ${fmtMoney(price)} е в рамките на типичния диапазон в Сърбия (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Исканата цена от ${fmtMoney(price)} е над типичния диапазон в Сърбия (${rangeForLocale}). Преговаряйте или проверете дали оборудването и състоянието оправдават разликата.`,
+    },
+  } as const
+  const copy = localizedMessages[lang as keyof typeof localizedMessages] ?? localizedMessages.en
+  const nextEvaluation =
+    askingPrice == null
+      ? 'fair'
+      : askingPrice < minPrice * 0.9
+        ? 'low'
+        : askingPrice > maxPrice * 1.1
+          ? 'high'
+          : 'fair'
+  const nextLabel =
+    nextEvaluation === 'low'
+      ? copy.low
+      : nextEvaluation === 'high'
+        ? copy.high
+        : askingPrice == null
+          ? copy.estimate
+          : copy.fair
+  const nextSummary =
+    askingPrice == null
+      ? copy.summaryEstimate
+      : nextEvaluation === 'low'
+        ? copy.summaryLow(askingPrice)
+        : nextEvaluation === 'high'
+          ? copy.summaryHigh(askingPrice)
+          : copy.summaryFair(askingPrice)
+  const nextFiltersMatched = filtersUsed
     ? Object.fromEntries(Object.entries(filtersUsed).filter(([, v]) => v != null))
     : undefined
 
   return {
     ...(askingPrice != null ? { askingPrice, currency } : {}),
     marketRangeFrom: minPrice,
-    marketRangeTo:   maxPrice,
+    marketRangeTo: maxPrice,
     avgPrice,
-    evaluation,
-    evaluationLabel,
-    summary,
+    evaluation: nextEvaluation,
+    evaluationLabel: nextLabel,
+    summary: nextSummary,
     isEstimated: true,
     source,
     confidence,
     listingCount,
-    filtersMatched:  Object.keys(filtersMatched ?? {}).length > 0 ? filtersMatched : undefined,
-    filtersRelaxed:  listingCount != null && listingCount > 0 && filtersMatched != null
-                       && Object.keys(filtersMatched).length < 3 ? true : undefined,
+    filtersMatched: Object.keys(nextFiltersMatched ?? {}).length > 0 ? nextFiltersMatched : undefined,
+    filtersRelaxed: listingCount != null && listingCount > 0 && nextFiltersMatched != null
+      && Object.keys(nextFiltersMatched).length < 3 ? true : undefined,
   }
 }
 
-// ─── KB vs AI deduplication ──────────────────────────────────────────────────
+// â”€â”€â”€ KB vs AI deduplication â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Normalise a title string for loose comparison:
@@ -373,7 +407,7 @@ function normTitle(title: string): string {
 /**
  * Remove AI section items whose title closely matches a KB issue title.
  * Uses substring containment both ways so "N47 timing chain failure" matches
- * "N47 Timing Chain Failure — CRITICAL" and vice versa.
+ * "N47 Timing Chain Failure â€” CRITICAL" and vice versa.
  */
 export function deduplicateAiSections(
   sections: VehicleResearchResult['sections'],
@@ -400,7 +434,7 @@ export function deduplicateAiSections(
   }
 }
 
-// ─── Anthropic API caller ─────────────────────────────────────────────────────
+// â”€â”€â”€ Anthropic API caller â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function severityFromKb(issue: MatchedIssue): ResearchIssue['severity'] {
   if (issue.severity === 'critical' || issue.severity === 'major') return 'high'
@@ -596,13 +630,13 @@ async function generateResearchResult(
   kbIssues: MatchedIssue[] = [],
 ): Promise<VehicleResearchResult> {
   const parsed = await callAnthropic(apiKey, buildPrompt(params, kbIssues), timeoutMs) as unknown as VehicleResearchResult
-    // Warn if sections are incomplete but do not throw — a partial AI result is
+    // Warn if sections are incomplete but do not throw â€” a partial AI result is
     // better than falling back to the English-only static knowledge base.
   if (!parsed.sections || typeof parsed.sections !== 'object') {
     throw new Error('Anthropic response missing sections object entirely')
   }
   if (!parsed.sections.commonProblems) {
-    console.warn('[research] Anthropic response missing commonProblems section — using partial result')
+    console.warn('[research] Anthropic response missing commonProblems section â€” using partial result')
   }
   return parsed
 }
@@ -641,23 +675,23 @@ async function localizeResearchResult(
   }
 }
 
-// ─── Service ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class VehicleResearchService {
   constructor(private readonly anthropicApiKey: string) {}
 
   async research(params: ResearchParams): Promise<ResearchOutput> {
-    // ── KB matching (synchronous, fast) ──────────────────────────────────────
+    // â”€â”€ KB matching (synchronous, fast) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let kbIssues: MatchedIssue[] = []
     try {
       const identity = normalizeVehicle(params)
       kbIssues = matchIssues(identity, allIssues, 12)
       console.log(`[research] KB matched ${kbIssues.length} issues for ${identity.make} ${identity.model} ${identity.generation ?? identity.yearFrom}`)
     } catch (err) {
-      console.warn('[research] KB matching failed — continuing without KB context:', err)
+      console.warn('[research] KB matching failed â€” continuing without KB context:', err)
     }
 
-    // ── Run research + pricing in parallel ──────────────────────────────────
+    // â”€â”€ Run research + pricing in parallel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const [researchOutcome, pricingOutcome] = await Promise.allSettled([
       this.anthropicApiKey
         ? this.callWithRetry(params, kbIssues)
@@ -678,7 +712,7 @@ export class VehicleResearchService {
       }),
     ])
 
-    // ── Build final result ───────────────────────────────────────────────────
+    // â”€â”€ Build final result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let base: VehicleResearchResult
     let limitedMode = false
     const aiConfigured = Boolean(this.anthropicApiKey)
@@ -691,7 +725,7 @@ export class VehicleResearchService {
       }
       console.log('[research] Anthropic OK')
     } else {
-      console.warn('[research] AI failed — using knowledge base:', researchOutcome.reason)
+      console.warn('[research] AI failed â€” using knowledge base:', researchOutcome.reason)
       if (kbIssues.length > 0) {
         base = {
           ...buildKbFallbackResult(params, kbIssues),
@@ -725,7 +759,7 @@ export class VehicleResearchService {
         try {
           base = await localizeResearchResult(this.anthropicApiKey, base, params.locale)
         } catch (err) {
-          console.warn('[research] Final localization pass failed — using localized generic fallback:', err)
+          console.warn('[research] Final localization pass failed â€” using localized generic fallback:', err)
           base = {
             ...buildLocalizedReviewFallback(params),
             priceContext: base.priceContext,
@@ -749,7 +783,7 @@ export class VehicleResearchService {
       return await generateResearchResult(this.anthropicApiKey, params, 12000, kbIssues)
     } catch (err) {
       const isTimeout = err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'))
-      console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) — retrying with extended timeout`)
+      console.warn(`[research] Attempt 1 failed (${isTimeout ? 'timeout' : 'error'}) â€” retrying with extended timeout`)
     }
     // Second attempt: longer timeout to handle slow model responses
     return await generateResearchResult(this.anthropicApiKey, params, 18000, kbIssues)
@@ -760,3 +794,4 @@ export class VehicleResearchService {
 export const vehicleResearchService = new VehicleResearchService(
   process.env.ANTHROPIC_API_KEY ?? '',
 )
+

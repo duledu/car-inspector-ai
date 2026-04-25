@@ -156,7 +156,7 @@ export default function TermsPage() {
             {t('legal.terms.title')}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            {t('legal.lastUpdated')} April 13, 2026
+            {t('legal.lastUpdated')} April 24, 2026
           </p>
         </div>
 
@@ -231,27 +231,27 @@ export default function TermsPage() {
           ]} />
         </Section>
 
-        <Section title="5. AI Analysis — Important Disclaimer">
+        <Section title="5. AI-Based Analysis Disclaimer">
           <WarningBox>
             <strong style={{ color: '#fbbf24', display: 'block', marginBottom: 6 }}>
               AI ANALYSIS IS NOT A PROFESSIONAL INSPECTION
             </strong>
-            The AI-generated analysis, summaries, and risk assessments provided by the Service are produced by automated machine learning models and are provided for informational and guidance purposes only. They do not constitute a professional vehicle inspection, mechanical assessment, or expert opinion of any kind.
+            The Service uses AI-based image and data analysis to generate inspection summaries and risk assessments. These outputs are produced by automated machine learning models and are provided for informational and guidance purposes only. They do not constitute a professional vehicle inspection, mechanical assessment, certified appraisal, or expert opinion of any kind. They must not be used as the sole basis for any financial, purchasing, selling, or negotiation decision.
           </WarningBox>
           <P>
-            AI models can and do make errors. They may miss defects that are not clearly visible in photos, misidentify conditions, or fail to detect issues that require physical examination by a qualified mechanic. The accuracy of AI analysis is dependent on the quality, angle, and completeness of the photos and data you provide.
+            AI results may be inaccurate, incomplete, outdated, or misleading. AI models can and do make errors. They may miss defects not clearly visible in photos, misidentify conditions, or fail to detect issues that require physical examination by a qualified mechanic. The accuracy of AI analysis is directly dependent on the quality, resolution, lighting, angles, and completeness of the photos and data you provide.
           </P>
           <P>
-            Photo-based analysis is advisory only. Results generated from photos may be incomplete or inaccurate and are not a guaranteed diagnosis or professional mechanical inspection. You should verify important findings with a qualified mechanic or in-person inspection.
+            Photo-based analysis is advisory only. Results generated from images may be incomplete or incorrect and are not a guaranteed diagnosis or professional mechanical inspection. The Service does not perform any physical, mechanical, or certified inspection of any vehicle.
           </P>
           <P>
-            The Service does not guarantee any vehicle's condition, history, mileage, value, safety, roadworthiness, legal status, ownership status, accident history, or suitability for purchase. You remain solely responsible for independent due diligence before buying, selling, registering, financing, or driving any vehicle.
+            The Service does not guarantee any vehicle's condition, history, mileage, value, safety, roadworthiness, legal status, ownership status, accident history, or suitability for purchase.
           </P>
           <P>
-            <strong style={{ color: 'rgba(255,255,255,0.82)' }}>We strongly recommend</strong> that any vehicle purchase decision be made only after a physical inspection by a licensed, qualified mechanic or automotive technician. The Service is intended to supplement, not replace, professional inspection.
+            <strong style={{ color: 'rgba(255,255,255,0.82)' }}>You must independently verify vehicle condition</strong> before buying, selling, negotiating, financing, registering, or relying on any result produced by the Service. The Service is intended to supplement, not replace, a physical inspection by a licensed, qualified mechanic or automotive technician.
           </P>
           <P>
-            WE EXPRESSLY DISCLAIM ALL LIABILITY FOR ANY VEHICLE PURCHASE DECISION MADE IN RELIANCE ON AI-GENERATED ANALYSIS, PHOTO ASSESSMENTS, OR INSPECTION SUMMARIES PROVIDED BY THE SERVICE.
+            WE EXPRESSLY DISCLAIM ALL LIABILITY FOR ANY VEHICLE PURCHASE DECISION, FINANCIAL LOSS, NEGOTIATION OUTCOME, OR HARM ARISING FROM RELIANCE ON AI-GENERATED ANALYSIS, PHOTO ASSESSMENTS, OR INSPECTION SUMMARIES PROVIDED BY THE SERVICE.
           </P>
         </Section>
 
@@ -307,23 +307,59 @@ export default function TermsPage() {
 
         <Section title="11. Limitation of Liability">
           <P>
-            TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL USED CAR INSPECTOR AI, ITS OPERATORS, AFFILIATES, LICENSORS, OR SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, COST OF SUBSTITUTE GOODS OR SERVICES, OR DAMAGES ARISING FROM A VEHICLE PURCHASE DECISION MADE BASED ON THE SERVICE.
+            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE." WE MAKE NO WARRANTIES OF ANY KIND — EXPRESS OR IMPLIED — REGARDING THE ACCURACY, RELIABILITY, COMPLETENESS, VEHICLE CONDITION, SAFETY, VALUE, OR PURCHASE SUITABILITY OF ANY INFORMATION, ANALYSIS, OR RESULT PROVIDED BY THE SERVICE.
+          </P>
+          <P>
+            YOUR USE OF THE SERVICE IS ENTIRELY AT YOUR OWN RISK. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL USED CAR INSPECTOR AI, ITS OPERATORS, AFFILIATES, LICENSORS, OR SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO: LOSS OF PROFITS; LOSS OF DATA; FINANCIAL LOSS; INCORRECT AI RESULTS; MISSED VEHICLE DEFECTS OR ISSUES; NEGOTIATION OUTCOMES; DECISIONS MADE BASED ON THE SERVICE; COST OF SUBSTITUTE GOODS OR SERVICES; OR DAMAGES ARISING FROM ANY VEHICLE PURCHASE, SALE, OR VALUATION DECISION MADE IN RELIANCE ON THE SERVICE.
           </P>
           <P>
             IN NO EVENT SHALL OUR TOTAL AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THE SERVICE EXCEED THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR €10 EUR IF YOU HAVE MADE NO PAYMENTS.
           </P>
           <P>
-            Some jurisdictions do not allow limitations on liability for certain types of damages; in such cases, the above limitations apply to the fullest extent permitted by law.
+            Some jurisdictions do not allow limitations on liability for certain types of damages; in such cases, the above limitations apply to the fullest extent permitted by applicable law.
           </P>
         </Section>
 
         <Section title="12. Indemnification">
           <P>
-            You agree to indemnify, defend, and hold harmless Used Cars Doctor and its operators from and against any claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to: (a) your use of the Service; (b) your violation of these Terms; (c) your violation of any applicable law; or (d) any content or data you submit through the Service.
+            You agree to indemnify, defend, and hold harmless Used Cars Doctor and its operators, affiliates, licensors, and service providers from and against any claims, liabilities, damages, losses, legal actions, costs, and expenses (including reasonable legal fees) arising out of or relating to: (a) your use of or reliance on the Service; (b) your violation of these Terms; (c) your violation of any applicable law or regulation; (d) any content or data you submit through the Service; or (e) your misuse of any AI-generated analysis, result, or recommendation provided by the Service.
           </P>
         </Section>
 
-        <Section title="13. Governing Law & Dispute Resolution">
+        <Section title="13. User Responsibility">
+          <P>
+            You are solely responsible for all decisions, actions, and outcomes arising from your use of the Service. The Service provides informational assistance only and does not advise, recommend, or direct any specific course of action.
+          </P>
+          <Ul items={[
+            'No guarantee is made regarding any vehicle\'s condition, safety, value, reliability, legal status, or suitability for purchase.',
+            'The Service does not guarantee any specific negotiation outcome, purchase result, or financial benefit.',
+            'Any vehicle inspection, purchase, sale, negotiation, financing, or registration decision you make is made entirely at your own risk and on your own judgment.',
+            'You must independently verify all vehicle information, condition, and history through qualified professionals before acting on any result produced by the Service.',
+          ]} />
+          <P>
+            The Service is a tool to assist your personal evaluation process. It is not a guarantee, warranty, or professional certification of any vehicle or vehicle-related information.
+          </P>
+        </Section>
+
+        <Section title="14. No Professional Advice">
+          <P>
+            Nothing in the Service constitutes mechanical, financial, legal, investment, or any other form of professional advice. All information, analysis, summaries, risk assessments, and recommendations provided by the Service are general and informational in nature only.
+          </P>
+          <P>
+            The Service does not provide:
+          </P>
+          <Ul items={[
+            'Mechanical or engineering assessments of any kind',
+            'Financial advice regarding vehicle value, pricing, or investment suitability',
+            'Legal advice regarding vehicle ownership, title, registration, or compliance',
+            'Any form of certified or professional appraisal',
+          ]} />
+          <P>
+            Before making any vehicle-related decision, you should consult qualified professionals, including but not limited to a licensed mechanic, certified vehicle appraiser, legal adviser, or financial adviser, as appropriate to your circumstances.
+          </P>
+        </Section>
+
+        <Section title="15. Governing Law & Dispute Resolution">
           <P>
             These Terms shall be governed by and construed in accordance with applicable law. If you are located in the European Economic Area, EU consumer protection laws apply and you may have rights under them that these Terms cannot override.
           </P>
@@ -336,7 +372,7 @@ export default function TermsPage() {
           </P>
         </Section>
 
-        <Section title="14. Modifications to Terms">
+        <Section title="16. Modifications to Terms">
           <P>
             We reserve the right to modify these Terms at any time. Material changes will be communicated by updating the "Last updated" date at the top of this page and, where appropriate, by sending a notification to the email address associated with your account.
           </P>
@@ -345,7 +381,7 @@ export default function TermsPage() {
           </P>
         </Section>
 
-        <Section title="15. Contact Us">
+        <Section title="17. Contact Us">
           <P>For questions, concerns, or notices regarding these Terms, please contact us:</P>
           <Ul items={[
             'Email: contact@usedcarsdoctor.com',

@@ -654,6 +654,14 @@ describe('VehicleResearchService — localization pass', () => {
       description: 'Tekst kartele ne shqip.',
       disclaimer: 'Mohim pergjegjesie ne shqip.',
     },
+    {
+      locale: 'bg',
+      summary: 'Balgarsko rezume.',
+      priceSummary: 'Balgarsko rezume za cenata.',
+      title: 'Raztegnata veriga na angrenazha',
+      description: 'Tekst na kartata na balgarski.',
+      disclaimer: 'Otgovornostta e ogranichena na balgarski.',
+    },
   ])('localizes final assembled research content for %s', async ({ locale, summary, priceSummary, title, description, disclaimer }) => {
     jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
 
@@ -675,7 +683,7 @@ describe('VehicleResearchService — localization pass', () => {
               summary,
               priceContext: {
                 ...englishAiResult.priceContext,
-                evaluationLabel: locale === 'de' ? 'Marktgerechter Preis' : locale === 'mk' ? 'Vo ramki na pazarot' : locale === 'sq' ? 'Brenda tregut' : 'U okviru tržišta',
+                evaluationLabel: locale === 'de' ? 'Marktgerechter Preis' : locale === 'mk' ? 'Vo ramki na pazarot' : locale === 'sq' ? 'Brenda tregut' : locale === 'bg' ? 'V ramkite na pazara' : 'U okviru tržišta',
                 summary: priceSummary,
               },
               sections: {
@@ -746,7 +754,7 @@ describe('VehicleResearchService — localization pass', () => {
     }
   })
 
-  it.each(['sr', 'de', 'mk', 'sq'])('uses localized generic fallback instead of English KB prose when live localization is unavailable for %s', async (locale) => {
+  it.each(['sr', 'de', 'mk', 'sq', 'bg'])('uses localized generic fallback instead of English KB prose when live localization is unavailable for %s', async (locale) => {
     jest.spyOn(pricingService, 'getMarketPrice').mockResolvedValue(pricingResult)
 
     const service = new VehicleResearchService('')
@@ -772,3 +780,4 @@ function base(overrides: Partial<ResearchParams> & { make: string; model: string
     ...overrides,
   }
 }
+

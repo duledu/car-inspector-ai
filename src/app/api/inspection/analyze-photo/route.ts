@@ -64,6 +64,7 @@ function localeInstruction(locale: string): string {
     de: 'German',
     mk: 'Macedonian',
     sq: 'Albanian',
+    bg: 'Bulgarian',
   }
   return language[locale.split('-')[0]] ?? 'English'
 }
@@ -90,6 +91,10 @@ function fallbackAnalysis(locale: string): { signal: string; detail: string } {
     sq: {
       signal: 'Analiza nuk është e disponueshme',
       detail: 'Nuk mundëm ta analizonim këtë fotografi. Kontrolloni lidhjen dhe provoni përsëri.',
+    },
+    bg: {
+      signal: 'Анализът не е наличен',
+      detail: 'Не успяхме да анализираме тази снимка. Проверете връзката и опитайте отново.',
     },
   }
   return messages[lang] ?? messages.en

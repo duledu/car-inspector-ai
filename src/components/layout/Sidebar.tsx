@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { DeleteAccountTrigger } from '@/components/account/DeleteAccountTrigger'
 
 const NAV = [
   {
@@ -92,6 +93,7 @@ export function Sidebar() {
 
   return (
     <div
+      className="app-sidebar"
       style={{
         width: 220,
         minWidth: 220,
@@ -199,25 +201,26 @@ export function Sidebar() {
           </div>
         </Link>
 
-        <div style={{ display: 'flex', gap: 10, padding: '0 12px', flexWrap: 'wrap' }}>
+        <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Link
             href="/legal/privacy"
-            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
+            style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
           >
             {t('nav.privacy')}
           </Link>
           <Link
             href="/legal/terms"
-            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
+            style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
           >
             {t('nav.terms')}
           </Link>
-          <Link
-            href="/legal/account-deletion"
-            style={{ fontSize: 11, color: 'rgba(255,255,255,0.34)', textDecoration: 'none' }}
-          >
-            {t('nav.accountDeletion')}
-          </Link>
+          <div className="nav-item--danger">
+            <DeleteAccountTrigger
+              label={t('nav.accountDeletion')}
+              fontSize={11}
+              className="sidebar-danger-link"
+            />
+          </div>
         </div>
       </div>
     </div>

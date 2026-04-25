@@ -8,6 +8,7 @@ import { useUserStore, useVehicleStore, usePaymentStore, useInspectionStore } fr
 import { SUPPORTED_LANGS, LANG_META, isSupportedLang } from '@/i18n/shared'
 import type { SupportedLang } from '@/i18n/shared'
 import AppShell from '../AppShell'
+import { DeleteAccountTrigger } from '@/components/account/DeleteAccountTrigger'
 
 const STATUS_COLOR: Record<string, string> = {
   PAID:    '#22c55e',
@@ -303,9 +304,10 @@ export default function ProfilePage() {
             <Link href="/legal/terms" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
               {t('nav.terms')}
             </Link>
-            <Link href="/legal/account-deletion" style={{ fontSize: 13, color: '#22d3ee', textDecoration: 'none' }}>
-              {t('nav.accountDeletion')}
-            </Link>
+            <DeleteAccountTrigger
+              label={t('nav.accountDeletion')}
+              fontSize={13}
+            />
           </div>
         </div>
 

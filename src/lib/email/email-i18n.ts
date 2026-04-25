@@ -28,7 +28,7 @@ export interface VerifyEmailStrings {
   textBody:           string
 }
 
-const verifyEmailTranslations: Record<SupportedLang, VerifyEmailStrings> = {
+const verifyEmailTranslations: Record<string, VerifyEmailStrings> = {
   en: {
     subject:            'Verify your email — Used Car Inspector AI',
     previewText:        'Verify your email to activate your Used Car Inspector AI account.',
@@ -173,10 +173,38 @@ Nëse nuk keni krijuar një llogari, mund ta injoroni këtë e-mail.
 — Used Car Inspector AI
 support@usedcarsdoctor.com`,
   },
+  bg: {
+    subject:            'Потвърдете имейла си — Used Car Inspector AI',
+    previewText:        'Потвърдете имейла си, за да активирате акаунта си в Used Car Inspector AI.',
+    eyebrow:            'Потвърждение на акаунта',
+    headline:           'Потвърдете имейл адреса си',
+    subheadline:        'Едно кликване и сте готови да проверите следващия си автомобил.',
+    headerContextLabel: 'Линк за потвърждение',
+    greeting:           'Здравейте {{name}},',
+    p1:                 'Благодарим ви, че създадохте акаунт в Used Car Inspector AI. За да използвате всички функции, потвърдете имейл адреса си чрез бутона по-долу.',
+    p2:                 'Този линк е валиден <strong style="color:#ffffff;">{{hours}} часа</strong>. След това можете да поискате нов от страницата с настройки.',
+    infoBlockTitle:     'Какво следва?',
+    ctaLabel:           'Потвърди имейл адреса',
+    footnote:           'Ако не сте създавали акаунт в Used Car Inspector AI, можете спокойно да игнорирате този имейл. Не е нужно действие.',
+    textBody:
+`Здравейте {{name}},
+
+Благодарим ви, че създадохте акаунт в Used Car Inspector AI.
+
+За да потвърдите имейл адреса си, посетете линка по-долу:
+{{url}}
+
+Този линк е валиден {{hours}} часа.
+
+Ако не сте създавали акаунт, можете спокойно да игнорирате този имейл.
+
+— Used Car Inspector AI
+support@usedcarsdoctor.com`,
+  },
 }
 
 export function getVerifyEmailStrings(lang: string | null | undefined): VerifyEmailStrings {
-  return verifyEmailTranslations[resolveEmailLang(lang)]
+  return verifyEmailTranslations[resolveEmailLang(lang)] ?? verifyEmailTranslations.mk ?? verifyEmailTranslations.en
 }
 
 // ─── Reset Password ───────────────────────────────────────────────────────────
@@ -198,7 +226,7 @@ export interface ResetPasswordStrings {
   textBody:           string
 }
 
-const resetPasswordTranslations: Record<SupportedLang, ResetPasswordStrings> = {
+const resetPasswordTranslations: Record<string, ResetPasswordStrings> = {
   en: {
     subject:            'Reset your password — Used Car Inspector AI',
     previewText:        'Reset your Used Car Inspector AI password. This link expires in 1 hour.',
@@ -348,10 +376,39 @@ Nëse nuk keni kërkuar rivendosjen, mund ta injoroni këtë e-mail.
 — Used Car Inspector AI
 support@usedcarsdoctor.com`,
   },
+  bg: {
+    subject:            'Смяна на паролата — Used Car Inspector AI',
+    previewText:        'Сменете паролата си за Used Car Inspector AI. Този линк изтича след 1 час.',
+    eyebrow:            'Смяна на парола',
+    headline:           'Сменете паролата си',
+    subheadline:        'Следвайте линка по-долу, за да зададете нова парола за акаунта си.',
+    headerContextLabel: 'Защитен линк за смяна',
+    greeting:           'Здравейте {{name}},',
+    p1:                 'Получихме заявка за смяна на паролата за вашия акаунт в Used Car Inspector AI. Натиснете бутона по-долу, за да изберете нова парола.',
+    p2:                 'Този линк е валиден <strong style="color:#ffffff;">{{hours}} час</strong> и може да се използва само веднъж. Ако изтече, можете да поискате нов от страницата за вход.',
+    p3:                 'Ако не сте поискали смяна на паролата, акаунтът ви е защитен — не са направени промени.',
+    infoBlockTitle:     'Нуждаете се от помощ?',
+    ctaLabel:           'Смени паролата',
+    footnote:           'Ако не сте поискали смяна на паролата, игнорирайте този имейл. Паролата ви няма да бъде променена.',
+    textBody:
+`Здравейте {{name}},
+
+Получихме заявка за смяна на паролата за вашия акаунт в Used Car Inspector AI.
+
+За да зададете нова парола, посетете линка по-долу:
+{{url}}
+
+Този линк е валиден {{hours}} час и може да се използва само веднъж.
+
+Ако не сте поискали смяна на паролата, можете спокойно да игнорирате този имейл.
+
+— Used Car Inspector AI
+support@usedcarsdoctor.com`,
+  },
 }
 
 export function getResetPasswordStrings(lang: string | null | undefined): ResetPasswordStrings {
-  return resetPasswordTranslations[resolveEmailLang(lang)]
+  return resetPasswordTranslations[resolveEmailLang(lang)] ?? resetPasswordTranslations.mk ?? resetPasswordTranslations.en
 }
 
 // ─── App Update ───────────────────────────────────────────────────────────────
@@ -366,7 +423,7 @@ export interface AppUpdateStrings {
   textBody:    string
 }
 
-const appUpdateTranslations: Record<SupportedLang, AppUpdateStrings> = {
+const appUpdateTranslations: Record<string, AppUpdateStrings> = {
   en: {
     subject:     'What\'s new in Used Car Inspector AI',
     previewText: 'Discover the latest improvements to your AI car inspection experience.',
@@ -446,8 +503,23 @@ Shikoni çfarë është e re: {{url}}
 — Used Car Inspector AI
 support@usedcarsdoctor.com`,
   },
+  bg: {
+    subject:     'Какво е новото в Used Car Inspector AI',
+    previewText: 'Открийте последните подобрения в AI прегледа на автомобили.',
+    eyebrow:     'Обновление на приложението',
+    headline:    'Подобрихме вашето изживяване',
+    subheadline: 'Новите функции и подобрения вече са активни.',
+    ctaLabel:    'Разгледайте новото',
+    textBody:
+`Въведохме подобрения в Used Car Inspector AI.
+
+Вижте какво е новото: {{url}}
+
+— Used Car Inspector AI
+support@usedcarsdoctor.com`,
+  },
 }
 
 export function getAppUpdateStrings(lang: string | null | undefined): AppUpdateStrings {
-  return appUpdateTranslations[resolveEmailLang(lang)]
+  return appUpdateTranslations[resolveEmailLang(lang)] ?? appUpdateTranslations.mk ?? appUpdateTranslations.en
 }

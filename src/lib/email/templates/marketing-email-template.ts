@@ -174,31 +174,37 @@ function getMarketingTemplateLabels(lang: string) {
       return {
         valueHeading: 'Šta dobijate',
         productLine: 'AI pregled polovnih vozila',
-        questions:   'Pitanja?',
+        questions: 'Pitanja?',
       }
     case 'de':
       return {
         valueHeading: 'Was Sie bekommen',
         productLine: 'KI-gestützte Fahrzeugprüfung',
-        questions:   'Fragen?',
+        questions: 'Fragen?',
       }
     case 'mk':
       return {
         valueHeading: 'Што добивате',
         productLine: 'AI проверка на возила',
-        questions:   'Прашања?',
+        questions: 'Прашања?',
       }
     case 'sq':
       return {
         valueHeading: 'Çfarë përfitoni',
         productLine: 'Inspektim automjeti me AI',
-        questions:   'Pyetje?',
+        questions: 'Pyetje?',
+      }
+    case 'bg':
+      return {
+        valueHeading: 'Какво получавате',
+        productLine: 'AI преглед на автомобили',
+        questions: 'Въпроси?',
       }
     default:
       return {
         valueHeading: 'What you get',
         productLine: 'AI-powered vehicle inspection',
-        questions:   'Questions?',
+        questions: 'Questions?',
       }
   }
 }

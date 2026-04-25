@@ -41,6 +41,7 @@ interface UserActions {
   register: (payload: RegisterPayload) => Promise<void>
   loginWithGoogle: (session: AuthSession) => void
   logout: () => Promise<void>
+  deleteAccount: () => Promise<void>
   refreshSession: () => Promise<void>
   clearError: () => void
   updateProfile: (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage'>>) => Promise<void>
@@ -114,6 +115,19 @@ export const useUserStore = create<UserStore>()(
       logout: async () => {
         try {
           await authApi.logout()
+        } finally {
+          set((state) => {
+            state.user = null
+            state.session = null
+            state.isAuthenticated = false
+            state.error = null
+          })
+        }
+      },
+
+      deleteAccount: async () => {
+        try {
+          await authApi.deleteAccount()
         } finally {
           set((state) => {
             state.user = null

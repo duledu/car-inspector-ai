@@ -3,18 +3,25 @@ import type { BaseEmailTemplateProps, EmailCardItem } from '../types/email-templ
 
 function getBaseLabels(lang?: string) {
   switch (lang) {
-    case 'sr': return { buttonFallback: 'Dugme ne radi? Kopirajte ovaj link:', productLine: 'AI pregled polovnih vozila', questions: 'Pitanja?' }
-    case 'de': return { buttonFallback: 'Schaltfläche funktioniert nicht? Kopieren Sie diesen Link:', productLine: 'KI-gestützte Fahrzeugprüfung', questions: 'Fragen?' }
-    case 'mk': return { buttonFallback: 'Копчето не работи? Копирајте го овој линк:', productLine: 'AI проверка на возила', questions: 'Прашања?' }
-    case 'sq': return { buttonFallback: 'Butoni nuk funksionon? Kopjojeni këtë lidhje:', productLine: 'Inspektim automjeti me AI', questions: 'Pyetje?' }
-    default:   return { buttonFallback: 'Button not working? Copy this link:', productLine: 'AI-powered vehicle inspection', questions: 'Questions?' }
+    case 'sr':
+      return { buttonFallback: 'Dugme ne radi? Kopirajte ovaj link:', productLine: 'AI pregled polovnih vozila', questions: 'Pitanja?' }
+    case 'de':
+      return { buttonFallback: 'Schaltfläche funktioniert nicht? Kopieren Sie diesen Link:', productLine: 'KI-gestützte Fahrzeugprüfung', questions: 'Fragen?' }
+    case 'mk':
+      return { buttonFallback: 'Копчето не работи? Копирајте го овој линк:', productLine: 'AI проверка на возила', questions: 'Прашања?' }
+    case 'sq':
+      return { buttonFallback: 'Butoni nuk funksionon? Kopjojeni këtë lidhje:', productLine: 'Inspektim automjeti me AI', questions: 'Pyetje?' }
+    case 'bg':
+      return { buttonFallback: 'Бутонът не работи? Копирайте този линк:', productLine: 'AI преглед на автомобили', questions: 'Въпроси?' }
+    default:
+      return { buttonFallback: 'Button not working? Copy this link:', productLine: 'AI-powered vehicle inspection', questions: 'Questions?' }
   }
 }
 
 export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
   const support = opts.supportEmail ?? 'support@usedcarsdoctor.com'
-  const year    = new Date().getFullYear()
-  const labels  = getBaseLabels(opts.lang)
+  const year = new Date().getFullYear()
+  const labels = getBaseLabels(opts.lang)
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -32,7 +39,6 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
 </head>
 <body style="margin:0;padding:0;background-color:#06070a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
 
-  <!-- Preview text (hidden) -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#06070a;">
     ${escHtml(opts.previewText)}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
   </div>
@@ -41,17 +47,11 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
     <tr>
       <td align="center" style="padding:40px 16px 48px;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;width:100%;">
-
-          <!-- Top accent bar -->
           <tr>
             <td style="height:3px;background:linear-gradient(90deg,#00c2ff 0%,#7dd3fc 50%,#00c2ff 100%);border-radius:3px 3px 0 0;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
-
-          <!-- Card body -->
           <tr>
             <td style="background:linear-gradient(160deg,#111723 0%,#0b1018 100%);border:1px solid #1a2232;border-top:none;border-radius:0 0 24px 24px;padding:48px 48px 40px;">
-
-              <!-- Brand header -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:32px;">
                 <tr>
                   <td style="vertical-align:middle;">
@@ -67,14 +67,12 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                 </tr>
               </table>
 
-              <!-- Divider -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:36px;">
                 <tr>
                   <td style="height:1px;background:#1a2232;font-size:0;line-height:0;">&nbsp;</td>
                 </tr>
               </table>
 
-              <!-- Headline -->
               <h1 style="margin:0 0 12px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.6px;line-height:1.2;">
                 ${escHtml(opts.headline)}
               </h1>
@@ -84,12 +82,10 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                 ${escHtml(opts.subheadline)}
               </p>` : ''}
 
-              <!-- Body content -->
               <div style="margin-bottom:32px;font-size:15px;color:rgba(255,255,255,0.7);line-height:1.7;">
                 ${opts.bodyContent}
               </div>
 
-              <!-- CTA button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;">
                 <tr>
                   <td style="border-radius:12px;background:#00c2ff;">
@@ -103,7 +99,6 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
                 </tr>
               </table>
 
-              <!-- Fallback plain link -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:${opts.cards && opts.cards.length > 0 ? '36px' : '32px'};">
                 <tr>
                   <td style="background:rgba(0,194,255,0.04);border:1px solid rgba(0,194,255,0.1);border-radius:10px;padding:14px 16px;">
@@ -121,7 +116,6 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
 
               ${renderSecondarySection(opts)}
 
-              <!-- Divider -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:24px;">
                 <tr>
                   <td style="height:1px;background:#1a2232;font-size:0;line-height:0;">&nbsp;</td>
@@ -132,11 +126,9 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
               <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.28);line-height:1.6;">
                 ${opts.footnote}
               </p>` : ''}
-
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
               <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.18);">
@@ -147,7 +139,6 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
@@ -158,6 +149,7 @@ export function buildBaseEmailTemplate(opts: BaseEmailTemplateProps): string {
 
 function renderSecondarySection(opts: BaseEmailTemplateProps): string {
   if (!opts.secondaryTitle && !opts.secondaryBody) return ''
+
   const titleHtml = opts.secondaryTitle
     ? `<h2 style="margin:0 0 10px;font-size:16px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${escHtml(opts.secondaryTitle)}</h2>`
     : ''
@@ -167,8 +159,8 @@ function renderSecondarySection(opts: BaseEmailTemplateProps): string {
   const ctaHtml = (opts.secondaryCtaLabel && opts.secondaryCtaUrl)
     ? `<a href="${opts.secondaryCtaUrl}" target="_blank" style="display:inline-block;font-size:13px;font-weight:700;color:#00c2ff;text-decoration:none;">${escHtml(opts.secondaryCtaLabel)} →</a>`
     : ''
+
   return `
-              <!-- Secondary section -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:32px;">
                 <tr>
                   <td style="background:rgba(0,194,255,0.04);border:1px solid rgba(0,194,255,0.1);border-radius:14px;padding:24px 22px;">
@@ -182,8 +174,9 @@ function renderSecondarySection(opts: BaseEmailTemplateProps): string {
 
 function renderCards(cards: EmailCardItem[]): string {
   const rows: string[] = []
+
   for (let i = 0; i < cards.length; i += 2) {
-    const left  = cards[i]
+    const left = cards[i]
     const right = cards[i + 1]
     rows.push(`
               <tr>
@@ -202,6 +195,7 @@ function renderCards(cards: EmailCardItem[]): string {
               </tr>
               ${i + 2 < cards.length ? '<tr><td colspan="3" style="height:12px;">&nbsp;</td></tr>' : ''}`)
   }
+
   return `
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:32px;">
                 ${rows.join('')}

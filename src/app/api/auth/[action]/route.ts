@@ -21,7 +21,7 @@ const loginSchema = z.object({
   password: z.string().min(8),
 })
 
-const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq'] as const
+const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq', 'bg'] as const
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -75,6 +75,8 @@ export async function POST(
       return handleSendVerification(req)
     case 'verify-email':
       return handleVerifyEmail(body)
+    case 'delete-account':
+      return handleDeleteAccount(req, body)
     default:
       return apiError('Not found', { status: 404, code: 'NOT_FOUND' })
   }
@@ -414,4 +416,39 @@ async function handleUpdateProfile(req: NextRequest) {
   })
 
   return NextResponse.json({ data: toUserDto(updated) })
+}
+
+async function handleDeleteAccount(req: NextRequest, body: unknown) {
+  const authResult = await requireAuth(req)
+  if (!authResult.success) {
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
+  }
+
+  const schema = z.object({
+    confirmed: z.literal(true),
+  })
+
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    return apiError('Confirmation required', { status: 422, code: 'CONFIRMATION_REQUIRED' })
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentEvent.deleteMany({
+        where: { userId: authResult.userId },
+      })
+
+      await tx.user.delete({
+        where: { id: authResult.userId },
+      })
+    })
+
+    const res = NextResponse.json({ data: { success: true } })
+    clearEvCookie(res)
+    return res
+  } catch (error) {
+    logApiError('auth/delete-account', 'deleteAccount', error, { userId: authResult.userId })
+    return apiError('Failed to delete account. Please try again.', { status: 500, code: 'DELETE_ACCOUNT_FAILED' })
+  }
 }

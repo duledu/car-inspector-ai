@@ -394,7 +394,7 @@ function MarketingFormFields({ form, onChange }: Readonly<{
     <div style={{ flex: '2 1 480px', minWidth: 'min(460px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={S.card}>
         <p style={{ margin: '0 0 14px', fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
-          All fields are fully editable. Localized defaults exist for en, sr, de, mk, and sq â€” leave a field empty to use the localized default for the recipient's language.
+          All fields are fully editable. Localized defaults exist for en, sr, de, mk, sq, and bg — leave a field empty to use the localized default for the recipient's language.
         </p>
         <p style={S.groupTitle}>Email Metadata</p>
         <Field label="Subject" value={form.subject} onChange={set('subject')} />
@@ -821,3 +821,4 @@ export default function AdminPanelPage() {
     </div>
   )
 }
+

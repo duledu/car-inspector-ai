@@ -83,7 +83,7 @@ describe('email template localization', () => {
   })
 
   it('uses the shared supported language list for all email localization variants', () => {
-    expect(SUPPORTED_LANGS).toEqual(['en', 'sr', 'de', 'mk', 'sq'])
+    expect(SUPPORTED_LANGS).toEqual(['en', 'sr', 'de', 'mk', 'sq', 'bg'])
   })
 
   it.each(SUPPORTED_LANGS)('resolves and renders marketing content for %s', lang => {

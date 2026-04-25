@@ -3,6 +3,7 @@ import sr from '@/i18n/locales/sr'
 import de from '@/i18n/locales/de'
 import mk from '@/i18n/locales/mk'
 import sq from '@/i18n/locales/sq'
+import bg from '@/i18n/locales/bg'
 import { FALLBACK_LANG, isSupportedLang, type SupportedLang } from '@/i18n'
 
 type LocaleDict = Record<string, string>
@@ -13,6 +14,7 @@ const dictionaries: Record<SupportedLang, LocaleDict> = {
   de,
   mk,
   sq,
+  bg,
 }
 
 export type PdfTranslate = (key: string, vars?: Record<string, string | number>) => string
@@ -36,4 +38,3 @@ export function createPdfTranslator(locale: string | undefined | null): PdfTrans
     })
   }
 }
-

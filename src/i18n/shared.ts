@@ -1,4 +1,4 @@
-export const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq'] as const
+export const SUPPORTED_LANGS = ['en', 'sr', 'de', 'mk', 'sq', 'bg'] as const
 export type SupportedLang = (typeof SUPPORTED_LANGS)[number]
 
 export const FALLBACK_LANG: SupportedLang = 'en'
@@ -9,8 +9,9 @@ export const LANG_META: Record<SupportedLang, { label: string; countryCode: stri
   en: { label: 'EN', countryCode: 'GB', full: 'English' },
   sr: { label: 'SR', countryCode: 'RS', full: 'Srpski' },
   de: { label: 'DE', countryCode: 'DE', full: 'Deutsch' },
-  mk: { label: 'МК', countryCode: 'MK', full: 'Македонски' },
+  mk: { label: 'MK', countryCode: 'MK', full: 'Македонски' },
   sq: { label: 'SQ', countryCode: 'AL', full: 'Shqip' },
+  bg: { label: 'BG', countryCode: 'BG', full: 'Български' },
 }
 
 export function isSupportedLang(value: string | undefined | null): value is SupportedLang {

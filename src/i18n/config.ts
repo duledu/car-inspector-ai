@@ -15,6 +15,7 @@ import sr from './locales/sr'
 import de from './locales/de'
 import mk from './locales/mk'
 import sq from './locales/sq'
+import bg from './locales/bg'
 
 function readCookieLang(): SupportedLang | null {
   if (typeof document === 'undefined') return null
@@ -37,6 +38,7 @@ if (i18n.isInitialized) {
   i18n.addResourceBundle('de', 'translation', de, true, true)
   i18n.addResourceBundle('mk', 'translation', mk, true, true)
   i18n.addResourceBundle('sq', 'translation', sq, true, true)
+  i18n.addResourceBundle('bg', 'translation', bg, true, true)
 } else {
   i18n
     .use(initReactI18next)
@@ -47,6 +49,7 @@ if (i18n.isInitialized) {
         de: { translation: de },
         mk: { translation: mk },
         sq: { translation: sq },
+        bg: { translation: bg },
       },
       lng: getInitialLang(),
       fallbackLng: FALLBACK_LANG,

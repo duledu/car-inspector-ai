@@ -36,11 +36,13 @@ function AuthPageContent() {
 
   const { login, register, isAuthenticated, isLoading, error, clearError } = useUserStore()
 
-  const [tab,          setTab]          = useState<Tab>('login')
-  const [name,         setName]         = useState('')
-  const [email,        setEmail]        = useState('')
-  const [password,     setPassword]     = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [tab,              setTab]              = useState<Tab>('login')
+  const [name,             setName]             = useState('')
+  const [email,            setEmail]            = useState('')
+  const [password,         setPassword]         = useState('')
+  const [showPassword,     setShowPassword]      = useState(false)
+  const [consentAccepted,  setConsentAccepted]  = useState(false)
+  const [consentTouched,   setConsentTouched]   = useState(false)
   const [lang,         setLang]         = useState<SupportedLang>(() => {
     if (typeof document === 'undefined') return 'en'
     const cookie = document.cookie.split('; ').find(r => r.startsWith(`${LANG_COOKIE}=`))
@@ -49,7 +51,11 @@ function AuthPageContent() {
   })
 
   useEffect(() => { if (isAuthenticated) router.replace(redirect) }, [isAuthenticated])
-  useEffect(() => { clearError() },                                   [tab])
+  useEffect(() => {
+    clearError()
+    setConsentAccepted(false)
+    setConsentTouched(false)
+  }, [tab])
   useEffect(() => {
     if (urlError) {
       console.error('[auth/google] sign-in failed', {
@@ -62,6 +68,10 @@ function AuthPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     clearError()
+    if (tab === 'register' && !consentAccepted) {
+      setConsentTouched(true)
+      return
+    }
     try {
       if (tab === 'login') {
         await login({ email, password })
@@ -310,6 +320,65 @@ function AuthPageContent() {
               </div>
             )}
 
+            {/* Legal consent — register tab only */}
+            {tab === 'register' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                    cursor: 'pointer',
+                    padding: '11px 12px',
+                    borderRadius: 10,
+                    background: consentTouched && !consentAccepted ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.025)',
+                    border: `1px solid ${consentTouched && !consentAccepted ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.08)'}`,
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="auth-consent"
+                    checked={consentAccepted}
+                    onChange={e => {
+                      setConsentAccepted(e.target.checked)
+                      if (e.target.checked) setConsentTouched(false)
+                    }}
+                    style={{
+                      width: 20, height: 20, flexShrink: 0,
+                      marginTop: 1, cursor: 'pointer',
+                      accentColor: '#22d3ee',
+                    }}
+                  />
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6 }}>
+                    {t('auth.register.consentPre')}{' '}
+                    <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
+                      style={{ color: '#22d3ee', textDecoration: 'none' }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {t('nav.terms')}
+                    </a>
+                    {' '}{t('auth.register.consentMid')}{' '}
+                    <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
+                      style={{ color: '#22d3ee', textDecoration: 'none' }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {t('nav.privacy')}
+                    </a>
+                    .
+                  </span>
+                </label>
+                {consentTouched && !consentAccepted && (
+                  <div role="alert" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 2, fontSize: 12, color: '#f87171' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    {t('auth.register.consentError')}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Forgot password — login tab only */}
             {tab === 'login' && (
               <div style={{ textAlign: 'right', marginTop: -4 }}>
@@ -325,14 +394,14 @@ function AuthPageContent() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (tab === 'register' && !consentAccepted)}
               style={{
                 marginTop: 4, padding: '14px 0', width: '100%',
-                background: isLoading ? 'rgba(34,211,238,0.45)' : '#22d3ee',
+                background: isLoading || (tab === 'register' && !consentAccepted) ? 'rgba(34,211,238,0.35)' : '#22d3ee',
                 color: '#000', border: 'none', borderRadius: 11,
                 fontSize: 14, fontWeight: 800, letterSpacing: '-0.2px',
                 fontFamily: 'var(--font-sans)',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                cursor: isLoading || (tab === 'register' && !consentAccepted) ? 'not-allowed' : 'pointer',
                 transition: 'opacity 0.15s, background 0.15s',
               }}
             >

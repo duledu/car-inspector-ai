@@ -1361,9 +1361,8 @@ function Footer() {
             </Link>
             <Link
               href="/legal/account-deletion"
-              style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none', letterSpacing: '-0.1px', transition: 'color 0.15s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.28)' }}
+              className="account-delete-link"
+              style={{ fontSize: 12, textDecoration: 'none', letterSpacing: '-0.1px' }}
             >
               {t('nav.accountDeletion')}
             </Link>

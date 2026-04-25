@@ -104,8 +104,8 @@ function P({ children }: Readonly<{ children: React.ReactNode }>) {
 function Ul({ items }: Readonly<{ items: string[] }>) {
   return (
     <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {items.map((item, i) => (
-        <li key={i} style={{ lineHeight: 1.7 }}>{item}</li>
+      {items.map((item) => (
+        <li key={item} style={{ lineHeight: 1.7 }}>{item}</li>
       ))}
     </ul>
   )
@@ -140,7 +140,7 @@ export default function PrivacyPage() {
             {t('legal.privacy.title')}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            {t('legal.lastUpdated')} April 13, 2026
+            {t('legal.lastUpdated')} April 24, 2026
           </p>
         </div>
 
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
         <Section title="2. Information We Collect">
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Account Data.</strong> When you register, we collect your name, email address, and a hashed password. If you sign in with Google, we receive your name, email address, and profile photo from Google.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Vehicle & Inspection Data.</strong> Information you enter about vehicles you are evaluating: make, model, year, VIN, mileage, asking price, inspection checklist responses, and notes.</P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Photos.</strong> Images you upload during the AI photo inspection phase. These are transmitted to our AI provider (OpenAI) for analysis. See Section 4 for details.</P>
+          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Vehicle Images and Inspection Data.</strong> Images you upload during the AI photo inspection phase are transmitted to our AI provider (OpenAI) for analysis. See Section 5 for details. Uploaded images may incidentally contain information beyond the vehicle itself — including visible surroundings, license plates, reflections, or other content captured by the camera. You should avoid uploading images that contain personal, sensitive, or unrelated content that is not necessary for vehicle inspection purposes. We recommend focusing images on the vehicle and its condition.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>AI Results.</strong> AI-generated findings, confidence scores, inspection summaries, risk scores, and related report content generated from your photos and inspection inputs.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Payment Data.</strong> If you purchase a premium report, payment is processed by Stripe. We do not store card numbers or full payment instrument details on our servers. We retain transaction records (amount, date, vehicle reference, and status) for billing and legal compliance.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Usage Data.</strong> Browser type, device type, IP address, pages visited, feature interactions, and general usage patterns collected to improve the Service.</P>
@@ -202,7 +202,7 @@ export default function PrivacyPage() {
           <P>We do not sell, rent, or trade your personal data to third parties for their marketing purposes.</P>
         </Section>
 
-        <Section title="4. Data Sharing & Third-Party Services">
+        <Section title="4. Data Sharing & Third-Party Service Providers">
           <P>We share data only with service providers essential to delivering the Service:</P>
           <Ul items={[
             'Neon Technologies (neon.tech) — Database hosting. Your account, vehicle, and inspection data is stored in a Neon PostgreSQL instance. Data is hosted on AWS infrastructure in the EU.',
@@ -210,40 +210,72 @@ export default function PrivacyPage() {
             'Stripe — Payment processing. Stripe handles all card data and payment flows. We share only the minimum information required to initiate and confirm transactions.',
             'carVertical / autoDNA — When you purchase a premium vehicle history report, your vehicle\'s VIN is submitted to carVertical or associated data partners to retrieve history records.',
             'Cloudflare (if applicable) — CDN, DNS management, and DDoS protection. Cloudflare may process request metadata (IP address, headers) as part of its network security services.',
+            'Email delivery provider — Transactional emails (account verification, password reset, notifications) may be sent via a third-party email delivery service.',
           ]} />
+          <P>Each third-party provider processes data in accordance with their own privacy policies and data processing agreements. We are not responsible for the data practices of third-party systems beyond our reasonable control. We recommend reviewing the privacy policies of each provider if you have concerns about how your data is handled by those services.</P>
           <P>We do not share your personal data with advertisers, data brokers, or unaffiliated third parties for any other purpose.</P>
         </Section>
 
-        <Section title="5. Data Storage & Security">
+        <Section title="5. AI Processing">
+          <P>
+            Uploaded vehicle images and associated vehicle data may be processed using AI-based services and third-party AI providers, including OpenAI. AI processing is used to generate inspection insights, risk indicators, defect flags, condition summaries, and related recommendations that form part of your inspection report.
+          </P>
+          <P>The accuracy and quality of AI-generated results may depend on:</P>
+          <Ul items={[
+            'The resolution, clarity, and focus of uploaded images',
+            'Lighting conditions and camera angles at the time of capture',
+            'The completeness and accuracy of vehicle data entered by the user',
+            'The inherent capabilities and limitations of the AI model used',
+          ]} />
+          <P>
+            AI results are provided for informational and decision-support purposes only. They are not a professional inspection, certified assessment, or guarantee of any vehicle's condition, safety, value, or history. You should not rely solely on AI-generated results when making any vehicle-related decision.
+          </P>
+          <P>
+            Data submitted for AI processing is handled in accordance with the policies of the relevant AI provider. We transmit only the minimum data required to generate the requested analysis.
+          </P>
+        </Section>
+
+        <Section title="6. Data Storage & Security">
           <P>Your data is stored in a PostgreSQL database hosted by Neon Technologies on AWS infrastructure within the European Union. Data is encrypted in transit using TLS/SSL.</P>
-          <P>We implement technical and organizational measures to protect your data, including access controls, environment separation, and secure key management. However, no method of transmission over the Internet or method of electronic storage is 100% secure. We cannot guarantee absolute security.</P>
+          <P>We implement reasonable technical and organizational security measures to protect your data, including access controls, environment separation, and secure key management. However, no digital system or method of electronic transmission over the Internet can guarantee absolute security. By using the Service, you acknowledge and accept this inherent risk.</P>
           <P>In the event of a data breach that affects your rights and freedoms, we will notify you and the relevant supervisory authority as required by applicable law.</P>
         </Section>
 
-        <Section title="6. Data Retention">
+        <Section title="7. Data Retention">
+          <P>We retain your data for as long as necessary to fulfil the purposes described in this policy, including:</P>
+          <Ul items={[
+            'Account functionality — maintaining your account, inspection history, and saved vehicle data while your account is active',
+            'Report generation — retaining inspection results and summaries so you can access your reports',
+            'Security and fraud prevention — retaining information needed to detect, investigate, and prevent misuse',
+            'Service improvement — using aggregated or anonymised data to improve the quality and reliability of AI features',
+            'Legal and compliance obligations — retaining records required by applicable accounting, tax, or regulatory law',
+          ]} />
           <P>
-            We retain your account and inspection data for as long as your account is active. You may request deletion of your account and associated data at any time from the{' '}
-            <Link href="/legal/account-deletion" style={{ color: '#22d3ee', textDecoration: 'none' }}>Account Deletion</Link>{' '}
-            page or by contacting us (see Section 11).
+            Retention periods may vary depending on the type of data, the operational requirements of the Service, and applicable legal or technical constraints. We do not guarantee immediate or automatic deletion of all data upon account closure.
           </P>
-          <P>Payment transaction records may be retained for up to 7 years as required by applicable accounting and tax laws, even after account deletion. AI analysis results and inspection reports may be retained while your account remains active so you can access your inspection history. Raw photo handling depends on the feature used and the storage provider involved; where photos are processed only for analysis, we limit retention to what is necessary to provide the Service and maintain security.</P>
+          <P>
+            You may request deletion of your account and associated data at any time from the{' '}
+            <Link href="/legal/account-deletion" className="account-delete-link" style={{ textDecoration: 'none' }}>Account Deletion</Link>{' '}
+            page or by contacting us (see Section 12). Payment transaction records may be retained for up to 7 years as required by applicable accounting and tax laws, even after account deletion.
+          </P>
         </Section>
 
-        <Section title="7. Your Rights (GDPR & EEA/UK Users)">
+        <Section title="8. Your Rights (GDPR & EEA/UK Users)">
           <P>If you are located in the European Economic Area (EEA) or the United Kingdom, you have the following rights regarding your personal data under the General Data Protection Regulation (GDPR) or equivalent legislation:</P>
           <Ul items={[
             'Right of Access — Request a copy of the personal data we hold about you.',
             'Right to Rectification — Request correction of inaccurate or incomplete personal data.',
-            'Right to Erasure — Request deletion of your personal data, subject to legal retention obligations.',
+            'Right to Erasure — Request deletion of your personal data, subject to legal retention obligations and current system capabilities.',
             'Right to Restriction of Processing — Request that we restrict processing of your data in certain circumstances.',
-            'Right to Data Portability — Receive your data in a structured, commonly used, machine-readable format.',
+            'Right to Data Portability — Receive your data in a structured, commonly used, machine-readable format, where technically supported.',
             'Right to Object — Object to processing based on legitimate interests or direct marketing.',
             'Right to Lodge a Complaint — Lodge a complaint with the relevant data protection supervisory authority in your jurisdiction.',
           ]} />
-          <P>To exercise any of these rights, contact us at the email address provided in Section 11. We will respond within 30 days.</P>
+          <P>To exercise any of these rights, contact us at the email address provided in Section 12. We will respond within the timeframe required by applicable law, and in any event within 30 days where technically and operationally feasible.</P>
+          <P>Where rights depend on specific technical capabilities, we will inform you of any limitations at the time of your request.</P>
         </Section>
 
-        <Section title="8. Cookies & Local Storage">
+        <Section title="9. Cookies & Local Storage">
           <P>We use the following cookies and browser storage:</P>
           <Ul items={[
             'Authentication cookie — A session token used to maintain your signed-in state.',
@@ -253,16 +285,16 @@ export default function PrivacyPage() {
           <P>We do not use advertising cookies, cross-site tracking cookies, or third-party analytics cookies. We do not use Google Analytics or similar tracking services.</P>
         </Section>
 
-        <Section title="9. Children's Privacy">
+        <Section title="10. Children's Privacy">
           <P>The Service is not directed at individuals under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe that your child has provided us with personal data without your consent, please contact us and we will take steps to delete such information promptly.</P>
         </Section>
 
-        <Section title="10. Changes to This Policy">
+        <Section title="11. Changes to This Policy">
           <P>We may update this Privacy Policy from time to time. Material changes will be communicated by updating the "Last updated" date at the top of this page and, where appropriate, by sending a notification to the email address associated with your account.</P>
           <P>Your continued use of the Service after any changes constitutes your acceptance of the revised Privacy Policy. We encourage you to review this page periodically.</P>
         </Section>
 
-        <Section title="11. Contact Us">
+        <Section title="12. Contact Us">
           <P>For privacy-related questions, data access requests, erasure requests, or complaints, please contact us:</P>
           <Ul items={[
             'Email: contact@usedcarsdoctor.com',
