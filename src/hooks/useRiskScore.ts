@@ -22,12 +22,18 @@ interface UseRiskScoreReturn {
 
 export function useRiskScore(): UseRiskScoreReturn {
   const { activeVehicle } = useVehicleStore()
-  const { checklistItems, aiResults, testDriveRatings } = useInspectionStore()
+  const { session, checklistItems, aiResults, testDriveRatings } = useInspectionStore()
   const { hasAccess } = usePaymentStore()
 
   const hasPremium = activeVehicle
     ? hasAccess(activeVehicle.id, 'CARVERTICAL_REPORT')
     : false
+
+  // Ownership guard: if the persisted session belongs to a different vehicle, do not
+  // let its checklist/testDriveRatings corrupt this vehicle's score.
+  const checklistOwned = !session?.vehicleId || session.vehicleId === (activeVehicle?.id ?? '')
+  const ownedChecklistItems   = checklistOwned ? checklistItems   : ([] as typeof checklistItems)
+  const ownedTestDriveRatings = checklistOwned ? testDriveRatings : ({} as typeof testDriveRatings)
 
   // Memoized calculation — recomputes only when inputs change
   const score = useMemo(() => {
@@ -41,7 +47,7 @@ export function useRiskScore(): UseRiskScoreReturn {
       })
     ).length
     const tdRatings: Record<string, number> = {}
-    Object.entries(testDriveRatings).forEach(([k, v]) => {
+    Object.entries(ownedTestDriveRatings).forEach(([k, v]) => {
       tdRatings[k] = v.rating
     })
 
@@ -49,7 +55,7 @@ export function useRiskScore(): UseRiskScoreReturn {
       aiFindings,
       photoCount: aiResults.length || null,
       issuePhotoCount: actionableIssuePhotos || null,
-      checklistItems,
+      checklistItems: ownedChecklistItems,
       vinData: null, // VIN data pulled server-side when premium
       testDriveRatings: tdRatings,
       hasPremiumHistory: hasPremium,
@@ -57,7 +63,7 @@ export function useRiskScore(): UseRiskScoreReturn {
     }
 
     return calculateRiskScore(activeVehicle.id, input)
-  }, [activeVehicle?.id, checklistItems, aiResults, testDriveRatings, hasPremium])
+  }, [activeVehicle?.id, ownedChecklistItems, aiResults, ownedTestDriveRatings, hasPremium])
 
   const buyScore = score?.buyScore ?? 0
   const riskScore = score?.riskScore ?? 0

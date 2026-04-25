@@ -417,3 +417,88 @@ describe('getVerdictLabel', () => {
     expect(walkAway.emoji).toBe('\u274C')
   })
 })
+
+// =============================================================================
+// Vehicle isolation — empty/stale checklist handling
+//
+// These tests document the invariants the vehicle-switch bug fix relies on.
+// Root cause: Zustand hydrated Vehicle A's checklist into the store before
+// initSession(vehicleB) completed; the report page guard (checklistOwned) now
+// passes empty arrays to these scoring functions when session.vehicleId mismatches.
+// =============================================================================
+
+describe('vehicle isolation — checklist ownership guard', () => {
+  const vehicleAItems: ChecklistItem[] = [
+    makeChecklistItem({ id: 'a1', category: 'EXTERIOR',   itemKey: 'ext_paint',   status: 'OK' }),
+    makeChecklistItem({ id: 'a2', category: 'INTERIOR',   itemKey: 'int_seats',   status: 'OK' }),
+    makeChecklistItem({ id: 'a3', category: 'MECHANICAL', itemKey: 'mech_start',  status: 'OK' }),
+    makeChecklistItem({ id: 'a4', category: 'DOCUMENTS',  itemKey: 'doc_service', status: 'OK' }),
+    makeChecklistItem({ id: 'a5', category: 'TEST_DRIVE', itemKey: 'td_accel',    status: 'OK' }),
+  ]
+
+  test('empty checklistItems produce "not completed" explanation for every checklist dimension', () => {
+    const result = calculateRiskScore('vehicle-b', { ...emptyInput, checklistItems: [] })
+
+    expect(result.dimensions.exterior.explanation).toBe('Checklist not completed for this section.')
+    expect(result.dimensions.interior.explanation).toBe('Checklist not completed for this section.')
+    expect(result.dimensions.mechanical.explanation).toBe('Checklist not completed for this section.')
+    expect(result.dimensions.documents.explanation).toBe('Checklist not completed for this section.')
+  })
+
+  test('preliminary score with only AI dimension completed excludes checklist dimensions from weighted average', () => {
+    const input: ScoreCalculationInput = {
+      ...emptyInput,
+      aiFindings:     [makeAIFinding({ severity: 'info', confidence: 60 })],
+      photoCount:     1,
+      checklistItems: [],
+    }
+    const completedDimensions = {
+      ai:         true,
+      exterior:   false,
+      interior:   false,
+      mechanical: false,
+      testDrive:  false,
+      documents:  false,
+      vin:        false,
+    }
+
+    const result = calculatePreliminaryRiskScore('vehicle-b', input, completedDimensions)
+
+    expect(result.dimensions.exterior.explanation).toBe('Checklist not completed for this section.')
+    expect(result.dimensions.mechanical.explanation).toBe('Checklist not completed for this section.')
+    expect(result.dimensions.documents.explanation).toBe('Checklist not completed for this section.')
+    expect(result.buyScore).toBeGreaterThanOrEqual(10)
+    expect(result.buyScore).toBeLessThanOrEqual(96)
+  })
+
+  test('guarded (empty) vs unguarded (stale Vehicle A) inputs produce different preliminary scores', () => {
+    const aiInput = {
+      aiFindings:      [makeAIFinding({ severity: 'warning', confidence: 72 })],
+      photoCount:      1,
+      issuePhotoCount: 1,
+    }
+
+    const guardedResult = calculatePreliminaryRiskScore('vehicle-b', {
+      ...emptyInput, ...aiInput,
+      checklistItems: [],
+    }, { ai: true, exterior: false, interior: false, mechanical: false, testDrive: false, documents: false, vin: false })
+
+    const staleResult = calculatePreliminaryRiskScore('vehicle-b', {
+      ...emptyInput, ...aiInput,
+      checklistItems: vehicleAItems,
+    }, { ai: true, exterior: true, interior: true, mechanical: true, testDrive: true, documents: true, vin: false })
+
+    // Stale path inflates score by including Vehicle A's all-OK dimensions.
+    expect(staleResult.buyScore).toBeGreaterThan(guardedResult.buyScore)
+  })
+
+  test('preliminary with all completedDimensions false falls back to calculateRiskScore baseline', () => {
+    const result   = calculatePreliminaryRiskScore('vehicle-b', emptyInput, {
+      ai: false, exterior: false, interior: false, mechanical: false, testDrive: false, documents: false, vin: false,
+    })
+    const baseline = calculateRiskScore('vehicle-b', emptyInput)
+
+    expect(result.buyScore).toBe(baseline.buyScore)
+    expect(result.verdict).toBe(baseline.verdict)
+  })
+})

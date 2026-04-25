@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -496,13 +496,29 @@ export default function ReportPage() {
   const preliminaryMode = searchParams.get('mode') === 'preliminary'
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
-  const normalizedChecklist = useMemo(() => normalizeChecklistItems(checklistItems), [checklistItems])
+
+  // Guard: the inspection store is hydrated from localStorage and may still hold data
+  // from a previously inspected vehicle (Vehicle A) while the active vehicle is Vehicle B.
+  // This window exists because initSession() is async and is called from the inspection
+  // page — not from here. Until it completes, session.vehicleId !== vehicleId.
+  // When there is a mismatch, treat checklist + testDriveRatings as empty so Vehicle A's
+  // answers never corrupt Vehicle B's category scores or preliminary report.
+  const checklistOwned = !session?.vehicleId || session.vehicleId === vehicleId
+  if (process.env.NODE_ENV === 'development' && vehicleId && !checklistOwned) {
+    console.warn(
+      `[report] stale checklist discarded — session.vehicleId="${session?.vehicleId}" !== activeVehicle="${vehicleId}"`
+    )
+  }
+  const ownedChecklistItems   = checklistOwned ? checklistItems   : ([] as typeof checklistItems)
+  const ownedTestDriveRatings = checklistOwned ? testDriveRatings : ({} as typeof testDriveRatings)
+
+  const normalizedChecklist = useMemo(() => normalizeChecklistItems(ownedChecklistItems), [ownedChecklistItems])
   const inspectionCompletion = useMemo(() => getInspectionCompletion(normalizedChecklist), [normalizedChecklist])
 
   const derivedTestDriveRatings = useMemo(() => {
     const ratings: Record<string, number> = {}
 
-    Object.entries(testDriveRatings).forEach(([key, value]) => {
+    Object.entries(ownedTestDriveRatings).forEach(([key, value]) => {
       ratings[key] = value.rating
     })
 
@@ -518,7 +534,7 @@ export default function ReportPage() {
       })
 
     return ratings
-  }, [normalizedChecklist, testDriveRatings])
+  }, [normalizedChecklist, ownedTestDriveRatings])
 
   const sectionProgress = useMemo(() => {
     const missingCategoryLabels = inspectionCompletion.missingCategories.map((category) => {
@@ -610,6 +626,18 @@ export default function ReportPage() {
       unsubInspectionFinish()
     }
   }, [])
+
+  // Reset report state when the active vehicle changes. Without this, a riskScore
+  // computed for Vehicle A blocks the preliminary calculation for Vehicle B because
+  // the preliminary effect checks `if (riskScore) return` before recalculating.
+  const prevVehicleIdRef = useRef<string>('')
+  useEffect(() => {
+    if (!vehicleId || prevVehicleIdRef.current === vehicleId) return
+    prevVehicleIdRef.current = vehicleId
+    setRiskScore(null)
+    setIsPreliminaryScore(false)
+    setCalcError(null)
+  }, [vehicleId])
 
   useEffect(() => {
     if (!storesHydrated || !vehicleId) {

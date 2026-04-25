@@ -75,6 +75,10 @@ export const useInspectionStore = create<InspectionStore>()(
           const session = await inspectionApi.getOrCreateSession(vehicleId)
           set((state) => {
             if (previousVehicleId && previousVehicleId !== session.vehicleId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(`[inspection-store] vehicle switch — discarding stale state. previous="${previousVehicleId}" next="${session.vehicleId}"`)
+              }
+              state.checklistItems = []
               state.aiResults = []
               state.testDriveRatings = {}
               state.activeChecklistTab = 'EXTERIOR'
@@ -196,11 +200,22 @@ export const useInspectionStore = create<InspectionStore>()(
         testDriveRatings: state.testDriveRatings,
       }),
       merge: (persisted, current) => {
-        const persistedState = persisted as Partial<InspectionState>
+        const p = persisted as Partial<InspectionState>
+        const storedVehicleId = p.session?.vehicleId ?? null
+        if (process.env.NODE_ENV === 'development' && storedVehicleId) {
+          console.debug(`[inspection-store] hydrating persisted state for vehicle="${storedVehicleId}"`)
+        }
+        // Reconstruct explicitly — do NOT use spread so every field is intentional.
+        // vehicle-scoped data (checklistItems, aiResults, testDriveRatings) is only
+        // valid for storedVehicleId; the report page validates ownership before use.
         return {
           ...current,
-          ...persistedState,
-          checklistItems: normalizeChecklistItems(persistedState.checklistItems ?? []),
+          session:            p.session            ?? null,
+          currentPhase:       p.currentPhase       ?? 'PRE_SCREENING',
+          activeChecklistTab: p.activeChecklistTab ?? 'EXTERIOR',
+          checklistItems:     normalizeChecklistItems(p.checklistItems ?? []),
+          aiResults:          p.aiResults          ?? [],
+          testDriveRatings:   p.testDriveRatings   ?? {},
         }
       },
     }
