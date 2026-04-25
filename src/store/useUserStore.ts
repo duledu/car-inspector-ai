@@ -139,10 +139,8 @@ export const useUserStore = create<UserStore>()(
       },
 
       refreshSession: async () => {
-        const { session } = get()
-        if (!session?.refreshToken) return
         try {
-          const refreshed = await authApi.refresh(session.refreshToken)
+          const refreshed = await authApi.refresh()
           set((state) => {
             state.session = refreshed
             state.user = refreshed.user
@@ -195,11 +193,20 @@ export const useUserStore = create<UserStore>()(
         isAuthenticated: state.isAuthenticated,
       }),
       merge: (persisted, current) => {
-        const state = persisted as Partial<UserStore>
+        // Cast broadly so we can strip legacy token fields that may still be in
+        // old localStorage entries written before Phase 3.
+        const p = persisted as {
+          session?: AuthSession & { accessToken?: unknown; refreshToken?: unknown }
+          isAuthenticated?: boolean
+        }
+        const safeSession: AuthSession | null = p.session?.user
+          ? { user: p.session.user, expiresAt: p.session.expiresAt }
+          : null
         return {
           ...current,
-          ...state,
-          user: state.session?.user ?? null,
+          session: safeSession,
+          isAuthenticated: p.isAuthenticated ?? false,
+          user: safeSession?.user ?? null,
         }
       },
     }

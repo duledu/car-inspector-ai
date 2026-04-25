@@ -25,8 +25,8 @@ export const authApi = {
     await apiClient.post('/auth/delete-account', { confirmed: true })
   },
 
-  refresh: async (refreshToken: string): Promise<AuthSession> => {
-    const { data } = await apiClient.post<ApiResponse<AuthSession>>('/auth/refresh', { refreshToken })
+  refresh: async (): Promise<AuthSession> => {
+    const { data } = await apiClient.post<ApiResponse<AuthSession>>('/auth/refresh', {})
     return data.data
   },
 

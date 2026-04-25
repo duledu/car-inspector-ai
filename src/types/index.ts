@@ -20,9 +20,8 @@ export interface AuthUser {
 
 export interface AuthSession {
   user: AuthUser
-  accessToken: string
-  refreshToken: string
   expiresAt: number
+  // Tokens are not exposed client-side; httpOnly cookies hold them.
 }
 
 export interface LoginCredentials {

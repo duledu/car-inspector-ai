@@ -67,24 +67,10 @@ export default function AppShell({ children }: AppShellProps) {
   const { t }    = useTranslation()
 
   const [hydrated, setHydrated] = useState(false)
-  const [userStoreHydrated, setUserStoreHydrated] = useState(() => useUserStore.persist.hasHydrated())
   useEffect(() => { setHydrated(true) }, [])
-  useEffect(() => {
-    const handleHydrate = () => setUserStoreHydrated(false)
-    const handleFinishHydration = () => setUserStoreHydrated(true)
-
-    const unsubHydrate = useUserStore.persist.onHydrate(handleHydrate)
-    const unsubFinish = useUserStore.persist.onFinishHydration(handleFinishHydration)
-    setUserStoreHydrated(useUserStore.persist.hasHydrated())
-
-    return () => {
-      unsubHydrate()
-      unsubFinish()
-    }
-  }, [])
 
   useEffect(() => {
-    if (!hydrated || !userStoreHydrated) return
+    if (!hydrated) return
     if (!isAuthenticated) {
       router.replace(`/auth?redirect=${encodeURIComponent(pathname)}`)
       return
@@ -94,9 +80,9 @@ export default function AppShell({ children }: AppShellProps) {
       return
     }
     refreshSession()
-  }, [hydrated, isAuthenticated, pathname, router, user?.emailVerified, userStoreHydrated, refreshSession])
+  }, [hydrated, isAuthenticated, pathname, router, user?.emailVerified, refreshSession])
 
-  if (!hydrated || !userStoreHydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
+  if (!hydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (!isAuthenticated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (user?.emailVerified === false) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
 

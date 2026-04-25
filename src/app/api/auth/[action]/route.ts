@@ -30,10 +30,6 @@ const registerSchema = z.object({
   preferredLanguage: z.enum(SUPPORTED_LANGS).optional().default('en'),
 })
 
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
-})
-
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email(),
 })
@@ -61,10 +57,11 @@ export async function POST(
     case 'register':
       return handleRegister(body)
     case 'refresh':
-      return handleRefresh(body)
+      return handleRefresh(req)
     case 'logout': {
       const logoutRes = NextResponse.json({ data: { success: true } })
       clearEvCookie(logoutRes)
+      clearAuthCookies(logoutRes)
       return logoutRes
     }
     case 'forgot-password':
@@ -104,9 +101,15 @@ export async function PATCH(
 
 // ─── Cookie helpers ───────────────────────────────────────────────────────────
 
-const EV_COOKIE    = 'uci_ev'
-const EV_MAX_AGE   = 30 * 24 * 60 * 60  // 30 days
-const IS_PROD      = process.env.NODE_ENV === 'production'
+const IS_PROD    = process.env.NODE_ENV === 'production'
+
+const EV_COOKIE  = 'uci_ev'
+const EV_MAX_AGE = 30 * 24 * 60 * 60  // 30 days
+
+const AT_COOKIE  = 'uci_at'            // access token — httpOnly, 15 min
+const RT_COOKIE  = 'uci_rt'            // refresh token — httpOnly, 30 days, scoped to refresh endpoint
+const AT_MAX_AGE = 15 * 60
+const RT_MAX_AGE = 30 * 24 * 60 * 60
 
 function setEvCookie(res: NextResponse, verified: boolean) {
   res.cookies.set(EV_COOKIE, verified ? '1' : '0', {
@@ -120,6 +123,30 @@ function setEvCookie(res: NextResponse, verified: boolean) {
 
 function clearEvCookie(res: NextResponse) {
   res.cookies.set(EV_COOKIE, '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0, secure: IS_PROD })
+}
+
+/** Set both auth token cookies. Called after every successful login/register/refresh. */
+function setAuthCookies(res: NextResponse, accessToken: string, refreshToken: string) {
+  res.cookies.set(AT_COOKIE, accessToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path:     '/',
+    maxAge:   AT_MAX_AGE,
+    secure:   IS_PROD,
+  })
+  res.cookies.set(RT_COOKIE, refreshToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path:     '/api/auth/refresh',
+    maxAge:   RT_MAX_AGE,
+    secure:   IS_PROD,
+  })
+}
+
+/** Clear both auth token cookies. Called on logout and account deletion. */
+function clearAuthCookies(res: NextResponse) {
+  res.cookies.set(AT_COOKIE, '', { httpOnly: true, sameSite: 'lax', path: '/',                 maxAge: 0, secure: IS_PROD })
+  res.cookies.set(RT_COOKIE, '', { httpOnly: true, sameSite: 'lax', path: '/api/auth/refresh', maxAge: 0, secure: IS_PROD })
 }
 
 // ─── DTO helper ──────────────────────────────────────────────────────────────
@@ -172,9 +199,10 @@ async function handleLogin(body: unknown) {
 
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
     const res = NextResponse.json({
-      data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
+      data: { expiresAt, user: toUserDto(user) },
     })
     setEvCookie(res, !!user.emailVerified)
+    setAuthCookies(res, accessToken, refreshToken)
     return res
   } catch (error) {
     logApiError('auth/login', 'login', error)
@@ -216,16 +244,18 @@ async function handleRegister(body: unknown) {
     .catch(err => console.error('[auth/register] verification email unexpected error:', err))
 
   const res = NextResponse.json(
-    { data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) } },
+    { data: { expiresAt, user: toUserDto(user) } },
     { status: 201 }
   )
   setEvCookie(res, false) // new registrations are always unverified
+  setAuthCookies(res, accessToken, refreshToken)
   return res
 }
 
-async function handleRefresh(body: unknown) {
-  const parsed = refreshSchema.safeParse(body)
-  if (!parsed.success) {
+async function handleRefresh(req: NextRequest) {
+  const rawToken = req.cookies.get(RT_COOKIE)?.value ?? null
+
+  if (!rawToken) {
     return apiError('Refresh token required', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
@@ -233,7 +263,7 @@ async function handleRefresh(body: unknown) {
     const jwt = await import('jsonwebtoken')
     const JWT_SECRET = process.env.JWT_SECRET
     if (!JWT_SECRET) throw new Error('JWT_SECRET is not configured')
-    const payload = jwt.default.verify(parsed.data.refreshToken, JWT_SECRET) as {
+    const payload = jwt.default.verify(rawToken, JWT_SECRET) as {
       sub: string
       type: string
     }
@@ -247,9 +277,10 @@ async function handleRefresh(body: unknown) {
 
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
     const res = NextResponse.json({
-      data: { accessToken, refreshToken, expiresAt, user: toUserDto(user) },
+      data: { expiresAt, user: toUserDto(user) },
     })
     setEvCookie(res, !!user.emailVerified)
+    setAuthCookies(res, accessToken, refreshToken)
     return res
   } catch {
     return apiError('Invalid or expired refresh token', { status: 401, code: 'INVALID_REFRESH_TOKEN' })
@@ -446,6 +477,7 @@ async function handleDeleteAccount(req: NextRequest, body: unknown) {
 
     const res = NextResponse.json({ data: { success: true } })
     clearEvCookie(res)
+    clearAuthCookies(res)
     return res
   } catch (error) {
     logApiError('auth/delete-account', 'deleteAccount', error, { userId: authResult.userId })

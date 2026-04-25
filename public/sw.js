@@ -14,7 +14,8 @@
 // stream has already been handed to the browser.
 // =============================================================================
 
-const SW_VERSION = 'car-inspector-v9';
+const SW_VERSION = 'car-inspector-v10';
+const OFFLINE_URL = '/offline.html';
 const CACHE_NAME = SW_VERSION;
 
 function toUrl(input) {
@@ -100,8 +101,11 @@ async function putInCache(request, response) {
 }
 
 // Updates wait until the app sends SKIP_WAITING from the visible update prompt.
+// Pre-cache the offline fallback page so it is always available.
 globalThis.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+  );
 });
 
 globalThis.addEventListener('message', (event) => {
@@ -161,7 +165,15 @@ globalThis.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached ?? Response.error()))
+        .catch(() =>
+          caches.match(request).then((cached) => {
+            if (cached) return cached;
+            if (isCacheableNavigationRequest(request)) {
+              return caches.match(OFFLINE_URL);
+            }
+            return Response.error();
+          })
+        )
     );
   }
 });

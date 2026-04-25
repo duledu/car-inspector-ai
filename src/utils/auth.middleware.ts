@@ -28,13 +28,11 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
     return { success: false, reason: 'Server configuration error' }
   }
 
-  const authHeader = req.headers.get('Authorization')
+  const token = req.cookies.get('uci_at')?.value ?? null
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { success: false, reason: 'Missing Authorization header' }
+  if (!token) {
+    return { success: false, reason: 'Missing auth cookie' }
   }
-
-  const token = authHeader.slice(7)
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as {

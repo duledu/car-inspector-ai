@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
+import { AiConsentModal } from '@/components/inspection/AiConsentModal'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { getChecklistDiagnostics, getInspectionCompletion } from '@/lib/inspection/checklist'
@@ -108,7 +109,15 @@ async function enqueueAIAnalysis<T>(task: () => Promise<T>): Promise<T> {
 }
 
 // ─── Photo draft persistence (survives refresh / navigation) ──────────────────
-const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
+const PHOTO_DRAFT_KEY   = 'uci-photo-drafts'
+const AI_CONSENT_KEY    = 'uci-ai-consent'
+
+function readAiConsent(): boolean {
+  try { return localStorage.getItem(AI_CONSENT_KEY) === 'true' } catch { return false }
+}
+function writeAiConsent(): void {
+  try { localStorage.setItem(AI_CONSENT_KEY, 'true') } catch { /* quota */ }
+}
 
 interface PhotoDraft {
   vehicleId: string
@@ -260,17 +269,6 @@ async function prepareImageForAI(file: File): Promise<PreparedAIImage> {
   }
 }
 
-function getAuthHeader(): string {
-  try {
-    const stored = localStorage.getItem('uci-user-store')
-    if (stored) {
-      const token = JSON.parse(stored)?.state?.session?.accessToken
-      if (token) return `Bearer ${token}`
-    }
-  } catch { /* ignore */ }
-  return ''
-}
-
 type TFn = (key: string, opts?: Record<string, unknown>) => string
 
 // Failure reasons from the server that are worth retrying on the client
@@ -289,7 +287,6 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       mimeType: prepared.mimeType,
     })
 
-    const authHeader = getAuthHeader()
     const requestBody = {
       imageBase64: prepared.imageBase64,
       mimeType: prepared.mimeType,
@@ -314,13 +311,11 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
         try {
           logPhotoFlow('ai_request_sent', { key, label, clientAttempt })
           const response = await fetch('/api/inspection/analyze-photo', {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(authHeader ? { Authorization: authHeader } : {}),
-            },
-            body: JSON.stringify(requestBody),
+            method:      'POST',
+            signal:      controller.signal,
+            credentials: 'include',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify(requestBody),
           })
           return response
         } catch (err) {
@@ -1073,6 +1068,9 @@ export default function InspectionPage() {
   const [photos, setPhotos]             = useState<PhotoEntry[]>([])
   const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string; shotNumber: number } | null>(null)
   const [findingsSaved, setFindingsSaved] = useState(false)
+  const [aiConsentAccepted, setAiConsentAccepted] = useState<boolean>(readAiConsent)
+  const [showConsentModal,  setShowConsentModal]  = useState(false)
+  const pendingCameraRef = useRef<{ key: string; label: string } | null>(null)
   const phaseCardRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef<InspectionPhase | null>(null)
   const previousVehicleIdRef = useRef<string | null>(null)
@@ -1166,15 +1164,11 @@ export default function InspectionPage() {
       recommendation: p.aiResult!.recommendation ?? '',
     }))
 
-    const authHeader = getAuthHeader()
-
     fetch('/api/ai-analysis/analyze', {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-      body: JSON.stringify({ vehicleId, photoResults }),
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify({ vehicleId, photoResults }),
     })
       .then(r => r.json())
       .then(json => { if (json?.data) pushAIResult(json.data) })
@@ -1225,11 +1219,29 @@ export default function InspectionPage() {
     [checklistItems, updateChecklistItem, markSaved]
   )
 
+  const handleConsentAccept = useCallback(() => {
+    writeAiConsent()
+    setAiConsentAccepted(true)
+    setShowConsentModal(false)
+    const pending = pendingCameraRef.current
+    pendingCameraRef.current = null
+    if (pending) {
+      logPhotoFlow('capture_flow_opened', { key: pending.key, label: pending.label })
+      const shotNumber = PHOTO_ANGLES.findIndex(a => a.key === pending.key) + 1
+      setCameraTarget({ key: pending.key, label: pending.label, shotNumber })
+    }
+  }, [])
+
   const handleOpenCamera = useCallback((key: string, label: string) => {
+    if (!aiConsentAccepted) {
+      pendingCameraRef.current = { key, label }
+      setShowConsentModal(true)
+      return
+    }
     logPhotoFlow('capture_flow_opened', { key, label })
     const shotNumber = PHOTO_ANGLES.findIndex(a => a.key === key) + 1
     setCameraTarget({ key, label, shotNumber })
-  }, [])
+  }, [aiConsentAccepted])
 
   const handleCapture = useCallback(async (file: File, previewUrl: string) => {
     if (!cameraTarget) return
@@ -1299,6 +1311,8 @@ export default function InspectionPage() {
 
   return (
     <AppShell>
+      {showConsentModal && <AiConsentModal onAccept={handleConsentAccept} />}
+
       {cameraTarget && (
         <CameraCapture
           label={cameraTarget.label}
