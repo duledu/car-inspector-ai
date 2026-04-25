@@ -447,7 +447,7 @@ const de = {
   'report.recommendation.HIGH_RISK':        'Dieses Fahrzeug birgt ein erhebliches Risiko. Kaufen Sie nur, wenn der Verkäufer einen deutlichen Preisnachlass akzeptiert oder die Mängel behebt.',
   'report.recommendation.WALK_AWAY':        'Auf Basis der Befunde ist Abstand nehmen die sicherste Option. Das wahrscheinliche Reparaturrisiko ist für den aufgerufenen Preis zu hoch.',
   'report.dimExplanation.ai.clean':         'Keine KI-Fotobefunde. Die eingereichten Fotos wirken unauffällig.',
-  'report.dimExplanation.ai.issues':        '{{count}} Fotobefund erkannt. Hauptpunkt: {{title}} ({{confidence}}% Sicherheit).',
+  'report.dimExplanation.ai.issues':        'Probleme wurden auf {{count}} von {{total}} Fotos erkannt. Hauptpunkt: {{title}}. Sicherheit: {{confidence}}%. Eine zusätzliche manuelle Prüfung wird empfohlen.',
   'report.dimExplanation.checklist.notCompleted': 'Dieser Checklistenbereich wurde noch nicht abgeschlossen.',
   'report.dimExplanation.checklist.notAssessed':  'Es wurden noch keine Checklistenpunkte bewertet.',
   'report.dimExplanation.checklist.summary':      '{{ok}} OK · {{warnings}} Warnungen · {{problems}} Probleme bei {{total}} Punkten.',

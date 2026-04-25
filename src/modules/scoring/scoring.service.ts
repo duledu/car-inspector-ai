@@ -65,6 +65,13 @@ export class ScoringService {
       }
       return findings as AIFinding[]
     })
+    const actionableIssuePhotos = aiResults.filter((result: AIResult) => {
+      const findings = Array.isArray(result.findings) ? (result.findings as unknown as AIFinding[]) : []
+      return findings.some((finding) => {
+        const confidence = Number(finding.confidence)
+        return finding.severity !== 'info' && Number.isFinite(confidence) && confidence >= 45
+      })
+    }).length
 
     const normalizedChecklist = normalizeChecklistItems((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
       id: item.id,
@@ -97,6 +104,8 @@ export class ScoringService {
 
     const input: ScoreCalculationInput = {
       aiFindings,
+      photoCount: aiResults.length || null,
+      issuePhotoCount: actionableIssuePhotos || null,
       checklistItems: normalizedChecklist,
       vinData: hasPremium && vinHistory ? (vinHistory.normalizedData as any) : null,
       testDriveRatings,

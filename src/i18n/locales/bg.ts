@@ -542,7 +542,7 @@ const bg: Record<string, string> = {
 
   // ── Report dim explanations ───────────────────────────────────────────────
   'report.dimExplanation.ai.clean':               'Не са открити видими проблеми в нито една от изпратените снимки.',
-  'report.dimExplanation.ai.issues':              'Открит е {{count}} проблем на снимка. Основен въпрос: {{title}} ({{confidence}}% сигурност).',
+  'report.dimExplanation.ai.issues':              'Проблеми са открити в {{count}} от {{total}} снимки. Основен въпрос: {{title}}. Увереност: {{confidence}}%. Препоръчва се допълнителен ръчен преглед.',
   'report.dimExplanation.checklist.notCompleted': 'Тази секция от контролния списък не е попълнена.',
   'report.dimExplanation.checklist.notAssessed':  'Все още не са оценени елементи от контролния списък.',
   'report.dimExplanation.checklist.summary':      '{{ok}} добре · {{warnings}} предупреждения · {{problems}} проблема при {{total}} елемента.',

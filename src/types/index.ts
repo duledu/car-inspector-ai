@@ -200,6 +200,8 @@ export interface RiskScore {
 
 export interface ScoreCalculationInput {
   aiFindings: AIFinding[]
+  photoCount?: number | null
+  issuePhotoCount?: number | null
   checklistItems: ChecklistItem[]
   vinData?: VehicleHistoryResult | null
   testDriveRatings: Record<string, number>

@@ -465,7 +465,7 @@ const sr = {
   'report.recommendation.HIGH_RISK':        'Vozilo nosi značajan rizik. Nastavite samo ako prodavac prihvati veliko sniženje cene ili otkloni probleme.',
   'report.recommendation.WALK_AWAY':        'Na osnovu dostupnih dokaza, najbezbednije je odustati. Rizik troškova popravke je previsok za traženu cenu.',
   'report.dimExplanation.ai.clean':         'Nema AI nalaza na fotografijama. Dostavljene fotografije izgledaju uredno.',
-  'report.dimExplanation.ai.issues':        'Otkriveno je {{count}} problema na fotografijama. Glavna nedoumica: {{title}} (pouzdanost {{confidence}}%).',
+  'report.dimExplanation.ai.issues':        'Problemi su otkriveni na {{count}} od {{total}} fotografija. Glavna nedoumica: {{title}}. Pouzdanost: {{confidence}}%. Preporučuje se dodatni ručni pregled.',
   'report.dimExplanation.checklist.notCompleted': 'Ovaj deo ček-liste nije završen.',
   'report.dimExplanation.checklist.notAssessed':  'Još nema ocenjenih stavki u ček-listi.',
   'report.dimExplanation.checklist.summary':      '{{ok}} OK · {{warnings}} upozorenja · {{problems}} problema kroz {{total}} stavki.',

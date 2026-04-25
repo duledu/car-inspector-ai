@@ -97,10 +97,21 @@ function translateDimensionExplanationV2(key: string, text: string | undefined, 
   if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return t('report.dimExplanation.vin.basic')
   if (normalizedText === 'Test drive not yet completed.') return t('report.dimExplanation.testDrive.notCompleted')
 
+  const aiPhotoMatch = normalizedText.match(/^Issues detected in (\d+) of (\d+) photos\. Main concern: (.+?)\. Confidence: (\d+)%\. Further manual inspection recommended\.$/)
+  if (aiPhotoMatch) {
+    return t('report.dimExplanation.ai.issues', {
+      count: Number(aiPhotoMatch[1]),
+      total: Number(aiPhotoMatch[2]),
+      title: aiPhotoMatch[3],
+      confidence: Number(aiPhotoMatch[4]),
+    })
+  }
+
   const aiMatch = normalizedText.match(/^(\d+) issue(s)? detected\. Primary concern: (.+) \(confidence (\d+)%\)\.$/)
   if (aiMatch) {
     return t('report.dimExplanation.ai.issues', {
       count: Number(aiMatch[1]),
+      total: Number(aiMatch[1]),
       title: aiMatch[3],
       confidence: Number(aiMatch[4]),
     })
@@ -269,25 +280,65 @@ function RiskFlagCard({ flagKey }: Readonly<{ flagKey: string }>) {
 }
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Dimension bar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-function dimColor(score: number): string {
-  if (score >= 70) return '#22c55e'
-  if (score >= 45) return '#f59e0b'
-  return '#ef4444'
+function getDimensionSeverity(score: number): {
+  color: string
+  border: string
+  background: string
+  explanation: string
+} {
+  if (score >= 90) {
+    return {
+      color: '#22c55e',
+      border: 'rgba(34,197,94,0.24)',
+      background: 'rgba(34,197,94,0.05)',
+      explanation: 'rgba(187,247,208,0.82)',
+    }
+  }
+  if (score >= 75) {
+    return {
+      color: '#84cc16',
+      border: 'rgba(132,204,22,0.24)',
+      background: 'rgba(132,204,22,0.05)',
+      explanation: 'rgba(236,252,203,0.82)',
+    }
+  }
+  if (score >= 60) {
+    return {
+      color: '#f59e0b',
+      border: 'rgba(245,158,11,0.24)',
+      background: 'rgba(245,158,11,0.05)',
+      explanation: 'rgba(253,230,138,0.84)',
+    }
+  }
+  if (score >= 40) {
+    return {
+      color: '#f97316',
+      border: 'rgba(249,115,22,0.24)',
+      background: 'rgba(249,115,22,0.05)',
+      explanation: 'rgba(254,215,170,0.84)',
+    }
+  }
+  return {
+    color: '#ef4444',
+    border: 'rgba(239,68,68,0.24)',
+    background: 'rgba(239,68,68,0.05)',
+    explanation: 'rgba(254,202,202,0.84)',
+  }
 }
 
 function DimBar({ label, score, explanation }: Readonly<{ label: string; score: number; explanation?: string }>) {
-  const color = dimColor(score)
+  const severity = getDimensionSeverity(score)
   return (
-    <div style={{ padding: '13px 15px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 }}>
+    <div style={{ padding: '13px 15px', background: `linear-gradient(180deg, ${severity.background}, rgba(255,255,255,0.02))`, border: `1px solid ${severity.border}`, borderRadius: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{label}</span>
-        <span style={{ fontSize: 17, fontWeight: 800, color, letterSpacing: '-0.5px' }}>{score}</span>
+        <span style={{ fontSize: 17, fontWeight: 800, color: severity.color, letterSpacing: '-0.5px' }}>{score}</span>
       </div>
       <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: 3, transition: 'width 0.7s ease' }} />
+        <div style={{ height: '100%', width: `${score}%`, background: severity.color, borderRadius: 3, transition: 'width 0.7s ease' }} />
       </div>
       {explanation && (
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 7, lineHeight: 1.5 }}>{explanation}</div>
+        <div style={{ fontSize: 11, color: severity.explanation, marginTop: 7, lineHeight: 1.5 }}>{explanation}</div>
       )}
     </div>
   )
@@ -431,12 +482,16 @@ export default function ReportPage() {
 
   const preliminaryInput = useMemo<ScoreCalculationInput>(() => ({
     aiFindings: aiResults.flatMap((result) => result.findings),
+    photoCount: reportPhotoCount,
+    issuePhotoCount: aiResults.filter((result) =>
+      result.findings.some((finding) => finding.severity !== 'info' && Number(finding.confidence) >= 45)
+    ).length,
     checklistItems: normalizedChecklist,
     vinData: null,
     testDriveRatings: derivedTestDriveRatings,
     hasPremiumHistory: false,
     askingPrice: activeVehicle?.askingPrice ?? null,
-  }), [activeVehicle?.askingPrice, aiResults, normalizedChecklist, derivedTestDriveRatings])
+  }), [activeVehicle?.askingPrice, aiResults, normalizedChecklist, derivedTestDriveRatings, reportPhotoCount])
 
   const preliminaryMissingData = useMemo(() => detectPreliminaryMissingData({
     photoCount: reportPhotoCount,

@@ -446,7 +446,7 @@ const mk = {
   'report.recommendation.HIGH_RISK':        'Возилото носи значителен ризик. Продолжете само ако продавачот прифати значително намалување на цената или ги отстрани проблемите.',
   'report.recommendation.WALK_AWAY':        'Според достапните докази, најбезбедно е да се откажете. Веројатниот ризик од поправки е превисок за бараната цена.',
   'report.dimExplanation.ai.clean':         'Нема ВИ наоди на фотографиите. Доставените фотографии изгледаат уредно.',
-  'report.dimExplanation.ai.issues':        'Откриени се {{count}} проблеми на фотографиите. Главна забелешка: {{title}} (сигурност {{confidence}}%).',
+  'report.dimExplanation.ai.issues':        'Проблеми се откриени на {{count}} од {{total}} фотографии. Главна забелешка: {{title}}. Сигурност: {{confidence}}%. Се препорачува дополнителен рачен преглед.',
   'report.dimExplanation.checklist.notCompleted': 'Овој дел од чек-листата не е завршен.',
   'report.dimExplanation.checklist.notAssessed':  'Сè уште нема оценети ставки во чек-листата.',
   'report.dimExplanation.checklist.summary':      '{{ok}} OK · {{warnings}} предупредувања · {{problems}} проблеми низ {{total}} ставки.',

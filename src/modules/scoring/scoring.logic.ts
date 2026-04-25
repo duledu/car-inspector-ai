@@ -115,6 +115,11 @@ function coercePositivePrice(value: unknown): number | null {
   return price > 0 ? price : null
 }
 
+function coercePositiveCount(value: unknown): number | null {
+  const count = Math.round(safeNumber(value, 0))
+  return count > 0 ? count : null
+}
+
 function buildNegotiationRange(
   askingPrice: number | null,
   fallbackMin: number,
@@ -316,10 +321,19 @@ export function normalizeNegotiationHints(
 
 // ─── AI Score Calculation ─────────────────────────────────────────────────────
 
-function calculateAIScore(findings: AIFinding[]): ScoreDimension {
+function calculateAIScore(
+  findings: AIFinding[],
+  photoCount?: number | null,
+  issuePhotoCount?: number | null
+): ScoreDimension {
   const safeFindings = safeArray<AIFinding>(findings).filter((f) => f && typeof f === 'object')
+  const actionableFindings = safeFindings.filter((finding) => {
+    logInvalidNumber('ai.confidence', finding.confidence, 55)
+    const confidence = clampScore(finding.confidence, 0, 100, 55)
+    return finding.severity !== 'info' && confidence >= 45
+  })
 
-  if (safeFindings.length === 0) {
+  if (actionableFindings.length === 0) {
     return {
       label: 'AI Photo Analysis',
       score: 88,
@@ -329,32 +343,71 @@ function calculateAIScore(findings: AIFinding[]): ScoreDimension {
   }
 
   let score = 100
-  safeFindings.forEach((finding) => {
-    logInvalidNumber('ai.confidence', finding.confidence, 55)
+  actionableFindings.forEach((finding) => {
     const confidence = clampScore(finding.confidence, 0, 100, 55)
-    if (finding.severity === 'info' || confidence < 45) return
-
-    const basePenalty = finding.severity === 'critical' ? 14 : 5
+    const basePenalty = finding.severity === 'critical' ? 18 : 10
     const confidenceFactor =
-      confidence >= 90 ? 1.1 :
-      confidence >= 70 ? 1 :
-      confidence >= 55 ? 0.65 :
-      0.35
+      confidence >= 90 ? 1.35 :
+      confidence >= 75 ? 1.15 :
+      confidence >= 60 ? 0.95 :
+      0.65
     score -= basePenalty * confidenceFactor
   })
 
+  const safePhotoCount = Math.max(
+    coercePositiveCount(photoCount) ?? 0,
+    coercePositiveCount(issuePhotoCount) ?? 0
+  )
+  const affectedPhotoCount = Math.min(
+    safePhotoCount || actionableFindings.length,
+    Math.max(
+      coercePositiveCount(issuePhotoCount) ?? 0,
+      Math.min(actionableFindings.length, safePhotoCount || actionableFindings.length)
+    )
+  )
+  const issueRatio = safePhotoCount > 0
+    ? affectedPhotoCount / safePhotoCount
+    : Math.min(1, actionableFindings.length / 4)
+  const averageConfidence = actionableFindings.reduce(
+    (sum, finding) => sum + clampScore(finding.confidence, 0, 100, 55),
+    0
+  ) / actionableFindings.length
+
+  score -= issueRatio * 34
+  if (averageConfidence >= 70) {
+    score -= issueRatio * 8
+  }
+
+  const concernCounts = actionableFindings.reduce<Record<string, number>>((acc, finding) => {
+    const key = normalizeWhitespace(`${finding.title}|${finding.area}`).toLowerCase()
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+  const repeatedConcernCount = Object.values(concernCounts).reduce((max, count) => Math.max(max, count), 0)
+  if (repeatedConcernCount > 1) {
+    score -= (repeatedConcernCount - 1) * 6
+  }
+
+  if (issueRatio >= 0.5) {
+    score = Math.min(score, averageConfidence >= 70 ? 55 : 59)
+  } else if (issueRatio >= 0.3) {
+    score = Math.min(score, averageConfidence >= 70 ? 68 : 72)
+  }
+
   const clampedScore = clampScore(score, 10, 100, 50)
 
-  const topIssue = [...safeFindings].sort((a, b) => {
+  const topIssue = [...actionableFindings].sort((a, b) => {
     const sev: Record<string, number> = { critical: 3, warning: 2, info: 1 }
     return (sev[b.severity] ?? 0) - (sev[a.severity] ?? 0)
   })[0]
+  const totalPhotos = safePhotoCount || actionableFindings.length || 1
+  const issuePhotos = Math.max(1, Math.min(totalPhotos, affectedPhotoCount || actionableFindings.length))
 
   return {
     label: 'AI Photo Analysis',
     score: clampedScore,
     weight: SCORE_WEIGHTS.ai,
-    explanation: `${safeFindings.length} issue${safeFindings.length > 1 ? 's' : ''} detected. Primary concern: ${topIssue?.title ?? 'N/A'} (confidence ${clampScore(topIssue?.confidence, 0, 100, 0)}%).`,
+    explanation: `Issues detected in ${issuePhotos} of ${totalPhotos} photos. Main concern: ${topIssue?.title ?? 'N/A'}. Confidence: ${clampScore(topIssue?.confidence, 0, 100, 0)}%. Further manual inspection recommended.`,
   }
 }
 
@@ -815,10 +868,10 @@ function generateReasons(
 // ─── Internal dimension calculator ───────────────────────────────────────────
 
 function calculateAllDimensions(input: ScoreCalculationInput) {
-  const { aiFindings, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
+  const { aiFindings, photoCount, issuePhotoCount, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
 
   return {
-    ai:        calculateAIScore(safeArray<AIFinding>(aiFindings)),
+    ai:        calculateAIScore(safeArray<AIFinding>(aiFindings), photoCount, issuePhotoCount),
     exterior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'EXTERIOR',   'Exterior Inspection', SCORE_WEIGHTS.exterior),
     interior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'INTERIOR',   'Interior Inspection', SCORE_WEIGHTS.interior),
     mechanical:calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'MECHANICAL', 'Mechanical Check',    SCORE_WEIGHTS.mechanical),
@@ -991,7 +1044,8 @@ export function getVerdictLabel(verdict: Verdict): { label: string; emoji: strin
  */
 export function getScoreColor(score: number): string {
   const safeScore = clampScore(score, 0, 100, 0)
-  if (safeScore >= 80) return '#00e676'
+  if (safeScore >= 90) return '#00e676'
+  if (safeScore >= 75) return '#84cc16'
   if (safeScore >= 60) return '#ffaa00'
   if (safeScore >= 40) return '#ff7700'
   return '#ff4757'

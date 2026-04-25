@@ -513,7 +513,7 @@ const en = {
   'report.recommendation.HIGH_RISK':        'This vehicle carries significant risk. Only proceed if the seller accepts a major price reduction or resolves the issues.',
   'report.recommendation.WALK_AWAY':        'Based on the evidence, walking away is the safest option. The likely repair risk is too high for the asking price.',
   'report.dimExplanation.ai.clean':         'No visible issues were found across all submitted photos.',
-  'report.dimExplanation.ai.issues':        '{{count}} photo issue detected. Main concern: {{title}} ({{confidence}}% confidence).',
+  'report.dimExplanation.ai.issues':        'Issues detected in {{count}} of {{total}} photos. Main concern: {{title}}. Confidence: {{confidence}}%. Further manual inspection recommended.',
   'report.dimExplanation.checklist.notCompleted': 'This section of the checklist has not been completed.',
   'report.dimExplanation.checklist.notAssessed':  'No checklist items have been assessed yet.',
   'report.dimExplanation.checklist.summary':      '{{ok}} OK · {{warnings}} warnings · {{problems}} problems across {{total}} items.',

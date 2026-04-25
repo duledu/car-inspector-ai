@@ -107,6 +107,27 @@ describe('calculateRiskScore', () => {
     expect(result.verdict).toBe('HIGH_RISK')
   })
 
+  test('ai analysis is capped out of green territory when issues affect 4 of 9 photos', () => {
+    const findings = [
+      makeAIFinding({ id: 'f1', title: 'Paint damage', severity: 'warning', confidence: 75 }),
+      makeAIFinding({ id: 'f2', title: 'Paint damage', severity: 'warning', confidence: 78 }),
+      makeAIFinding({ id: 'f3', title: 'Paint damage', severity: 'warning', confidence: 74 }),
+      makeAIFinding({ id: 'f4', title: 'Panel mismatch', severity: 'critical', confidence: 75 }),
+    ]
+
+    const result = calculateRiskScore('v1', {
+      ...emptyInput,
+      aiFindings: findings,
+      photoCount: 9,
+      issuePhotoCount: 4,
+    })
+
+    expect(result.dimensions.ai.score).toBeLessThanOrEqual(68)
+    expect(result.dimensions.ai.explanation).toBe(
+      'Issues detected in 4 of 9 photos. Main concern: Panel mismatch. Confidence: 75%. Further manual inspection recommended.'
+    )
+  })
+
   test('problem checklist items reduce score', () => {
     const cleanResult = calculateRiskScore('v1', emptyInput)
     const problemItems = Array.from({ length: 5 }, (_, i) =>
@@ -288,14 +309,19 @@ describe('calculatePreliminaryRiskScore', () => {
 })
 
 describe('getScoreColor', () => {
-  test('returns success color for score >= 80', () => {
-    expect(getScoreColor(80)).toBe('#00e676')
+  test('returns strong green for score >= 90', () => {
+    expect(getScoreColor(90)).toBe('#00e676')
     expect(getScoreColor(100)).toBe('#00e676')
   })
 
-  test('returns warning color for score 60-79', () => {
+  test('returns light green for score 75-89', () => {
+    expect(getScoreColor(75)).toBe('#84cc16')
+    expect(getScoreColor(89)).toBe('#84cc16')
+  })
+
+  test('returns warning color for score 60-74', () => {
     expect(getScoreColor(60)).toBe('#ffaa00')
-    expect(getScoreColor(79)).toBe('#ffaa00')
+    expect(getScoreColor(74)).toBe('#ffaa00')
   })
 
   test('returns orange for score 40-59', () => {

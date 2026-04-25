@@ -446,7 +446,7 @@ const sq = {
   'report.recommendation.HIGH_RISK':        'Ky automjet ka rrezik të konsiderueshëm. Vazhdoni vetëm nëse shitësi pranon ulje të madhe çmimi ose i zgjidh problemet.',
   'report.recommendation.WALK_AWAY':        'Bazuar në provat e disponueshme, tërheqja është opsioni më i sigurt. Rreziku i riparimeve është shumë i lartë për çmimin e kërkuar.',
   'report.dimExplanation.ai.clean':         'Nuk ka gjetje AI në fotografi. Fotografitë e dorëzuara duken të pastra.',
-  'report.dimExplanation.ai.issues':        'U zbuluan {{count}} probleme në fotografi. Shqetësimi kryesor: {{title}} (besueshmëri {{confidence}}%).',
+  'report.dimExplanation.ai.issues':        'Probleme u zbuluan në {{count}} nga {{total}} fotografi. Shqetësimi kryesor: {{title}}. Besueshmëria: {{confidence}}%. Rekomandohet inspektim shtesë manual.',
   'report.dimExplanation.checklist.notCompleted': 'Ky seksion i listës së kontrollit nuk është përfunduar.',
   'report.dimExplanation.checklist.notAssessed':  'Ende nuk është vlerësuar asnjë pikë e listës së kontrollit.',
   'report.dimExplanation.checklist.summary':      '{{ok}} OK · {{warnings}} paralajmërime · {{problems}} probleme në {{total}} pika.',

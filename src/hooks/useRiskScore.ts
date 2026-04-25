@@ -34,6 +34,12 @@ export function useRiskScore(): UseRiskScoreReturn {
     if (!activeVehicle) return null
 
     const aiFindings = aiResults.flatMap((r) => r.findings)
+    const actionableIssuePhotos = aiResults.filter((result) =>
+      result.findings.some((finding) => {
+        const confidence = Number(finding.confidence)
+        return finding.severity !== 'info' && Number.isFinite(confidence) && confidence >= 45
+      })
+    ).length
     const tdRatings: Record<string, number> = {}
     Object.entries(testDriveRatings).forEach(([k, v]) => {
       tdRatings[k] = v.rating
@@ -41,6 +47,8 @@ export function useRiskScore(): UseRiskScoreReturn {
 
     const input: ScoreCalculationInput = {
       aiFindings,
+      photoCount: aiResults.length || null,
+      issuePhotoCount: actionableIssuePhotos || null,
       checklistItems,
       vinData: null, // VIN data pulled server-side when premium
       testDriveRatings: tdRatings,
