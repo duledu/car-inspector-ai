@@ -19,11 +19,21 @@ interface RecentUser {
 }
 
 export interface BulkSendResult {
-  dbUsers:      number
-  manualEmails: number
-  valid:        number
-  sent:         number
-  failed:       number
+  dbUsers:              number
+  manualEmails:         number
+  valid:                number
+  sent:                 number
+  failed:               number
+  sentCount:            number
+  failedCount:          number
+  validRecipientsCount: number
+  failedRecipients:     FailedRecipient[]
+}
+
+export interface FailedRecipient {
+  email:  string
+  reason: string
+  source: 'db' | 'manual'
 }
 
 export const adminApi = {

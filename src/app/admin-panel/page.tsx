@@ -189,17 +189,71 @@ function ConfirmModal({ dbCount, manualCount, mode, onConfirm, onCancel, sending
 
 // --- Bulk send result ---
 
-function BulkResult({ result, onReset }: Readonly<{ result: BulkSendResult; onReset: () => void }>) {
+function BulkResult({ result, onReset, onRetryFailed, retrying }: Readonly<{
+  result: BulkSendResult
+  onReset: () => void
+  onRetryFailed: () => void
+  retrying: boolean
+}>) {
+  const [copyMsg, setCopyMsg] = useState<string | null>(null)
+  const failedRecipients = result.failedRecipients ?? []
+  const failedCount = result.failedCount ?? result.failed
+  const sentCount = result.sentCount ?? result.sent
+  const validCount = result.validRecipientsCount ?? result.valid
+
+  const handleCopyFailed = async () => {
+    const text = failedRecipients.map(recipient => recipient.email).join('\n')
+    if (!text) return
+
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyMsg('Copied.')
+    } catch {
+      setCopyMsg('Copy failed.')
+    } finally {
+      setTimeout(() => setCopyMsg(null), 2200)
+    }
+  }
+
   return (
-    <div style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 10, padding: '14px 16px', fontSize: 13 }}>
-      <p style={{ margin: '0 0 8px', fontWeight: 700, color: '#34d399' }}>✓ Bulk send complete</p>
+    <div style={{ background: failedCount > 0 ? 'rgba(245,158,11,0.07)' : 'rgba(52,211,153,0.07)', border: `1px solid ${failedCount > 0 ? 'rgba(245,158,11,0.22)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 10, padding: '14px 16px', fontSize: 13 }}>
+      <p style={{ margin: '0 0 8px', fontWeight: 700, color: failedCount > 0 ? '#fbbf24' : '#34d399' }}>✓ Bulk send complete</p>
       <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', lineHeight: 1.9 }}>
         DB users: <strong style={{ color: '#fff' }}>{result.dbUsers}</strong><br />
         Manual emails: <strong style={{ color: '#fff' }}>{result.manualEmails}</strong><br />
-        Valid recipients: <strong style={{ color: '#fff' }}>{result.valid}</strong><br />
-        Sent: <strong style={{ color: '#34d399' }}>{result.sent}</strong><br />
-        Failed: <strong style={{ color: result.failed > 0 ? '#f87171' : '#fff' }}>{result.failed}</strong>
+        Valid recipients: <strong style={{ color: '#fff' }}>{validCount}</strong><br />
+        Sent: <strong style={{ color: '#34d399' }}>{sentCount}</strong><br />
+        Failed: <strong style={{ color: failedCount > 0 ? '#f87171' : '#fff' }}>{failedCount}</strong>
       </p>
+      {failedCount > 0 && (
+        <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#fca5a5', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Failed recipients</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button style={{ ...S.btn('ghost'), padding: '7px 10px', fontSize: 11 }} onClick={handleCopyFailed} disabled={failedRecipients.length === 0}>
+                Copy failed emails
+              </button>
+              {failedRecipients.length > 0 && (
+                <button style={{ ...S.btn('danger'), padding: '7px 10px', fontSize: 11, opacity: retrying ? 0.5 : 1 }} onClick={onRetryFailed} disabled={retrying}>
+                  {retrying ? 'Retrying...' : 'Retry failed only'}
+                </button>
+              )}
+            </div>
+          </div>
+          {copyMsg && <p style={{ margin: '0 0 8px', color: copyMsg === 'Copied.' ? '#34d399' : '#f87171', fontSize: 11 }}>{copyMsg}</p>}
+          <div style={{ display: 'grid', gap: 8, maxHeight: 210, overflow: 'auto', paddingRight: 2 }}>
+            {failedRecipients.map(recipient => (
+              <div key={`${recipient.email}-${recipient.source}`} style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(248,113,113,0.16)', borderRadius: 8, padding: '9px 10px' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#fff', fontWeight: 700, wordBreak: 'break-all' }}>{recipient.email}</span>
+                  <span style={{ color: recipient.source === 'db' ? '#93c5fd' : '#c4b5fd', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{recipient.source}</span>
+                </div>
+                <p style={{ margin: '5px 0 0', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45, fontSize: 12 }}>{recipient.reason || 'Delivery failed. Check server logs for details.'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <button style={{ ...S.btn('ghost'), marginTop: 12, fontSize: 11 }} onClick={onReset}>Reset</button>
     </div>
   )
@@ -228,6 +282,7 @@ interface RightPanelProps {
   bulkResult:          BulkSendResult | null
   bulkError:           string | null
   onBulkReset:         () => void
+  onRetryFailed:       () => void
   dbUserCount:         number | null
 }
 
@@ -291,7 +346,7 @@ function RightPanel(props: Readonly<RightPanelProps>) {
         {/* Bulk send */}
         <p style={S.groupTitle}>Bulk Send</p>
         {props.bulkResult ? (
-          <BulkResult result={props.bulkResult} onReset={props.onBulkReset} />
+          <BulkResult result={props.bulkResult} onReset={props.onBulkReset} onRetryFailed={props.onRetryFailed} retrying={props.bulkSending} />
         ) : (
           <button
             style={{ ...S.btn('danger'), width: '100%', padding: '13px', opacity: props.bulkSending ? 0.5 : 1 }}
@@ -301,7 +356,7 @@ function RightPanel(props: Readonly<RightPanelProps>) {
             {props.bulkSending ? 'Sending…' : `🚀 Send to ${props.recipientMode === 'manual' ? `${manualCount} manual` : props.recipientMode === 'both' ? `DB + ${manualCount} manual` : 'all DB users'}`}
           </button>
         )}
-        {props.bulkError && !props.bulkResult && (
+        {props.bulkError && (
           <p style={{ fontSize: 12, color: '#f87171', margin: '8px 0 0', lineHeight: 1.5 }}>{props.bulkError}</p>
         )}
 
@@ -561,6 +616,27 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
     }
   }
 
+  const handleRetryFailed = async () => {
+    const failedEmails = [...new Set((bulkResult?.failedRecipients ?? []).map(recipient => recipient.email).filter(email => EMAIL_RE.test(email)))]
+    if (failedEmails.length === 0) {
+      setBulkError('No failed recipient emails are available to retry.')
+      return
+    }
+
+    setBulkSending(true)
+    setBulkError(null)
+    try {
+      const result = campaignType === 'announcement'
+        ? await adminApi.sendAnnouncementToAll(announcementForm, failedEmails, 'manual', manualLanguage)
+        : await adminApi.sendMarketingToAll(marketingForm, failedEmails, 'manual', manualLanguage)
+      setBulkResult(result)
+    } catch (error) {
+      setBulkError(getErrorMessage(error, 'Retry failed.'))
+    } finally {
+      setBulkSending(false)
+    }
+  }
+
   if (loading) return <div style={{ padding: 40, color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>Loading…</div>
 
   const handleBulkSendClick = () => {
@@ -666,6 +742,7 @@ function EmailToolsTab({ dbUserCount }: Readonly<{ dbUserCount: number | null }>
           bulkResult={bulkResult}
           bulkError={bulkError}
           onBulkReset={() => { setBulkResult(null); setBulkError(null) }}
+          onRetryFailed={handleRetryFailed}
           dbUserCount={dbUserCount}
         />
       </div>

@@ -4,8 +4,8 @@ import { buildMarketingEmailTemplate } from '@/lib/email/templates/marketing-ema
 import { localizeMarketingContent, resolveMarketingLang } from '@/lib/email/marketing-i18n'
 import type { SupportedLang } from '@/i18n/shared'
 import type { MarketingCampaignContent } from '@/lib/email/types/email-template.types'
-import { EMAIL_RE, MAX_MANUAL_RECIPIENTS } from './bulk-email-sender'
-import type { BulkSendResult, RecipientMode } from './bulk-email-sender'
+import { EMAIL_RE, MAX_MANUAL_RECIPIENTS, getSafeEmailFailureReason } from './bulk-email-sender'
+import type { BulkSendResult, FailedRecipient, RecipientMode } from './bulk-email-sender'
 
 interface MarketingRecipient {
   email: string
@@ -79,8 +79,8 @@ export async function sendMarketingEmails(opts: SendMarketingEmailsOptions): Pro
   }
 
   const templateByLang = new Map<SupportedLang, ReturnType<typeof buildMarketingEmailTemplate>>()
-  let sent   = 0
-  let failed = 0
+  let sent = 0
+  const failedRecipients: FailedRecipient[] = []
 
   const all = [...unique.values()]
 
@@ -95,25 +95,33 @@ export async function sendMarketingEmails(opts: SendMarketingEmailsOptions): Pro
           templateByLang.set(recipient.lang, template)
         }
         return sendEmail({ to: recipient.email, subject: template.subject, html: template.html, text: template.text })
-          .then(result => ({ result, source: recipient.source }))
+          .then(result => ({ result, recipient }))
       }),
     )
-    for (const { result, source } of results) {
+    for (const { result, recipient } of results) {
       if (result.success) {
         sent++
       } else {
-        failed++
-        console.error(`[marketing-email] ${source} delivery failed:`, result.error)
+        const reason = getSafeEmailFailureReason(result.error)
+        failedRecipients.push({ email: recipient.email, reason, source: recipient.source })
+        console.error(`[marketing-email] ${recipient.source} delivery failed:`, {
+          email: recipient.email,
+          error: result.error,
+        })
       }
     }
   }
 
+  const failed = failedRecipients.length
   return {
-    dbUsers:      dbUsersCount,
-    manualEmails: manualCount,
-    valid:        unique.size,
+    dbUsers:              dbUsersCount,
+    manualEmails:         manualCount,
+    valid:                unique.size,
     sent,
     failed,
+    sentCount:            sent,
+    failedCount:          failed,
+    validRecipientsCount: unique.size,
+    failedRecipients,
   }
 }
-
