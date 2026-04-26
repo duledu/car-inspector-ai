@@ -10,7 +10,7 @@ import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { buildInspectionReturnHref, detectPreliminaryMissingData } from '@/lib/report/preliminary'
-import { calculatePreliminaryRiskScore } from '@/modules/scoring'
+import { calculatePreliminaryRiskScore, AI_TOTAL_EXPECTED_PHOTOS } from '@/modules/scoring'
 import type { RiskScore, ScoreCalculationInput, ScoreDimension } from '@/types'
 import AppShell from '../AppShell'
 
@@ -93,13 +93,32 @@ function translateDimensionExplanationV2(key: string, text: string | undefined, 
 
   const normalizedText = normalizeReportTextV2(text)
 
-  if (normalizedText === 'No obvious issues detected from available photos. Results are advisory only.') return t('report.dimExplanation.ai.clean')
-  if (normalizedText === 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.') return t('report.dimExplanation.ai.limited')
-  if (normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') return t('report.dimExplanation.ai.noData')
-  if (normalizedText === 'Checklist not completed for this section.') return t('report.dimExplanation.checklist.notCompleted')
-  if (normalizedText === 'No items assessed yet.') return t('report.dimExplanation.checklist.notAssessed')
-  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return t('report.dimExplanation.vin.basic')
-  if (normalizedText === 'Test drive not yet completed.') return t('report.dimExplanation.testDrive.notCompleted')
+  // All t() calls below include defaultValue so they never render raw keys
+  // during the brief SSR/hydration gap when i18next is not yet fully ready.
+  if (normalizedText === 'No obvious issues detected from available photos. Results are advisory only.') return t('report.dimExplanation.ai.clean', { defaultValue: 'No obvious issues were detected from the available photos. Results are advisory only.' })
+  if (normalizedText === 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.') return t('report.dimExplanation.ai.limited', { defaultValue: 'No obvious issues detected, but limited photo coverage reduces confidence.' })
+  if (normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') return t('report.dimExplanation.ai.noData', { defaultValue: 'No photo analysis data is available yet. Upload more clear photos for a more reliable AI assessment.' })
+
+  const aiVeryLimitedMatch = normalizedText.match(/^No issues detected in (\d+) of (\d+) analyzed photos\. Very limited coverage/)
+  if (aiVeryLimitedMatch) {
+    return t('report.dimExplanation.ai.veryLimited', {
+      count: Number(aiVeryLimitedMatch[1]),
+      total: Number(aiVeryLimitedMatch[2]),
+      defaultValue: `No issues detected in ${aiVeryLimitedMatch[1]} of ${aiVeryLimitedMatch[2]} analyzed photos. Very limited coverage.`,
+    })
+  }
+  const aiPartialMatch = normalizedText.match(/^No issues detected in (\d+) of (\d+) analyzed photos\. Partial coverage/)
+  if (aiPartialMatch) {
+    return t('report.dimExplanation.ai.partialCoverage', {
+      count: Number(aiPartialMatch[1]),
+      total: Number(aiPartialMatch[2]),
+      defaultValue: `No issues detected in ${aiPartialMatch[1]} of ${aiPartialMatch[2]} analyzed photos. Partial coverage.`,
+    })
+  }
+  if (normalizedText === 'Checklist not completed for this section.') return t('report.dimExplanation.checklist.notCompleted', { defaultValue: 'This section of the checklist has not been completed.' })
+  if (normalizedText === 'No items assessed yet.') return t('report.dimExplanation.checklist.notAssessed', { defaultValue: 'No checklist items have been assessed yet.' })
+  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return t('report.dimExplanation.vin.basic', { defaultValue: 'Only basic VIN data is available. Unlock premium history for full history scoring.' })
+  if (normalizedText === 'Test drive not yet completed.') return t('report.dimExplanation.testDrive.notCompleted', { defaultValue: 'The test drive section has not been completed.' })
 
   const aiPhotoMatch = normalizedText.match(/^Issues detected in (\d+) of (\d+) photos\. Main concern: (.+?)\. Confidence: (\d+)%\. Further manual inspection recommended\.$/)
   if (aiPhotoMatch) {
@@ -355,6 +374,91 @@ function DimBar({
   )
 }
 
+// ─── Checklist status helpers ─────────────────────────────────────────────────
+
+type ChecklistStatus = 'ok' | 'warning' | 'problem' | 'mixed' | 'incomplete'
+
+// English fallbacks — shown if the i18n bundle hasn't hydrated yet or the key
+// is missing. Prevents raw keys ever appearing in the UI.
+const CHECKLIST_STATUS_EN: Record<ChecklistStatus, string> = {
+  ok:         'All clear',
+  warning:    'Needs attention',
+  problem:    'Issues found',
+  mixed:      'Mixed results',
+  incomplete: 'Not completed',
+}
+
+function getChecklistStatus(rawExplanation: string | undefined, score: number): ChecklistStatus {
+  const s = (rawExplanation ?? '').replace(/Â·/g, '·').replace(/\s+/g, ' ').trim()
+
+  if (!s || s.includes('Checklist not completed') || s.includes('No items assessed')) {
+    return 'incomplete'
+  }
+
+  const okM   = s.match(/(\d+)\s*OK/)
+  const warnM = s.match(/(\d+)\s*warnings?/)
+  const probM = s.match(/(\d+)\s*problems?/)
+  if (okM && warnM && probM) {
+    const ok   = Number(okM[1])
+    const warn = Number(warnM[1])
+    const prob = Number(probM[1])
+    if (prob > 0 && (warn > 0 || ok > 0)) return 'mixed'
+    if (prob > 0) return 'problem'
+    if (warn > 0 && ok > 0) return 'mixed'
+    if (warn > 0) return 'warning'
+    if (ok > 0) return 'ok'
+  }
+
+  return score >= 88 ? 'ok' : score >= 60 ? 'warning' : 'problem'
+}
+
+// Checklist-category card: status label instead of bare numeric score.
+// Stacked column layout (category name → status → bar → note) is inherently
+// mobile-safe — no horizontal collision possible regardless of screen width.
+// Progress bar preserved; reduced visual weight vs. the AI card.
+function ChecklistDimBar({
+  label,
+  score,
+  status,
+  statusLabel,
+  explanation,
+  visualMaxScore,
+}: Readonly<{
+  label: string
+  score: number
+  status: ChecklistStatus
+  statusLabel: string
+  explanation?: string
+  visualMaxScore?: number
+}>) {
+  const severity = status === 'incomplete'
+    ? { color: 'rgba(255,255,255,0.28)', border: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', explanation: 'rgba(255,255,255,0.28)' }
+    : getDimensionSeverity(score, visualMaxScore)
+
+  const barColor = status === 'incomplete' ? 'rgba(255,255,255,0.1)' : severity.color
+  // Detect when t() returned the raw i18n key (e.g. during SSR/hydration gap).
+  // A raw key equals the key pattern itself; in that case fall back to English.
+  const rawKey = `report.checklistStatus.${status}`
+  const resolvedLabel = (statusLabel && statusLabel !== rawKey) ? statusLabel : CHECKLIST_STATUS_EN[status]
+
+  return (
+    <div style={{ padding: '11px 13px', background: `linear-gradient(180deg, ${severity.background}, rgba(255,255,255,0.015))`, border: `1px solid ${severity.border}`, borderRadius: 11 }}>
+      {/* Category name */}
+      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.38)', marginBottom: 3, lineHeight: 1.3 }}>{label}</div>
+      {/* Status label — full width, never truncated or colliding */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: severity.color, marginBottom: 7, lineHeight: 1.3 }}>{resolvedLabel}</div>
+      {/* Progress bar */}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: status === 'incomplete' ? '0%' : `${score}%`, background: barColor, borderRadius: 3, transition: 'width 0.7s ease' }} />
+      </div>
+      {/* Explanation */}
+      {explanation && (
+        <div style={{ fontSize: 10.5, color: severity.explanation, marginTop: 5, lineHeight: 1.45 }}>{explanation}</div>
+      )}
+    </div>
+  )
+}
+
 // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Section label ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 function SectionLabel({ children, style }: Readonly<{ children: React.ReactNode; style?: React.CSSProperties }>) {
   return (
@@ -480,16 +584,22 @@ export default function ReportPage() {
   const { session, aiResults, checklistItems, testDriveRatings } = useInspectionStore()
   const { hasAccess }                  = usePaymentStore()
 
-  const [riskScore,   setRiskScore]   = useState<(Omit<RiskScore, 'id' | 'createdAt'> | RiskScore) | null>(null)
-  const [loading,     setLoading]     = useState(false)
-  const [calculating, setCalculating] = useState(false)
+  const [riskScore,        setRiskScore]        = useState<(Omit<RiskScore, 'id' | 'createdAt'> | RiskScore) | null>(null)
+  const [loading,          setLoading]          = useState(false)
+  const [calculating,      setCalculating]      = useState(false)
+  // True when the report page is auto-recalculating because the stored score
+  // was stale (checklist changed after the score was last saved).
+  const [autoRecalculating, setAutoRecalculating] = useState(false)
   const [calcError,   setCalcError]   = useState<string | null>(null)
   const [pdfLoading,  setPdfLoading]  = useState(false)
   const [pdfError,    setPdfError]    = useState<string | null>(null)
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
-  const [vehicleStoreHydrated, setVehicleStoreHydrated] = useState(() => useVehicleStore.persist.hasHydrated())
-  const [inspectionStoreHydrated, setInspectionStoreHydrated] = useState(() => useInspectionStore.persist.hasHydrated())
+  // Start as false on the server; the useEffect below reads the real value
+  // once mounted on the client. Using persist.hasHydrated() in a useState
+  // initializer throws on SSR because localStorage doesn't exist there.
+  const [vehicleStoreHydrated, setVehicleStoreHydrated] = useState(false)
+  const [inspectionStoreHydrated, setInspectionStoreHydrated] = useState(false)
   const [reportUnavailable, setReportUnavailable] = useState(false)
 
   const vehicleId  = activeVehicle?.id ?? ''
@@ -511,6 +621,19 @@ export default function ReportPage() {
   }
   const ownedChecklistItems   = checklistOwned ? checklistItems   : ([] as typeof checklistItems)
   const ownedTestDriveRatings = checklistOwned ? testDriveRatings : ({} as typeof testDriveRatings)
+
+  // AI results ownership guard — filter by vehicleId directly from each result.
+  // Unlike checklist items (which are implicitly scoped via session.vehicleId),
+  // every AIAnalysisResult carries an explicit vehicleId field we can check.
+  // This handles direct /report navigation where initSession() was never called.
+  const ownedAIResults = vehicleId
+    ? aiResults.filter(r => r.vehicleId === vehicleId)
+    : aiResults
+  if (process.env.NODE_ENV === 'development' && vehicleId && ownedAIResults.length < aiResults.length) {
+    console.warn(
+      `[report] ${aiResults.length - ownedAIResults.length} stale aiResult(s) discarded — vehicleId mismatch (active="${vehicleId}")`
+    )
+  }
 
   const normalizedChecklist = useMemo(() => normalizeChecklistItems(ownedChecklistItems), [ownedChecklistItems])
   const inspectionCompletion = useMemo(() => getInspectionCompletion(normalizedChecklist), [normalizedChecklist])
@@ -550,7 +673,7 @@ export default function ReportPage() {
       missing: missingCategoryLabels,
       isComplete: inspectionCompletion.isComplete,
       completedDimensions: {
-        ai: aiResults.length > 0,
+        ai: ownedAIResults.length > 0,
         exterior: inspectionCompletion.categoryProgress.EXTERIOR.answered > 0,
         interior: inspectionCompletion.categoryProgress.INTERIOR.answered > 0,
         mechanical: inspectionCompletion.categoryProgress.MECHANICAL.answered > 0,
@@ -558,22 +681,23 @@ export default function ReportPage() {
         documents: inspectionCompletion.categoryProgress.DOCUMENTS.answered > 0,
         vin: false,
       },
-      hasAnyData: aiResults.length > 0 || inspectionCompletion.answeredCount > 0 || Object.keys(derivedTestDriveRatings).length > 0,
+      hasAnyData: ownedAIResults.length > 0 || inspectionCompletion.answeredCount > 0 || Object.keys(derivedTestDriveRatings).length > 0,
     }
-  }, [aiResults.length, derivedTestDriveRatings, inspectionCompletion, t])
+  }, [ownedAIResults.length, derivedTestDriveRatings, inspectionCompletion, t])
 
   const preliminaryInput = useMemo<ScoreCalculationInput>(() => ({
-    aiFindings: aiResults.flatMap((result) => result.findings),
+    aiFindings: ownedAIResults.flatMap((result) => result.findings),
     photoCount: reportPhotoCount,
-    issuePhotoCount: aiResults.filter((result) =>
+    issuePhotoCount: ownedAIResults.filter((result) =>
       result.findings.some((finding) => finding.severity !== 'info' && Number(finding.confidence) >= 45)
     ).length,
+    totalExpectedPhotos: AI_TOTAL_EXPECTED_PHOTOS,
     checklistItems: normalizedChecklist,
     vinData: null,
     testDriveRatings: derivedTestDriveRatings,
     hasPremiumHistory: false,
     askingPrice: activeVehicle?.askingPrice ?? null,
-  }), [activeVehicle?.askingPrice, aiResults, normalizedChecklist, derivedTestDriveRatings, reportPhotoCount])
+  }), [activeVehicle?.askingPrice, ownedAIResults, normalizedChecklist, derivedTestDriveRatings, reportPhotoCount])
 
   const preliminaryMissingData = useMemo(() => detectPreliminaryMissingData({
     photoCount: reportPhotoCount,
@@ -647,12 +771,12 @@ export default function ReportPage() {
 
     try {
       const drafts = loadReportPhotoDrafts(vehicleId)
-      setReportPhotoCount(Math.max(drafts.length, aiResults.length))
+      setReportPhotoCount(Math.max(drafts.length, ownedAIResults.length))
     } catch (err) {
       console.error('[report] failed to read saved report photos', err, { vehicleId })
-      setReportPhotoCount(aiResults.length)
+      setReportPhotoCount(ownedAIResults.length)
     }
-  }, [aiResults.length, storesHydrated, vehicleId])
+  }, [ownedAIResults.length, storesHydrated, vehicleId])
 
   useEffect(() => {
     if (!storesHydrated) return
@@ -687,6 +811,35 @@ export default function ReportPage() {
       }
     })
   }, [activeVehicle, session?.vehicleId, storesHydrated, t])
+
+  // Auto-recalculate when the stored score was stale (getLatest returned null)
+  // and the inspection is complete. This fires when the user navigates to /report
+  // after changing checklist answers — no manual "Recalculate" click required.
+  useEffect(() => {
+    if (!storesHydrated || !vehicleId) return
+    if (loading || riskScore || autoRecalculating) return
+    if (preliminaryMode) return               // preliminary has its own flow
+    if (!sectionProgress.isComplete) return   // checklist not yet done
+
+    setAutoRecalculating(true)
+    setCalcError(null)
+    inspectionApi.calculateScore(vehicleId)
+      .then(s => {
+        setRiskScore(s)
+        setIsPreliminaryScore(false)
+        setReportUnavailable(false)
+      })
+      .catch((err: unknown) => {
+        if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
+          setReportUnavailable(true)
+          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+        } else {
+          setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
+        }
+      })
+      .finally(() => setAutoRecalculating(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, preliminaryMode, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId])
 
   useEffect(() => {
     if (!storesHydrated) return
@@ -800,7 +953,7 @@ export default function ReportPage() {
     )
   }
 
-  const latestAI = aiResults[0] ?? null
+  const latestAI = ownedAIResults[0] ?? null
   const latestAITotalPhotos = Math.max(
     Number(latestAI?.analyzedCount ?? 0),
     reportPhotoCount,
@@ -885,14 +1038,16 @@ export default function ReportPage() {
         </div>
 
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Loading ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        {loading && (
+        {(loading || autoRecalculating) && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
-            {t('report.loading')}
+            {autoRecalculating
+              ? t('report.autoRecalculating', { defaultValue: 'Updating report with latest answers…' })
+              : t('report.loading')}
           </div>
         )}
 
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ No score yet ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        {!loading && !riskScore && (
+        {!loading && !autoRecalculating && !riskScore && (
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
             {preliminaryMode ? (
               <div style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1243,16 +1398,32 @@ export default function ReportPage() {
             {dims.length > 0 && (
               <div>
                 <SectionLabel>{t('report.breakdown')}</SectionLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
                   {dims.map(d => {
-                    const dim = riskScore.dimensions[d.key]
+                    const dim        = riskScore.dimensions[d.key]
+                    const translated = translateDimensionExplanationV2(d.key, dim.explanation, t)
+                    const vms        = (dim as ScoreDimension).signals?.visualMaxScore
+                    if (d.key === 'ai') {
+                      return (
+                        <DimBar
+                          key={d.key}
+                          label={t('dim.ai')}
+                          score={dim.score}
+                          explanation={translated}
+                          visualMaxScore={vms}
+                        />
+                      )
+                    }
+                    const status = getChecklistStatus(dim.explanation, dim.score)
                     return (
-                      <DimBar
+                      <ChecklistDimBar
                         key={d.key}
                         label={t(`dim.${d.key}`)}
                         score={dim.score}
-                        explanation={translateDimensionExplanationV2(d.key, dim.explanation, t)}
-                        visualMaxScore={(dim as ScoreDimension).signals?.visualMaxScore}
+                        status={status}
+                        statusLabel={t(`report.checklistStatus.${status}`, { defaultValue: CHECKLIST_STATUS_EN[status] })}
+                        explanation={translated}
+                        visualMaxScore={vms}
                       />
                     )
                   })}
@@ -1340,17 +1511,28 @@ export default function ReportPage() {
                         {t(`report.severity.${f.severity}`)}
                       </span>
                     </div>
-                  )) : (
-                    <div style={{ padding: '18px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  )) : (() => {
+                    // Coverage-aware "no issues" message — never say "all good" when coverage is low.
+                    const aiCoverageRatio = reportPhotoCount > 0 ? reportPhotoCount / AI_TOTAL_EXPECTED_PHOTOS : 0
+                    const noIssuesHeadline =
+                      aiCoverageRatio < 0.3 ? t('inspection.noFlagsVeryLimited') :
+                      aiCoverageRatio < 0.5 ? t('inspection.noFlagsPartialCoverage') :
+                      t('inspection.noFlagsRaised')
+                    const noIssuesDetail = riskScore?.dimensions?.ai?.explanation
+                      ? (translateDimensionExplanationV2('ai', riskScore.dimensions.ai.explanation, t) ?? t('report.dimExplanation.ai.clean'))
+                      : t('report.dimExplanation.ai.clean')
+                    return (
+                      <div style={{ padding: '18px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>{noIssuesHeadline}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>{noIssuesDetail}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>{t('inspection.noFlagsRaised')}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>{t('report.dimExplanation.ai.clean')}</div>
-                      </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </div>
               </div>
 

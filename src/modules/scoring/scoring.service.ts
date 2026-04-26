@@ -5,7 +5,7 @@
 
 import { prisma } from '@/config/prisma'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
-import { calculateRiskScore, clampScore } from './scoring.logic'
+import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
 import type { AIResult, ChecklistItem } from '.prisma/client'
 
@@ -106,6 +106,7 @@ export class ScoringService {
       aiFindings,
       photoCount: aiResults.length || null,
       issuePhotoCount: actionableIssuePhotos || null,
+      totalExpectedPhotos: AI_TOTAL_EXPECTED_PHOTOS,
       checklistItems: normalizedChecklist,
       vinData: hasPremium && vinHistory ? (vinHistory.normalizedData as any) : null,
       testDriveRatings,
@@ -174,6 +175,8 @@ export class ScoringService {
   /**
    * getLatest
    * Fetch the most recent persisted risk score for a vehicle.
+   * Returns null when the checklist was modified after the score was calculated
+   * (i.e., the score is stale), forcing the caller to recalculate.
    */
   async getLatest(vehicleId: string): Promise<RiskScore | null> {
     const session = await prisma.inspectionSession.findFirst({
@@ -198,6 +201,19 @@ export class ScoringService {
       orderBy: { createdAt: 'desc' },
     })
     if (!score) return null
+
+    // Staleness check: if any checklist item was updated after the score was
+    // last calculated, the score no longer reflects the current answers.
+    // Return null so the caller is forced to recalculate rather than showing
+    // stale results silently.
+    const latestChecklistChange = (session?.checklistItems ?? []).reduce<Date | null>(
+      (max, item) => (!max || item.updatedAt > max ? item.updatedAt : max),
+      null
+    )
+    if (latestChecklistChange && latestChecklistChange > score.updatedAt) {
+      return null
+    }
+
     return this.mapToDto(score)
   }
 

@@ -502,3 +502,113 @@ describe('vehicle isolation — checklist ownership guard', () => {
     expect(result.verdict).toBe(baseline.verdict)
   })
 })
+
+// =============================================================================
+// Vehicle isolation — AI results ownership guard
+//
+// Verifies that the ownedAIResults filter in report/page.tsx and useRiskScore.ts
+// correctly excludes AI findings from a different vehicle, and that the scoring
+// engine produces the right output when stale AI data is discarded.
+// =============================================================================
+
+describe('vehicle isolation — AI results ownership guard', () => {
+  const vehicleAId = 'vehicle-a'
+  const vehicleBId = 'vehicle-b'
+
+  const makeAIResult = (vehicleId: string, severity: AIFinding['severity'] = 'warning', confidence = 72) => ({
+    id: `result-${vehicleId}`,
+    vehicleId,
+    findings: [makeAIFinding({ severity, confidence })],
+    overallScore: 75,
+    modelVersion: 'test',
+    createdAt: new Date().toISOString(),
+  })
+
+  // Simulates the filter applied in report/page.tsx and useRiskScore.ts
+  function filterOwnedAIResults(allResults: ReturnType<typeof makeAIResult>[], activeVehicleId: string) {
+    return allResults.filter(r => r.vehicleId === activeVehicleId)
+  }
+
+  test('AI findings from Vehicle A are excluded when active vehicle is B', () => {
+    const storeResults = [makeAIResult(vehicleAId)]
+    const owned = filterOwnedAIResults(storeResults, vehicleBId)
+
+    expect(owned).toHaveLength(0)
+  })
+
+  test('AI findings from Vehicle B are kept when active vehicle is B', () => {
+    const storeResults = [makeAIResult(vehicleBId), makeAIResult(vehicleAId)]
+    const owned = filterOwnedAIResults(storeResults, vehicleBId)
+
+    expect(owned).toHaveLength(1)
+    expect(owned[0].vehicleId).toBe(vehicleBId)
+  })
+
+  test('stale Vehicle A critical findings lower Vehicle B score when guard is absent', () => {
+    // Vehicle A had a critical AI finding. Vehicle B has no photos analyzed yet.
+    const vehicleAResult = makeAIResult(vehicleAId, 'critical', 90)
+    const storeResults   = [vehicleAResult]
+
+    const ownedForB = filterOwnedAIResults(storeResults, vehicleBId)
+    const staleForB = storeResults // unfiltered — represents the bug (no guard)
+
+    // Owned: Vehicle B has no photos → "no data" baseline
+    expect(ownedForB).toHaveLength(0)
+
+    const inputOwned: ScoreCalculationInput = {
+      ...emptyInput,
+      aiFindings: [],
+      photoCount: null,
+    }
+    const inputStale: ScoreCalculationInput = {
+      ...emptyInput,
+      aiFindings: staleForB.flatMap(r => r.findings),
+      photoCount: staleForB.length || null,
+    }
+
+    const scoreOwned = calculateRiskScore(vehicleBId, inputOwned)
+    const scoreStale = calculateRiskScore(vehicleBId, inputStale)
+
+    // With no guard: Vehicle A's critical finding severely penalises Vehicle B's score
+    expect(scoreStale.buyScore).toBeLessThan(scoreOwned.buyScore)
+    // The correct path shows "no photos" — not a critical-finding explanation
+    expect(scoreOwned.dimensions.ai.explanation).toContain('No photo analysis data available')
+    expect(scoreStale.dimensions.ai.score).toBeLessThan(scoreOwned.dimensions.ai.score)
+  })
+
+  test('Vehicle B with no AI results shows noData AI explanation when no photos analyzed', () => {
+    const result = calculateRiskScore(vehicleBId, { ...emptyInput, photoCount: null, aiFindings: [] })
+    expect(result.dimensions.ai.explanation).toContain('No photo analysis data available')
+  })
+
+  test('returning to Vehicle A restores its AI findings correctly via ownership filter', () => {
+    // Store has results from both vehicles after switching back and forth
+    const storeResults = [
+      makeAIResult(vehicleAId, 'critical', 85),
+      makeAIResult(vehicleBId, 'warning',  70),
+    ]
+
+    const ownedForA = filterOwnedAIResults(storeResults, vehicleAId)
+    const ownedForB = filterOwnedAIResults(storeResults, vehicleBId)
+
+    expect(ownedForA).toHaveLength(1)
+    expect(ownedForA[0].vehicleId).toBe(vehicleAId)
+
+    expect(ownedForB).toHaveLength(1)
+    expect(ownedForB[0].vehicleId).toBe(vehicleBId)
+
+    // Vehicle A had a critical finding — should score worse than B's warning
+    const scoreA = calculateRiskScore(vehicleAId, {
+      ...emptyInput,
+      aiFindings: ownedForA.flatMap(r => r.findings),
+      photoCount: ownedForA.length,
+    })
+    const scoreB = calculateRiskScore(vehicleBId, {
+      ...emptyInput,
+      aiFindings: ownedForB.flatMap(r => r.findings),
+      photoCount: ownedForB.length,
+    })
+
+    expect(scoreA.buyScore).toBeLessThan(scoreB.buyScore)
+  })
+})

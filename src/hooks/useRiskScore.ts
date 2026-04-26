@@ -35,12 +35,18 @@ export function useRiskScore(): UseRiskScoreReturn {
   const ownedChecklistItems   = checklistOwned ? checklistItems   : ([] as typeof checklistItems)
   const ownedTestDriveRatings = checklistOwned ? testDriveRatings : ({} as typeof testDriveRatings)
 
+  // AI results ownership guard — each AIAnalysisResult carries its own vehicleId,
+  // so we can filter precisely rather than relying solely on session.vehicleId.
+  const ownedAIResults = activeVehicle?.id
+    ? aiResults.filter(r => r.vehicleId === activeVehicle.id)
+    : aiResults
+
   // Memoized calculation — recomputes only when inputs change
   const score = useMemo(() => {
     if (!activeVehicle) return null
 
-    const aiFindings = aiResults.flatMap((r) => r.findings)
-    const actionableIssuePhotos = aiResults.filter((result) =>
+    const aiFindings = ownedAIResults.flatMap((r) => r.findings)
+    const actionableIssuePhotos = ownedAIResults.filter((result) =>
       result.findings.some((finding) => {
         const confidence = Number(finding.confidence)
         return finding.severity !== 'info' && Number.isFinite(confidence) && confidence >= 45
@@ -53,7 +59,7 @@ export function useRiskScore(): UseRiskScoreReturn {
 
     const input: ScoreCalculationInput = {
       aiFindings,
-      photoCount: aiResults.length || null,
+      photoCount: ownedAIResults.length || null,
       issuePhotoCount: actionableIssuePhotos || null,
       checklistItems: ownedChecklistItems,
       vinData: null, // VIN data pulled server-side when premium
@@ -63,7 +69,7 @@ export function useRiskScore(): UseRiskScoreReturn {
     }
 
     return calculateRiskScore(activeVehicle.id, input)
-  }, [activeVehicle?.id, ownedChecklistItems, aiResults, ownedTestDriveRatings, hasPremium])
+  }, [activeVehicle?.id, ownedChecklistItems, ownedAIResults, ownedTestDriveRatings, hasPremium])
 
   const buyScore = score?.buyScore ?? 0
   const riskScore = score?.riskScore ?? 0

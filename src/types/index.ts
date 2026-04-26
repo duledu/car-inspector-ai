@@ -213,6 +213,7 @@ export interface ScoreCalculationInput {
   aiFindings: AIFinding[]
   photoCount?: number | null
   issuePhotoCount?: number | null
+  totalExpectedPhotos?: number | null
   checklistItems: ChecklistItem[]
   vinData?: VehicleHistoryResult | null
   testDriveRatings: Record<string, number>

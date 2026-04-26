@@ -145,6 +145,16 @@ export const useInspectionStore = create<InspectionStore>()(
       },
 
       pushAIResult: (result) => {
+        const currentVehicleId = get().session?.vehicleId
+        // Guard: reject results that belong to a different vehicle.
+        // This prevents a race where an in-flight AI request for Vehicle A
+        // resolves after the user has already switched to Vehicle B.
+        if (currentVehicleId && result.vehicleId && result.vehicleId !== currentVehicleId) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[inspection-store] pushAIResult: discarding stale result vehicleId="${result.vehicleId}" (active="${currentVehicleId}")`)
+          }
+          return
+        }
         set((state) => {
           state.aiResults.unshift(result)
         })
@@ -207,14 +217,23 @@ export const useInspectionStore = create<InspectionStore>()(
         }
         // Reconstruct explicitly — do NOT use spread so every field is intentional.
         // vehicle-scoped data (checklistItems, aiResults, testDriveRatings) is only
-        // valid for storedVehicleId; the report page validates ownership before use.
+        // valid for storedVehicleId. Filter aiResults so that any result whose
+        // vehicleId differs from the stored session is dropped on hydration — this
+        // prevents a stale Vehicle A result from leaking into a Vehicle B session
+        // when the page refreshes with an old localStorage snapshot.
+        const filteredAIResults = storedVehicleId
+          ? (p.aiResults ?? []).filter(r => !r.vehicleId || r.vehicleId === storedVehicleId)
+          : (p.aiResults ?? [])
+        if (process.env.NODE_ENV === 'development' && p.aiResults && filteredAIResults.length < (p.aiResults.length ?? 0)) {
+          console.warn(`[inspection-store] merge: dropped ${(p.aiResults.length ?? 0) - filteredAIResults.length} stale aiResult(s) whose vehicleId !== "${storedVehicleId}"`)
+        }
         return {
           ...current,
           session:            p.session            ?? null,
           currentPhase:       p.currentPhase       ?? 'PRE_SCREENING',
           activeChecklistTab: p.activeChecklistTab ?? 'EXTERIOR',
           checklistItems:     normalizeChecklistItems(p.checklistItems ?? []),
-          aiResults:          p.aiResults          ?? [],
+          aiResults:          filteredAIResults,
           testDriveRatings:   p.testDriveRatings   ?? {},
         }
       },

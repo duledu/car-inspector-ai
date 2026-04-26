@@ -918,19 +918,48 @@ function RiskAnalysisPhase({
             </div>
           )}
 
-          {flagged.length === 0 && failed.length === 0 && analyzed.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <div>
-                <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                  {!isPartial && analyzed.length === total
-                    ? t('inspection.analysisFull', { total })
-                    : t('inspection.analyzedCount', { count: clean.length, total })}
+          {flagged.length === 0 && failed.length === 0 && analyzed.length > 0 ? (() => {
+            const coverageRatio = analyzed.length / total
+            if (coverageRatio < 0.3) {
+              // Very limited coverage — never show a green "no issues" box.
+              return (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 9 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                    {t('inspection.noFlagsVeryLimited', { defaultValue: 'No issues in the analyzed photos, but most of the vehicle was not covered. Upload more photos for reliable results.' })}
+                  </span>
+                </div>
+              )
+            }
+            if (coverageRatio < 0.5) {
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <div>
+                    <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsPartialCoverage', { defaultValue: 'No issues detected in the analyzed photos. Partial coverage — results may not represent the full vehicle condition.' })}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                      {t('inspection.analyzedCount', { count: analyzed.length, total })}
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                    {!isPartial && analyzed.length === total
+                      ? t('inspection.analysisFull', { total })
+                      : t('inspection.analyzedCount', { count: clean.length, total })}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
+            )
+          })() : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {flagged.map(p => (
                 <div key={p.key} style={{

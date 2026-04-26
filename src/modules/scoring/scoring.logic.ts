@@ -57,6 +57,10 @@ function logInvalidNumber(context: string, value: unknown, fallback: number) {
 }
 
 // â”€â”€â”€ Weight Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Total number of photo angles in the standard 8-angle inspection set.
+// Used to compute coverage ratio; passed via ScoreCalculationInput.totalExpectedPhotos.
+export const AI_TOTAL_EXPECTED_PHOTOS = 8
+
 // Weights must sum to 100
 export const SCORE_WEIGHTS = {
   ai: 25,
@@ -365,7 +369,8 @@ function getAIFindingImpactWeight(finding: AIFinding): number {
 function calculateAIScore(
   findings: AIFinding[],
   photoCount?: number | null,
-  issuePhotoCount?: number | null
+  issuePhotoCount?: number | null,
+  totalExpectedPhotos?: number | null
 ): ScoreDimension {
   const safeFindings = safeArray<AIFinding>(findings).filter((f) => f && typeof f === 'object')
   const safePhotoCount = Math.max(
@@ -389,6 +394,35 @@ function calculateAIScore(
       }
     }
 
+    // Coverage ratio — how many of the expected angles were actually analyzed.
+    // Prevents "no issues detected" from being treated as a clean bill of health
+    // when only a fraction of the vehicle was inspected.
+    const safeTotal = Math.max(safePhotoCount, coercePositiveCount(totalExpectedPhotos) ?? AI_TOTAL_EXPECTED_PHOTOS)
+    const coverageRatio = safePhotoCount / safeTotal
+
+    if (coverageRatio < 0.3) {
+      // 1–2 of 8 photos analyzed — nearly nothing inspected.
+      return {
+        label: 'AI Photo Analysis',
+        score: 58,
+        weight: SCORE_WEIGHTS.ai,
+        explanation: `No issues detected in ${safePhotoCount} of ${safeTotal} analyzed photos. Very limited coverage — most of the vehicle was not inspected.`,
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 65 },
+      }
+    }
+
+    if (coverageRatio < 0.5) {
+      // 3 of 8 photos analyzed — less than half the vehicle covered.
+      return {
+        label: 'AI Photo Analysis',
+        score: 72,
+        weight: SCORE_WEIGHTS.ai,
+        explanation: `No issues detected in ${safePhotoCount} of ${safeTotal} analyzed photos. Partial coverage — results may not reflect the full vehicle condition.`,
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 79, issueCount: 0, issueRatio: 0 },
+      }
+    }
+
+    // coverage >= 0.5: apply the pre-existing threshold logic unchanged.
     if (safePhotoCount < 5) {
       return {
         label: 'AI Photo Analysis',
@@ -1047,10 +1081,10 @@ function generateReasons(
 // â”€â”€â”€ Internal dimension calculator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function calculateAllDimensions(input: ScoreCalculationInput) {
-  const { aiFindings, photoCount, issuePhotoCount, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
+  const { aiFindings, photoCount, issuePhotoCount, totalExpectedPhotos, checklistItems, vinData, testDriveRatings, hasPremiumHistory } = input
 
   return {
-    ai:        calculateAIScore(safeArray<AIFinding>(aiFindings), photoCount, issuePhotoCount),
+    ai:        calculateAIScore(safeArray<AIFinding>(aiFindings), photoCount, issuePhotoCount, totalExpectedPhotos),
     exterior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'EXTERIOR',   'Exterior Inspection', SCORE_WEIGHTS.exterior),
     interior:  calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'INTERIOR',   'Interior Inspection', SCORE_WEIGHTS.interior),
     mechanical:calculateChecklistScore(safeArray<ChecklistItem>(checklistItems), 'MECHANICAL', 'Mechanical Check',    SCORE_WEIGHTS.mechanical),
