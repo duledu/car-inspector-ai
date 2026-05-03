@@ -5,6 +5,7 @@
 
 import { prisma } from '@/config/prisma'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
 import type { AIResult, ChecklistItem } from '.prisma/client'
@@ -41,6 +42,7 @@ export class ScoringService {
       throw new Error('VEHICLE_NOT_FOUND')
     }
 
+    const dbFetchStart = Date.now()
     const [session, aiResults, vinHistory, purchase] = await Promise.all([
       prisma.inspectionSession.findFirst({
         where: { vehicleId, userId },
@@ -56,11 +58,19 @@ export class ScoringService {
         where: { vehicleId, userId, status: 'PAID', productType: 'CARVERTICAL_REPORT' },
       }),
     ])
+    const dbFetchMs = Date.now() - dbFetchStart
 
     const aiFindings: AIFinding[] = aiResults.flatMap((r: AIResult) => {
       const findings = r.findings as unknown
       if (!Array.isArray(findings)) {
-        console.warn('[scoring/service] invalid AI findings payload', { vehicleId, aiResultId: r.id })
+        pipelineLog({
+          step: 'score:invalid-ai-findings',
+          requestId: generateRequestId(),
+          vehicleId,
+          success: false,
+          durationMs: Date.now() - dbFetchStart,
+          meta: { aiResultId: r.id },
+        })
         return []
       }
       return findings as AIFinding[]
@@ -114,7 +124,9 @@ export class ScoringService {
       askingPrice: vehicle.askingPrice,
     }
 
+    const computeStart = Date.now()
     const scoreResult = calculateRiskScore(vehicleId, input)
+    const computeMs = Date.now() - computeStart
 
     // Store riskFlags, negotiationHints, and serviceHistoryStatus inside the
     // breakdown JSON field — no schema migration required.
@@ -142,6 +154,7 @@ export class ScoringService {
       reasonsAgainst: scoreResult.reasonsAgainst,
     }
 
+    const dbPersistStart = Date.now()
     let saved
     if (session?.id) {
       saved = await prisma.riskScore.upsert({
@@ -168,6 +181,16 @@ export class ScoringService {
             },
           })
     }
+    const dbPersistMs = Date.now() - dbPersistStart
+
+    pipelineLog({
+      step: 'score:sub-timings',
+      requestId: generateRequestId(),
+      vehicleId,
+      success: true,
+      durationMs: dbFetchMs + computeMs + dbPersistMs,
+      meta: { dbFetchMs, computeMs, dbPersistMs, verdict: scoreResult.verdict, buyScore: scoreData.buyScore },
+    })
 
     return this.mapToDto(saved)
   }

@@ -11,6 +11,7 @@ import { AiConsentModal } from '@/components/inspection/AiConsentModal'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { getChecklistDiagnostics, getInspectionCompletion } from '@/lib/inspection/checklist'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 import AppShell from '../AppShell'
 
 // ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
@@ -65,6 +66,8 @@ type MockAIResult = {
   confidenceScore?: number
   recommendation?: string
   failureReason?: string
+  isUsable?: boolean
+  usabilityReason?: 'NOT_VEHICLE' | 'LOW_QUALITY' | 'UNCERTAIN' | 'OK'
 }
 type ChecklistRow = { id: string; itemKey: string; itemLabel: string; status: ItemStatus; notes?: string | null }
 type PreparedAIImage = { imageBase64: string; mimeType: string; width: number; height: number; size: number }
@@ -73,6 +76,8 @@ const AI_IMAGE_MAX_DIMENSION = 1024
 const AI_IMAGE_QUALITY = 0.82
 const AI_REQUEST_TIMEOUT_MS = 35_000
 const AI_MAX_ATTEMPTS = 3
+/** Must match MAX_IMAGE_BYTES on the server. Checked after client compression. */
+const MAX_CLIENT_IMAGE_BYTES = 750 * 1024
 
 // All 8 exterior slots are analysed. Angle shots expose accident damage best;
 // side shots provide supporting context on panel continuity.
@@ -84,8 +89,41 @@ const AI_PRIORITY_ANGLES = new Set([
 
 let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
 
-function logPhotoFlow(step: string, details?: Record<string, unknown>) {
-  console.info(`[inspection/photo] ${step}`, details ?? {})
+/**
+ * Derives usability from the AI result.
+ * Trusts the server-supplied `isUsable` field when present (new responses);
+ * falls back to local inference for photos restored from localStorage cache.
+ */
+function deriveUsability(result: MockAIResult): { isUsable: boolean; usabilityReason: string } {
+  if (result.isUsable !== undefined) {
+    return { isUsable: result.isUsable, usabilityReason: result.usabilityReason ?? 'OK' }
+  }
+  if (result.failureReason) return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
+  if (result.imageQuality === 'unusable') {
+    const sig = (result.signal ?? '').toLowerCase()
+    return {
+      isUsable: false,
+      usabilityReason: (sig.includes('inspectable') || sig.includes('vehicle') || sig.includes('car'))
+        ? 'NOT_VEHICLE'
+        : 'LOW_QUALITY',
+    }
+  }
+  const conf = result.confidenceScore ?? 100
+  if (conf < 40) return { isUsable: false, usabilityReason: 'UNCERTAIN' }
+  return { isUsable: true, usabilityReason: 'OK' }
+}
+
+function logPhotoFlow(step: string, details?: Record<string, unknown>, success = true) {
+  const durationMs = typeof details?.durationMs === 'number' ? details.durationMs : 0
+  const meta = { ...(details ?? {}) }
+  delete meta.durationMs
+  pipelineLog({
+    step: `inspection/photo:${step}`,
+    requestId: generateRequestId(),
+    success,
+    durationMs,
+    meta,
+  })
 }
 
 function sleep(ms: number): Promise<void> {
@@ -99,7 +137,56 @@ function friendlyAIDetail(fallbackDetail: string, reason: string, t: (key: strin
   // Only actual 429 rate-limit bursts should show "busy" — outages, config errors, and
   // unknown failures use the generic error message which is more accurate.
   if (reason === 'RATE_LIMIT')       return t('inspection.analysisFailedBusy',    { defaultValue: fallbackDetail })
-  return fallbackDetail
+  if (reason === 'CONFIG_ERROR')      return t('inspection.analysisFailedConfig',  { defaultValue: fallbackDetail })
+  if (reason === 'PROVIDER_OUTAGE')   return t('inspection.analysisFailedOutage',  { defaultValue: fallbackDetail })
+  if (reason === 'PROVIDER_RESPONSE') return t('inspection.analysisFailedResponse', { defaultValue: fallbackDetail })
+  if (reason === 'BAD_REQUEST')       return t('inspection.analysisFailedImage',   { defaultValue: fallbackDetail })
+  return t('inspection.analysisFailedUnknown', { defaultValue: fallbackDetail })
+}
+
+function friendlyAIReasonLabel(reason: string | undefined, t: TFn): string {
+  if (!reason) return ''
+  return t(`inspection.failure.${reason}`, {
+    defaultValue: t('inspection.failure.UNKNOWN', { defaultValue: 'Analysis issue' }),
+  })
+}
+
+function photoNeedsRetake(photo: PhotoEntry | undefined): boolean {
+  if (!photo?.aiResult || photo.aiPending) return false
+  return !!photo.aiResult.failureReason || !deriveUsability(photo.aiResult).isUsable
+}
+
+function canRetryExistingPhoto(photo: PhotoEntry | undefined): boolean {
+  return !!photo && photo.file.size > 0 && AI_PRIORITY_ANGLES.has(photo.key)
+}
+
+function photoStatusLabel(photo: PhotoEntry | undefined, t: TFn): { text: string; color: string; bg: string; border: string } | null {
+  if (!photo) return null
+  if (photo.aiPending) {
+    return {
+      text: t('inspection.statusAnalyzing', { defaultValue: 'Analyzing...' }),
+      color: '#22d3ee',
+      bg: 'rgba(34,211,238,0.12)',
+      border: 'rgba(34,211,238,0.28)',
+    }
+  }
+  if (photoNeedsRetake(photo)) {
+    return {
+      text: t('inspection.statusNeedsRetake', { defaultValue: 'Needs retake' }),
+      color: '#ef4444',
+      bg: 'rgba(239,68,68,0.13)',
+      border: 'rgba(239,68,68,0.28)',
+    }
+  }
+  if (photo.aiResult) {
+    return {
+      text: t('inspection.statusAnalyzed', { defaultValue: 'Analyzed' }),
+      color: '#22c55e',
+      bg: 'rgba(34,197,94,0.12)',
+      border: 'rgba(34,197,94,0.25)',
+    }
+  }
+  return null
 }
 
 async function enqueueAIAnalysis<T>(task: () => Promise<T>): Promise<T> {
@@ -213,7 +300,7 @@ async function loadBitmapWithOrientation(file: File): Promise<ImageBitmap | null
   } catch (err) {
     logPhotoFlow('image_bitmap_orientation_failed', {
       reason: err instanceof Error ? err.message : String(err),
-    })
+    }, false)
     return null
   }
 }
@@ -278,7 +365,15 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
   const startedAt = Date.now()
   try {
     logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type })
+    if (!file.type.startsWith('image/')) {
+      logPhotoFlow('ai_rejected_invalid_type', { key, fileType: file.type }, false)
+      throw new Error('IMAGE_VALIDATION')
+    }
     const prepared = await prepareImageForAI(file)
+    if (prepared.size > MAX_CLIENT_IMAGE_BYTES) {
+      logPhotoFlow('ai_rejected_oversized', { key, preparedSize: prepared.size, limitBytes: MAX_CLIENT_IMAGE_BYTES }, false)
+      throw new Error('IMAGE_VALIDATION')
+    }
     logPhotoFlow('ai_prepare_finished', {
       key,
       preparedSize: prepared.size,
@@ -336,7 +431,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
 
       logPhotoFlow('ai_response_received', {
         key, status: res.status, clientAttempt,
-        elapsedMs: Date.now() - startedAt, hasData: !!json?.data,
+        durationMs: Date.now() - startedAt, hasData: !!json?.data,
         failureReason: json?.data?.failureReason,
       })
 
@@ -369,7 +464,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     throw new Error('RATE_LIMIT')
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
-    logPhotoFlow('ai_failure', { key, reason, elapsedMs: Date.now() - startedAt })
+    logPhotoFlow('ai_failure', { key, reason, durationMs: Date.now() - startedAt }, false)
     const friendlyReason = reason.includes('decode') || reason.includes('Unsupported') || reason.includes('dimensions') ? 'IMAGE_VALIDATION' : reason
     return {
       signal: fallbackSignal,
@@ -383,6 +478,8 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       confidenceScore: 0,
       recommendation: tFn('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photo or try again with a stable network connection.' }),
       failureReason: friendlyReason,
+      isUsable: false,
+      usabilityReason: 'LOW_QUALITY',
     }
   }
 }
@@ -401,6 +498,7 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
     ...(result.detectedIssues ?? []).slice(0, 2),
     ...(result.possibleIssues ?? []).slice(0, 1),
   ].slice(0, 3)
+  const failureLabel = friendlyAIReasonLabel(result.failureReason, t as TFn)
   return (
     <div style={{ padding: '8px 10px', background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, marginTop: 8, display: 'flex', gap: 8 }}>
       <div style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, flexShrink: 0, marginTop: 3 }} />
@@ -417,6 +515,17 @@ function AIBadge({ result }: Readonly<{ result: MockAIResult }>) {
               padding: '1px 5px',
             }}>
               {t(`inspection.imgQuality.${result.imageQuality}`, { defaultValue: result.imageQuality })}
+            </span>
+          )}
+          {result.failureReason && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+              color: '#f59e0b',
+              border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 4,
+              padding: '1px 5px',
+            }}>
+              {failureLabel}
             </span>
           )}
           {/* Confidence level badge on successful analysis */}
@@ -465,13 +574,16 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
 }>) {
   const { t } = useTranslation()
   const label = t(`angle.${angle.key}`, { defaultValue: angle.label })
-  const isFailed  = !!(photo?.aiResult?.failureReason && !photo?.aiPending)
-  const hasResult = !!(photo?.aiResult && !photo?.aiPending)
-  const sev = photo?.aiResult?.severity
-  const borderColor = hasResult && !isFailed
-    ? sev === 'flag' ? 'rgba(239,68,68,0.55)' : sev === 'warn' ? 'rgba(245,158,11,0.45)' : 'rgba(34,197,94,0.45)'
+  const isFailed     = !!(photo?.aiResult?.failureReason && !photo?.aiPending)
+  const hasResult    = !!(photo?.aiResult && !photo?.aiPending)
+  const sev          = photo?.aiResult?.severity
+  const isUnusable   = hasResult && photo?.aiResult ? !deriveUsability(photo.aiResult).isUsable : false
+  const status       = photoStatusLabel(photo, t as TFn)
+  const borderColor  = hasResult && !isFailed
+    ? isUnusable ? 'rgba(239,68,68,0.55)'
+    : sev === 'flag' ? 'rgba(239,68,68,0.55)' : sev === 'warn' ? 'rgba(245,158,11,0.45)' : 'rgba(34,197,94,0.45)'
     : photo ? 'rgba(34,211,238,0.22)' : 'rgba(255,255,255,0.08)'
-  const dotColor = isFailed ? '#f59e0b' : sev === 'flag' ? '#ef4444' : sev === 'warn' ? '#f59e0b' : '#22c55e'
+  const dotColor     = isUnusable ? '#ef4444' : isFailed ? '#f59e0b' : sev === 'flag' ? '#ef4444' : sev === 'warn' ? '#f59e0b' : '#22c55e'
 
   return (
     <button
@@ -479,6 +591,7 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
       aria-label={photo ? `Retake ${label}` : `Capture ${label}`}
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+        minHeight: 44,
         padding: 0, background: 'transparent', border: 'none', cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -522,6 +635,46 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
             background: dotColor,
             boxShadow: `0 0 5px ${dotColor}`,
           }} />
+        )}
+
+        {/* Unusable photo overlay — shown when vehicle not visible */}
+        {isUnusable && (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 9,
+            background: 'rgba(239,68,68,0.10)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            </svg>
+          </div>
+        )}
+
+        {status && (
+          <div style={{
+            position: 'absolute', left: 4, bottom: 4,
+            maxWidth: 'calc(100% - 32px)',
+            padding: '2px 5px',
+            borderRadius: 5,
+            background: status.bg,
+            border: `1px solid ${status.border}`,
+            backdropFilter: 'blur(4px)',
+          }}>
+            <span style={{
+              display: 'block',
+              fontSize: 9,
+              fontWeight: 700,
+              lineHeight: 1.25,
+              color: status.color,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {status.text}
+            </span>
+          </div>
         )}
 
         {/* Retake icon (bottom-right) */}
@@ -572,24 +725,37 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
 }
 
 // ─── Photo Grid ───────────────────────────────────────────────────────────────
-function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (key: string, label: string) => void }>) {
+function PhotoGrid({ photos, onAdd, onRetry }: Readonly<{
+  photos: PhotoEntry[]
+  onAdd: (key: string, label: string) => void
+  onRetry: (key: string) => void
+}>) {
   const { t } = useTranslation()
   const captured = photos.length
   const total    = PHOTO_ANGLES.length
+  const analyzed = photos.filter(p => p.aiResult && !p.aiPending).length
+  const needsRetake = photos.filter(photoNeedsRetake).length
 
   return (
     <div>
       {/* Progress summary */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)' }}>
-          {t('inspection.photosCaptured', { count: captured, total })}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>
+            {t('inspection.photosAnalyzedCount', { count: analyzed, total, defaultValue: '{{count}} / {{total}} photos analyzed' })}
+          </div>
+          <div style={{ fontSize: 11, color: needsRetake > 0 ? '#f59e0b' : 'rgba(255,255,255,0.38)', marginTop: 2, lineHeight: 1.35 }}>
+            {needsRetake > 0
+              ? t('inspection.photosNeedRetakeCount', { count: needsRetake, defaultValue: '{{count}} need retake or retry' })
+              : t('inspection.photosCaptured', { count: captured, total })}
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 80, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(captured / total) * 100}%`, background: '#22d3ee', borderRadius: 2, transition: 'width 0.3s ease' }} />
+            <div style={{ height: '100%', width: `${(analyzed / total) * 100}%`, background: needsRetake > 0 ? '#f59e0b' : '#22d3ee', borderRadius: 2, transition: 'width 0.3s ease' }} />
           </div>
           <span style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, minWidth: 28, textAlign: 'right' }}>
-            {Math.round((captured / total) * 100)}%
+            {Math.round((analyzed / total) * 100)}%
           </span>
         </div>
       </div>
@@ -635,7 +801,10 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
               {/* AI analysis results for this row (only when available) */}
               {resultsInRow.length > 0 && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {resultsInRow.map(({ angle, photo }) => (
+                  {resultsInRow.map(({ angle, photo }) => {
+                    const needsRetakeForPhoto = photoNeedsRetake(photo)
+                    const retryAvailable = canRetryExistingPhoto(photo)
+                    return (
                     <div key={angle.key}>
                       <div style={{
                         fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -644,8 +813,51 @@ function PhotoGrid({ photos, onAdd }: Readonly<{ photos: PhotoEntry[]; onAdd: (k
                         {t(`angle.${angle.key}`, { defaultValue: angle.label })}
                       </div>
                       <AIBadge result={photo!.aiResult!} />
+                    {needsRetakeForPhoto && (
+                      <div style={{
+                        marginTop: 5,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                        padding: '7px 8px',
+                        background: 'rgba(239,68,68,0.07)',
+                        border: '1px solid rgba(239,68,68,0.22)',
+                        borderRadius: 6,
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
+                          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                        </svg>
+                        <span style={{ fontSize: 10.5, color: '#ef4444', lineHeight: 1.4, flex: 1, minWidth: 0 }}>
+                          {t('inspection.unusableRetake', { defaultValue: 'Vehicle not clearly visible — please retake this shot' })}
+                        </span>
+                      </div>
+                    )}
+                    {needsRetakeForPhoto && (
+                      <button
+                        type="button"
+                        onClick={() => retryAvailable ? onRetry(photo!.key) : onAdd(angle.key, t(`angle.${angle.key}`, { defaultValue: angle.label }))}
+                        disabled={photo?.aiPending}
+                        style={{
+                          minHeight: 40,
+                          marginTop: 6,
+                          padding: '0 12px',
+                          borderRadius: 9,
+                          border: '1px solid rgba(239,68,68,0.35)',
+                          background: 'rgba(239,68,68,0.12)',
+                          color: '#fca5a5',
+                          fontSize: 11.5,
+                          fontWeight: 800,
+                          fontFamily: 'var(--font-sans)',
+                          cursor: photo?.aiPending ? 'wait' : 'pointer',
+                        }}
+                      >
+                        {retryAvailable
+                          ? t('inspection.retryAnalysis', { defaultValue: 'Retry analysis' })
+                          : t('inspection.retakePhoto', { defaultValue: 'Retake photo' })}
+                      </button>
+                    )}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -870,11 +1082,12 @@ function RiskAnalysisPhase({
   const total        = PHOTO_ANGLES.length
   const analyzed     = photos.filter(p => p.aiResult && !p.aiPending)
   const failed       = analyzed.filter(p => p.aiResult?.failureReason)
-  const flagged      = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity !== 'ok')
-  const clean        = analyzed.filter(p => p.aiResult && !p.aiResult.failureReason && p.aiResult.severity === 'ok')
+  const unusable     = analyzed.filter(p => photoNeedsRetake(p) && !p.aiResult?.failureReason)
+  const flagged      = analyzed.filter(p => p.aiResult && !photoNeedsRetake(p) && p.aiResult.severity !== 'ok')
+  const clean        = analyzed.filter(p => p.aiResult && !photoNeedsRetake(p) && p.aiResult.severity === 'ok')
   const missing      = total - analyzed.length
-  const isPartial    = failed.length > 0 || missing > 0
-  const successCount = analyzed.length - failed.length
+  const isPartial    = failed.length > 0 || unusable.length > 0 || missing > 0
+  const successCount = analyzed.length - failed.length - unusable.length
   // Thresholds scaled for 8-image set: 7+ = high, 5+ = medium, <5 = low
   const confidenceLevel: 'high' | 'medium' | 'low' = successCount >= 7 ? 'high' : successCount >= 5 ? 'medium' : 'low'
   const confidenceColor = successCount >= 7 ? '#22c55e' : successCount >= 5 ? '#f59e0b' : 'rgba(255,255,255,0.32)'
@@ -913,7 +1126,12 @@ function RiskAnalysisPhase({
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                {t('inspection.analysisPartial', { failed: failed.length + missing })}
+                {t('inspection.partialAccuracyWarning', {
+                  defaultValue: 'Some angles are missing or unclear - this may affect accuracy.',
+                  failed: failed.length,
+                  missing,
+                  unusable: unusable.length,
+                })}
               </span>
             </div>
           )}
@@ -985,6 +1203,15 @@ function RiskAnalysisPhase({
                   </div>
                 </div>
               ))}
+              {unusable.map(p => (
+                <div key={p.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 10 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', flexShrink: 0, marginTop: 3 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>{t('inspection.statusNeedsRetake', { defaultValue: 'Needs retake' })}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -998,6 +1225,16 @@ function RiskAnalysisPhase({
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
               {t('inspection.allPhasesComplete')}
             </div>
+            {isPartial && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 10, marginBottom: 12 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', lineHeight: 1.5 }}>
+                  {t('inspection.partialAccuracyWarning', { defaultValue: 'Some angles are missing or unclear - this may affect accuracy.' })}
+                </span>
+              </div>
+            )}
             <Link
               href="/report"
               style={{
@@ -1140,6 +1377,10 @@ export default function InspectionPage() {
       setFindingsSaved(false)
       return
     }
+    const withCachedAI = drafts.filter(d => d.aiResult).length
+    if (withCachedAI > 0) {
+      pipelineLog({ step: 'inspection/photos:restored-from-cache', requestId: generateRequestId(), success: true, durationMs: 0, meta: { vehicleId, totalPhotos: drafts.length, withCachedAIResult: withCachedAI } })
+    }
     setPhotos(drafts.map(d => ({
       key:       d.key,
       label:     d.label,
@@ -1183,15 +1424,24 @@ export default function InspectionPage() {
 
     setFindingsSaved(true)
 
-    const photoResults = completed.map(p => ({
-      angle:          p.key,
-      label:          p.label,
-      signal:         p.aiResult!.signal,
-      severity:       p.aiResult!.severity,
-      detail:         p.aiResult!.detail,
-      confidence:     p.aiResult!.confidenceScore ?? 80,
-      recommendation: p.aiResult!.recommendation ?? '',
-    }))
+    const photoResults = completed.map(p => {
+      const usable = deriveUsability(p.aiResult!)
+      return {
+        angle:          p.key,
+        label:          p.label,
+        signal:         p.aiResult!.signal,
+        severity:       p.aiResult!.severity,
+        detail:         p.aiResult!.detail,
+        // Force confidence to 0 for unusable photos so their "findings" are
+        // filtered by the existing r.confidence >= 45 gate in ai-analysis/analyze.
+        // This prevents an "unusable" signal from contributing a false finding.
+        confidence:     usable.isUsable ? (p.aiResult!.confidenceScore ?? 80) : 0,
+        recommendation: p.aiResult!.recommendation ?? '',
+      }
+    })
+
+    const aggStart = Date.now()
+    pipelineLog({ step: 'inspection/ai-batch:aggregate-start', requestId: generateRequestId(), success: true, durationMs: 0, meta: { vehicleId, photoCount: photoResults.length } })
 
     fetch('/api/ai-analysis/analyze', {
       method:      'POST',
@@ -1200,8 +1450,11 @@ export default function InspectionPage() {
       body:        JSON.stringify({ vehicleId, photoResults }),
     })
       .then(r => r.json())
-      .then(json => { if (json?.data) pushAIResult(json.data) })
-      .catch(err => console.error('[inspection] failed to save photo findings:', err))
+      .then(json => {
+        pipelineLog({ step: 'inspection/ai-batch:aggregate-complete', requestId: generateRequestId(), success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
+        if (json?.data) pushAIResult(json.data)
+      })
+      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: generateRequestId(), success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, error: err?.message } }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPhase])
 
@@ -1220,7 +1473,10 @@ export default function InspectionPage() {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return
-    console.info('[inspection/checklist] final checklist before render', checklistDiagnostics)
+    const diagnosticsOk = checklistDiagnostics.duplicateItemCount === 0 &&
+      checklistDiagnostics.obsoleteKeys.length === 0 &&
+      checklistDiagnostics.missingCanonicalKeys.length === 0
+    pipelineLog({ step: 'inspection/checklist:diagnostics', requestId: generateRequestId(), success: diagnosticsOk, durationMs: 0, meta: checklistDiagnostics as unknown as Record<string, unknown> })
   }, [checklistDiagnostics])
 
   const goNext = () => { const n = PHASES[phaseIdx + 1]; if (n) setPhase(n.phase) }
@@ -1272,6 +1528,40 @@ export default function InspectionPage() {
     setCameraTarget({ key, label, shotNumber })
   }, [aiConsentAccepted])
 
+  const analyzePhotoEntry = useCallback(async (entry: PhotoEntry, thumbUrl: string, force = false) => {
+    const vehicleId = session?.vehicleId
+    const existing = photos.find(p => p.key === entry.key)
+    if (!force && existing?.aiResult && existing.previewUrl === entry.previewUrl) {
+      logPhotoFlow('ai_result_reused', { key: entry.key, reason: 'existing_result_same_photo' })
+      setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: existing.aiResult } : p))
+      return existing.aiResult
+    }
+
+    setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: true } : p))
+    const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
+    const result = await runAI(entry.key, entry.label, entry.file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn)
+    setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
+    logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, failureReason: result.failureReason, isUsable: result.isUsable })
+
+    if (vehicleId && thumbUrl) {
+      logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
+      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
+      logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
+    }
+    return result
+  }, [i18n.language, i18n.resolvedLanguage, photos, session?.vehicleId, t])
+
+  const handleRetryAnalysis = useCallback(async (key: string) => {
+    const photo = photos.find(p => p.key === key)
+    if (!photo) return
+    if (!canRetryExistingPhoto(photo)) {
+      handleOpenCamera(photo.key, photo.label)
+      return
+    }
+    const thumbUrl = await toThumbnailDataUrl(photo.file)
+    await analyzePhotoEntry(photo, thumbUrl || photo.previewUrl, true)
+  }, [analyzePhotoEntry, handleOpenCamera, photos])
+
   const handleCapture = useCallback(async (file: File, previewUrl: string) => {
     if (!cameraTarget) return
     logPhotoFlow('confirm_received', { key: cameraTarget.key, label: cameraTarget.label, size: file.size, type: file.type })
@@ -1294,23 +1584,13 @@ export default function InspectionPage() {
     // Step 2: run AI analysis — only for the 5 priority angles
     // Non-priority photos (wheels, hood, roof, trunk, extra angles) are stored
     // but not sent to AI, preventing 429 errors and queue buildup.
-    const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
     if (isPriorityAngle) {
-      const result = await runAI(entry.key, entry.label, file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn)
-      setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
-      logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, signal: result.signal })
-
-      // Step 3: update persisted draft with AI result
-      if (vehicleId && thumbUrl) {
-        logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
-        savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
-        logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
-      }
+      await analyzePhotoEntry(entry, thumbUrl)
     } else {
       // Non-priority angle — photo captured, AI skipped
       logPhotoFlow('ai_skipped_non_priority', { key: entry.key })
     }
-  }, [cameraTarget, i18n.language, i18n.resolvedLanguage, session, t])
+  }, [analyzePhotoEntry, cameraTarget, session])
 
   // ── No vehicle ──
   if (!activeVehicle) {
@@ -1552,7 +1832,7 @@ export default function InspectionPage() {
                   </div>
                 </div>
               </div>
-              <PhotoGrid photos={photos} onAdd={handleOpenCamera} />
+              <PhotoGrid photos={photos} onAdd={handleOpenCamera} onRetry={handleRetryAnalysis} />
               <PhotoAnalysisDisclaimer style={{ marginTop: 14 }} />
             </div>
           )}

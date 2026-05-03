@@ -9,6 +9,7 @@ import { normalizePdfLocale } from '@/lib/report/i18n'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -104,17 +105,22 @@ export async function POST(req: NextRequest) {
 
   const { vehicleId, photos } = parsed.data
   const locale = normalizePdfLocale(parsed.data.locale)
+  const requestId          = generateRequestId()
+  const reqStart           = Date.now()
+  const payloadEstimateBytes = JSON.stringify(parsed.data).length
+  pipelineLog({ step: 'pdf:start', requestId, vehicleId, userId: auth.userId, success: true, durationMs: 0, meta: { photoCount: photos.length, payloadEstimateBytes, locale } })
 
   try {
     // ── Step 1: vehicle ──────────────────────────────────────────────────────
-    console.log('[pdf] step:vehicle', { vehicleId, locale })
+    pipelineLog({ step: 'pdf:vehicle:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: { locale } })
     const vehicleRecord = await prisma.vehicle.findFirst({
       where: { id: vehicleId, userId: auth.userId },
     })
     if (!vehicleRecord) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
 
     // ── Step 2: session + AI results ─────────────────────────────────────────
-    console.log('[pdf] step:db-parallel')
+    const step2Start = Date.now()
+    pipelineLog({ step: 'pdf:db:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
     const [session, aiResults] = await Promise.all([
       prisma.inspectionSession.findFirst({
         where: { vehicleId, userId: auth.userId },
@@ -127,18 +133,19 @@ export async function POST(req: NextRequest) {
         take: 8,
       }),
     ])
-    console.log('[pdf] step:db-parallel done', { aiResults: aiResults.length, hasSession: !!session })
+    pipelineLog({ step: 'pdf:db:complete', requestId, vehicleId, success: true, durationMs: Date.now() - step2Start, meta: { aiResults: aiResults.length, hasSession: !!session } })
 
     // ── Step 3: scoring ───────────────────────────────────────────────────────
-    console.log('[pdf] step:scoring')
-    const score =
-      (await scoringService.getLatest(vehicleId)) ??
-      (await scoringService.computeAndPersist(vehicleId, auth.userId))
-    console.log('[pdf] step:scoring done', { verdict: score.verdict, buyScore: score.buyScore })
+    const step3Start  = Date.now()
+    pipelineLog({ step: 'pdf:scoring:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
+    const cachedScore = await scoringService.getLatest(vehicleId)
+    const score       = cachedScore ?? (await scoringService.computeAndPersist(vehicleId, auth.userId))
+    const scoreFresh  = !cachedScore
+    pipelineLog({ step: 'pdf:scoring:complete', requestId, vehicleId, durationMs: Date.now() - step3Start, success: true, meta: { scoreFresh, verdict: score.verdict, buyScore: score.buyScore } })
 
     // ── Step 4: research ─────────────────────────────────────────────────────
     const vehicle = toVehicleDto(vehicleRecord)
-    console.log('[pdf] step:research')
+    pipelineLog({ step: 'pdf:research:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
     const researchParams = {
       make: vehicle.make,
       model: vehicle.model,
@@ -153,27 +160,37 @@ export async function POST(req: NextRequest) {
       mileage: vehicle.mileage ?? undefined,
       locale,
     }
+    const step4Start = Date.now()
     const research = await Promise.race([
       vehicleResearchService.research(researchParams),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('research_timeout')), 8_000)
       ),
     ]).catch((err: Error) => {
-      console.warn('[pdf] research failed/timeout, using fallback:', err.message)
+      pipelineLog({ step: 'pdf:research:fallback', requestId, vehicleId, success: false, durationMs: Date.now() - step4Start, meta: { error: err.message } })
       return generateFallbackResult({ make: vehicle.make, model: vehicle.model, year: vehicle.year, locale })
     })
-    console.log('[pdf] step:research done', {
-      limitedMode: (research as any).limitedMode,
-      sections: Object.keys(research.sections ?? {}),
-      missingItems: Object.entries(research.sections ?? {})
-        .filter(([, s]) => !Array.isArray((s as any)?.items))
-        .map(([k]) => k),
+    pipelineLog({ step: 'pdf:research:complete', requestId, vehicleId, durationMs: Date.now() - step4Start, success: true, meta: { dataSource: (research as any).dataSource ?? 'unknown', limitedMode: !!(research as any).limitedMode } })
+    pipelineLog({
+      step: 'pdf:research:summary',
+      requestId,
+      vehicleId,
+      success: true,
+      durationMs: Date.now() - step4Start,
+      meta: {
+        limitedMode: (research as any).limitedMode,
+        sections: Object.keys(research.sections ?? {}),
+        missingItems: Object.entries(research.sections ?? {})
+          .filter(([, s]) => !Array.isArray((s as any)?.items))
+          .map(([k]) => k),
+      },
     })
 
     // ── Step 5: build PDF ────────────────────────────────────────────────────
+    const step5Start = Date.now()
     const findings = sanitizeFindings(aiResults)
     const checklistItems = toChecklistDto(session?.checklistItems ?? [])
-    console.log('[pdf] step:build', {
+    pipelineLog({ step: 'pdf:build:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {
       vehicle: { make: vehicle.make, model: vehicle.model, year: vehicle.year, hasVin: !!vehicle.vin },
       score: {
         buyScore: score.buyScore,
@@ -196,7 +213,7 @@ export async function POST(req: NextRequest) {
       findings: findings.length,
       checklist: checklistItems.length,
       photos: photos.length,
-    })
+    } })
 
     let pdf: Buffer
     try {
@@ -211,14 +228,11 @@ export async function POST(req: NextRequest) {
         locale,
       })
     } catch (buildErr: any) {
-      console.error('[pdf] buildInspectionReportPdf threw:', {
-        message: buildErr?.message,
-        stack: buildErr?.stack,
-        name: buildErr?.name,
-      })
+      pipelineLog({ step: 'pdf:build:failed', requestId, vehicleId, success: false, durationMs: Date.now() - step5Start, meta: { message: buildErr?.message, name: buildErr?.name } })
       throw buildErr
     }
-    console.log('[pdf] step:done', { bytes: pdf?.byteLength })
+    const totalDurationMs = Date.now() - reqStart
+    pipelineLog({ step: 'pdf:complete', requestId, vehicleId, durationMs: totalDurationMs, success: true, meta: { pdfBytes: pdf?.byteLength, buildMs: Date.now() - step5Start, timeoutRisk: totalDurationMs > 8_000 } })
 
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
@@ -229,10 +243,10 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err: any) {
+    pipelineLog({ step: 'pdf:failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: err?.message ?? 'unknown' } })
     if (err?.message === 'VEHICLE_NOT_FOUND') {
       return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
     }
-    console.error('[pdf] unhandled error:', { message: err?.message, stack: err?.stack, name: err?.name })
     logApiError('report/pdf', 'generate', err, { vehicleId })
     return apiError('Report generation failed, try again', { status: 500, code: 'INTERNAL_ERROR' })
   }

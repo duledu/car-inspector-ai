@@ -10,6 +10,7 @@ import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 
 const photoResultSchema = z.object({
   angle:          z.string().min(1),
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
+  const requestId = generateRequestId()
+  const reqStart  = Date.now()
   const { vehicleId, photoResults } = parsed.data
 
   try {
@@ -63,6 +66,8 @@ export async function POST(req: NextRequest) {
     logApiError('ai-analysis/analyze', 'findVehicle', err, { vehicleId })
     return apiError('Failed to verify vehicle', { status: 500, code: 'INTERNAL_ERROR' })
   }
+
+  pipelineLog({ step: 'ai-aggregate:start', requestId, vehicleId, userId: auth.userId, success: true, durationMs: 0, meta: { photoCount: photoResults.length } })
 
   const analyzedCount = photoResults.length
   const failedCount   = photoResults.filter(r => r.severity === 'warn' && r.signal.toLowerCase().includes('unavailable')).length
@@ -89,6 +94,7 @@ export async function POST(req: NextRequest) {
   const overallScore = clampScore(100 - overallPenalty, 0, 100, 100)
 
   try {
+    const dbStart = Date.now()
     const result = await prisma.aIResult.create({
       data: {
         vehicleId,
@@ -99,7 +105,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    console.log(`[ai-analysis/analyze] saved ${findings.length} findings for vehicle ${vehicleId}`)
+    pipelineLog({ step: 'ai-aggregate:complete', requestId, vehicleId, durationMs: Date.now() - reqStart, success: true, meta: { photoCount: analyzedCount, failedCount, findingsCount: findings.length, overallScore: result.overallScore, dbWriteMs: Date.now() - dbStart } })
 
     return NextResponse.json({
       data: {
@@ -114,6 +120,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err: any) {
+    pipelineLog({ step: 'ai-aggregate:failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: err instanceof Error ? err.message : String(err) } })
     logApiError('ai-analysis/analyze', 'saveAnalysis', err, { vehicleId })
     return apiError('Failed to save analysis', { status: 500, code: 'INTERNAL_ERROR' })
   }

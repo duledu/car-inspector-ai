@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { scoringService } from '@/modules/scoring'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 
 const BodySchema = z.object({ vehicleId: z.string().min(1) })
 
@@ -15,14 +16,21 @@ export async function POST(req: NextRequest) {
     return apiError('vehicleId is required', { status: 400, code: 'VALIDATION_ERROR' })
   }
 
+  const requestId = generateRequestId()
+  const reqStart  = Date.now()
+  const vehicleId = parsed.data.vehicleId
+  pipelineLog({ step: 'score:start', requestId, vehicleId, userId: auth.userId, success: true, durationMs: 0 })
+
   try {
-    const score = await scoringService.computeAndPersist(parsed.data.vehicleId, auth.userId)
+    const score = await scoringService.computeAndPersist(vehicleId, auth.userId)
+    pipelineLog({ step: 'score:complete', requestId, vehicleId, durationMs: Date.now() - reqStart, success: true, meta: { buyScore: score.buyScore, verdict: score.verdict, hasPremiumData: score.hasPremiumData } })
     return NextResponse.json({ data: score })
   } catch (err: any) {
+    pipelineLog({ step: 'score:failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: err?.message ?? 'unknown' } })
     if (err?.message === 'VEHICLE_NOT_FOUND') {
       return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
     }
-    logApiError('inspection/score', 'computeAndPersist', err, { vehicleId: parsed.data.vehicleId })
+    logApiError('inspection/score', 'computeAndPersist', err, { vehicleId })
     return apiError('Score calculation failed', { status: 500, code: 'INTERNAL_ERROR' })
   }
 }

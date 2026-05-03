@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
+import { generateRequestId, pipelineLog } from '@/lib/logger'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
@@ -56,6 +57,70 @@ const schema = z.object({
 })
 
 // â”€â”€â”€ Prompt per angle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// ─── Image input limits ───────────────────────────────────────────────────────
+
+/** Maximum decoded image size accepted after client-side compression (750 KB). */
+const MAX_IMAGE_BYTES = 750 * 1024
+
+/**
+ * Angle-specific inspection focus strings.
+ * Kept at module scope so SUPPORTED_ANGLES can be derived without duplication.
+ */
+const ANGLE_AREA_GUIDE: Record<string, string> = {
+  FRONT:             'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
+  FRONT_ANGLE_LEFT:  'Focus on: front-left corner impact markers, A-pillar condition, headlight fit, fender-bumper gap and alignment, paint tone match.',
+  FRONT_ANGLE_RIGHT: 'Focus on: front-right corner impact markers, A-pillar condition, headlight fit, fender-bumper gap and alignment, paint tone match.',
+  LEFT_SIDE:         'Focus on: door panel gaps, crease line continuity, paint tone across all panels, any ripple, waves, or filler signs, rocker panel condition.',
+  RIGHT_SIDE:        'Focus on: door panel gaps, crease line continuity, paint tone across all panels, any ripple, waves, or filler signs, rocker panel condition.',
+  REAR:              'Focus on: rear bumper alignment, tail-light symmetry, trunk/boot gap, colour tone vs quarter panels, tow-hitch area.',
+  REAR_ANGLE_LEFT:   'Focus on: rear-left corner impact markers, C-pillar condition, tail-light fit, rear bumper-quarter panel gap, paint tone match.',
+  REAR_ANGLE_RIGHT:  'Focus on: rear-right corner impact markers, C-pillar condition, tail-light fit, rear bumper-quarter panel gap, paint tone match.',
+  FRONT_LEFT:        'Focus on: front-left corner impact markers, headlight fit, fender-bumper gap.',
+  FRONT_RIGHT:       'Focus on: front-right corner impact markers, headlight fit, fender-bumper gap.',
+  HOOD:              'Focus on: surface texture uniformity, paint tone vs fenders, any ripple, filler, or overspray near edges.',
+  ROOF:              'Focus on: panel flatness, paint consistency, any dents or hail damage.',
+  TRUNK:             'Focus on: boot/trunk lid gap symmetry, hinge alignment, paint match vs rear.',
+  ENGINE_BAY:        'Focus on: fluid residue or stains (oil, coolant), corroded hoses or wiring, accident repair evidence, cleanliness vs mileage.',
+  INTERIOR:          'Focus on: seat wear vs claimed mileage, dashboard cracks or sun damage, water ingress stains on carpet or headliner.',
+  ODOMETER:          'Focus on: reading clearly, note the mileage value, flag if display looks tampered or reset.',
+  VIN_PLATE:         'Focus on: plate condition, signs of tampering or re-stamping.',
+  WHEELS_FL:         'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
+  WHEELS_FR:         'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
+  UNDERBODY:         'Focus on: rust patches, previous weld repairs, structural member condition, exhaust condition.',
+}
+
+/** All angle keys the server can meaningfully inspect. Any other value is rejected. */
+const SUPPORTED_ANGLES = new Set(Object.keys(ANGLE_AREA_GUIDE))
+
+type UsabilityReason = 'NOT_VEHICLE' | 'LOW_QUALITY' | 'UNCERTAIN' | 'OK'
+
+/** Classify a successfully parsed AI response into usable / not-usable, no extra API calls. */
+function classifyImageUsability(
+  imageQuality: ImageQuality,
+  confidenceScore: number,
+  signal: string,
+): { isUsable: boolean; usabilityReason: UsabilityReason } {
+  if (imageQuality === 'unusable') {
+    const sig = signal.toLowerCase()
+    if (
+      sig.includes('not inspectable') ||
+      sig.includes('no vehicle') ||
+      sig.includes('not a vehicle') ||
+      sig.includes('no car')
+    ) {
+      return { isUsable: false, usabilityReason: 'NOT_VEHICLE' }
+    }
+    return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
+  }
+  if (confidenceScore < 40) {
+    return { isUsable: false, usabilityReason: 'UNCERTAIN' }
+  }
+  if (imageQuality === 'poor' && confidenceScore < 55) {
+    return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
+  }
+  return { isUsable: true, usabilityReason: 'OK' }
+}
 
 function localeInstruction(locale: string): string {
   const language: Record<string, string> = {
@@ -215,13 +280,13 @@ function failureFromError(error: unknown): AIProviderFailure {
 const OPENAI_ATTEMPT_TIMEOUT_MS = 28_000
 const OPENAI_MAX_ATTEMPTS = 2
 
-async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: string): Promise<Response> {
+async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: string, requestId: string, startedAt: number): Promise<Response> {
   let lastStatus = 0
   for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), OPENAI_ATTEMPT_TIMEOUT_MS)
     try {
-      console.log('[analyze-photo] calling OpenAI', { angle, attempt, model: 'gpt-4o' })
+      pipelineLog({ step: 'analyze-photo:openai-call', requestId, success: true, durationMs: Date.now() - startedAt, meta: { angle, attempt, model: 'gpt-4o' } })
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         signal: controller.signal,
@@ -239,14 +304,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
         const errDetail = parseOpenAIError(rawBody, response.status)
         const failureType = failureFromOpenAIError(errDetail)
 
-        console.error('[analyze-photo] OpenAI non-ok response', {
-          angle, attempt,
-          status:         errDetail.status,
-          openAICode:     errDetail.code    || '(none)',
-          openAIType:     errDetail.type    || '(none)',
-          openAIMessage:  errDetail.message || '(none)',
-          classifiedAs:   failureType,
-        })
+        pipelineLog({ step: 'analyze-photo:openai-non-ok', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, status: errDetail.status, openAICode: errDetail.code || '(none)', openAIType: errDetail.type || '(none)', openAIMessage: errDetail.message || '(none)', classifiedAs: failureType } })
 
         // Quota exhausted or invalid key â€” these are permanent; throw immediately,
         // no retry will help.
@@ -256,7 +314,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
 
         // For genuine rate-limit (429), retry once if we have attempts left.
         if (response.status === 429 && attempt < OPENAI_MAX_ATTEMPTS) {
-          console.warn('[analyze-photo] rate-limit â€” retrying after backoff', { angle, attempt })
+          pipelineLog({ step: 'analyze-photo:openai-rate-limit-retry', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt } })
           clearTimeout(timeout)
           await sleep(1500)
           continue
@@ -273,11 +331,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
       }
       // Timeout (AbortError) or network failure â€” propagate immediately (no retry)
       const isTimeout = error instanceof DOMException && error.name === 'AbortError'
-      console.warn('[analyze-photo] OpenAI call threw', {
-        angle, attempt,
-        errorType: isTimeout ? 'AbortError/timeout' : 'network',
-        message: error instanceof Error ? error.message : String(error),
-      })
+      pipelineLog({ step: 'analyze-photo:openai-call-threw', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, errorType: isTimeout ? 'AbortError/timeout' : 'network', message: error instanceof Error ? error.message : String(error) } })
       throw error
     } finally {
       clearTimeout(timeout)
@@ -430,30 +484,7 @@ Return valid JSON only.`
 }
 
 function buildPrompt(angle: string, angleLabel: string, locale: string): string {
-  const areaGuide: Record<string, string> = {
-    FRONT:             'Focus on: bumper alignment, grille gaps, headlight symmetry, hood gap consistency, any paint colour mismatch.',
-    FRONT_ANGLE_LEFT:  'Focus on: front-left corner impact markers, A-pillar condition, headlight fit, fender-bumper gap and alignment, paint tone match.',
-    FRONT_ANGLE_RIGHT: 'Focus on: front-right corner impact markers, A-pillar condition, headlight fit, fender-bumper gap and alignment, paint tone match.',
-    LEFT_SIDE:         'Focus on: door panel gaps, crease line continuity, paint tone across all panels, any ripple, waves, or filler signs, rocker panel condition.',
-    RIGHT_SIDE:        'Focus on: door panel gaps, crease line continuity, paint tone across all panels, any ripple, waves, or filler signs, rocker panel condition.',
-    REAR:              'Focus on: rear bumper alignment, tail-light symmetry, trunk/boot gap, colour tone vs quarter panels, tow-hitch area.',
-    REAR_ANGLE_LEFT:   'Focus on: rear-left corner impact markers, C-pillar condition, tail-light fit, rear bumper-quarter panel gap, paint tone match.',
-    REAR_ANGLE_RIGHT:  'Focus on: rear-right corner impact markers, C-pillar condition, tail-light fit, rear bumper-quarter panel gap, paint tone match.',
-    FRONT_LEFT:        'Focus on: front-left corner impact markers, headlight fit, fender-bumper gap.',
-    FRONT_RIGHT:       'Focus on: front-right corner impact markers, headlight fit, fender-bumper gap.',
-    HOOD:              'Focus on: surface texture uniformity, paint tone vs fenders, any ripple, filler, or overspray near edges.',
-    ROOF:              'Focus on: panel flatness, paint consistency, any dents or hail damage.',
-    TRUNK:             'Focus on: boot/trunk lid gap symmetry, hinge alignment, paint match vs rear.',
-    ENGINE_BAY:        'Focus on: fluid residue or stains (oil, coolant), corroded hoses or wiring, accident repair evidence, cleanliness vs mileage.',
-    INTERIOR:          'Focus on: seat wear vs claimed mileage, dashboard cracks or sun damage, water ingress stains on carpet or headliner.',
-    ODOMETER:          'Focus on: reading clearly, note the mileage value, flag if display looks tampered or reset.',
-    VIN_PLATE:         'Focus on: plate condition, signs of tampering or re-stamping.',
-    WHEELS_FL:         'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
-    WHEELS_FR:         'Focus on: brake pad thickness visible through spokes, rotor condition, kerb damage on alloy.',
-    UNDERBODY:         'Focus on: rust patches, previous weld repairs, structural member condition, exhaust condition.',
-  }
-
-  const areaFocus = areaGuide[angle] ?? 'Inspect all visible surfaces for damage, repaints, misalignments, or anomalies.'
+  const areaFocus = ANGLE_AREA_GUIDE[angle] ?? 'Inspect all visible surfaces for damage, repaints, misalignments, or anomalies.'
 
   return `You are an expert pre-purchase car inspector analysing a real user's mobile photo of the vehicle's ${angleLabel} area.
 
@@ -505,6 +536,8 @@ async function callOpenAIOnce(
   apiKey: string,
   payload: unknown,
   angle: string,
+  requestId: string,
+  startedAt: number,
   timeoutMs = OPENAI_ATTEMPT_TIMEOUT_MS,
 ): Promise<Response> {
   const controller = new AbortController()
@@ -518,7 +551,7 @@ async function callOpenAIOnce(
     })
   } finally {
     clearTimeout(timer)
-    console.log('[analyze-photo] callOpenAIOnce finished', { angle })
+    pipelineLog({ step: 'analyze-photo:openai-once-finished', requestId, success: true, durationMs: Date.now() - startedAt, meta: { angle } })
   }
 }
 
@@ -554,6 +587,8 @@ function buildSuccessPayload(analysis: StructuredPhotoAnalysis) {
 // â”€â”€â”€ Route handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(req: NextRequest) {
+  const requestId = generateRequestId()
+  const reqStart  = Date.now()
   const auth = await requireAuth(req)
   if (!auth.success) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
@@ -563,20 +598,69 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
+    pipelineLog({ step: 'analyze-photo:invalid-json', requestId, success: false, durationMs: Date.now() - reqStart, meta: {} })
     return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
   }
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    console.warn('[analyze-photo] validation failed', parsed.error.flatten())
+    pipelineLog({ step: 'analyze-photo:validation-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { issues: parsed.error.issues.length } })
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
   const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = parsed.data
+  const requestBytes = Math.round((imageBase64.length * 3) / 4)
+
+  // ── Input validation (runs before any expensive work) ─────────────────────
+  if (requestBytes > MAX_IMAGE_BYTES) {
+    pipelineLog({ step: 'analyze-photo:rejected', requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'OVERSIZED', requestBytes, limitBytes: MAX_IMAGE_BYTES, mimeType, angle } })
+    const fallback = fallbackForFailure(locale, 'IMAGE_VALIDATION')
+    return NextResponse.json({
+      data: {
+        signal: fallback.signal,
+        severity: 'warn',
+        detail: `Image is ${Math.round(requestBytes / 1024)} KB — exceeds the ${Math.round(MAX_IMAGE_BYTES / 1024)} KB limit. The app compresses photos automatically; this image may be an unusual format.`,
+        confidence: 0,
+        imageQuality: 'unusable',
+        visibleAreas: [],
+        detectedIssues: [],
+        possibleIssues: [],
+        uncertainAreas: [],
+        confidenceScore: 0,
+        recommendation: fallback.recommendation,
+        failureReason: 'IMAGE_VALIDATION',
+        isUsable: false,
+        usabilityReason: 'LOW_QUALITY',
+      },
+    })
+  }
+
+  if (!SUPPORTED_ANGLES.has(angle)) {
+    pipelineLog({ step: 'analyze-photo:rejected', requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'INVALID_ANGLE', angle, mimeType, requestBytes } })
+    const fallback = fallbackForFailure(locale, 'IMAGE_VALIDATION')
+    return NextResponse.json({
+      data: {
+        signal: fallback.signal,
+        severity: 'warn',
+        detail: `Angle "${angle}" is not a recognised inspection shot. Use one of the ${SUPPORTED_ANGLES.size} standard angles.`,
+        confidence: 0,
+        imageQuality: 'unusable',
+        visibleAreas: [],
+        detectedIssues: [],
+        possibleIssues: [],
+        uncertainAreas: [],
+        confidenceScore: 0,
+        recommendation: fallback.recommendation,
+        failureReason: 'IMAGE_VALIDATION',
+        isUsable: false,
+        usabilityReason: 'LOW_QUALITY',
+      },
+    })
+  }
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    console.error('[analyze-photo] OPENAI_API_KEY is not set')
+    pipelineLog({ step: 'analyze-photo:failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType: 'CONFIG_ERROR' } })
     const fallback = fallbackForFailure(locale, 'CONFIG_ERROR')
     return NextResponse.json({
       data: {
@@ -592,20 +676,14 @@ export async function POST(req: NextRequest) {
         confidenceScore: 0,
         recommendation: fallback.recommendation,
         failureReason: 'CONFIG_ERROR',
+        isUsable: false,
+        usabilityReason: 'LOW_QUALITY',
       },
     })
   }
 
   try {
-    const requestBytes = Math.round((imageBase64.length * 3) / 4)
-    // Log key presence without exposing the key value.
-    console.log('[analyze-photo] request received', {
-      angle, mimeType, requestBytes,
-      imageMeta,
-      apiKeyPresent: !!apiKey,
-      apiKeyLength: apiKey.length,
-      apiKeyPrefix: apiKey.startsWith('sk-') ? apiKey.slice(0, 7) : '(unexpected prefix)',
-    })
+    pipelineLog({ step: 'analyze-photo:request-received', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, mimeType, requestBytes, imageMeta, apiKeyPresent: true } })
 
     // â”€â”€ Shared image content block (reused in condensed retry) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const imageContent = {
@@ -625,31 +703,19 @@ export async function POST(req: NextRequest) {
         { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON matching the schema exactly.' },
         { role: 'user', content: [imageContent, { type: 'text', text: buildPrompt(angle, angleLabel, locale) }] },
       ],
-    }, angle)
+    }, angle, requestId, reqStart)
 
     const result = await response.json()
     const finishReason: string = result.choices?.[0]?.finish_reason ?? 'unknown'
     const rawText: string = result.choices?.[0]?.message?.content ?? ''
     const usage = result.usage ?? {}
-    console.log('[analyze-photo] OpenAI response received', {
-      angle, finishReason,
-      contentLength: rawText.length,
-      promptTokens:     usage.prompt_tokens     ?? '?',
-      completionTokens: usage.completion_tokens ?? '?',
-      totalTokens:      usage.total_tokens      ?? '?',
-    })
+    pipelineLog({ step: 'analyze-photo:openai-response-received', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, finishReason, contentLength: rawText.length, promptTokens: usage.prompt_tokens ?? '?', completionTokens: usage.completion_tokens ?? '?', totalTokens: usage.total_tokens ?? '?' } })
 
     // â”€â”€ Truncation recovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // If the model hit the token limit, attempt one condensed retry before giving up.
     // This avoids silent degradation when 800 tokens is not enough for a verbose result.
     if (finishReason === 'length') {
-      console.warn('[analyze-photo] truncation detected â€” attempting condensed recovery', {
-        angle,
-        mimeType,
-        contentLength: rawText.length,
-        // Attempt to count issues in the truncated text for diagnostics
-        partialDetectedCount: (rawText.match(/"severity"/g) ?? []).length,
-      })
+      pipelineLog({ step: 'analyze-photo:truncation-recovery-start', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, mimeType, contentLength: rawText.length, partialDetectedCount: (rawText.match(/"severity"/g) ?? []).length } })
       try {
         const condensedRes = await callOpenAIOnce(apiKey, {
           model: 'gpt-4o',
@@ -660,7 +726,7 @@ export async function POST(req: NextRequest) {
             { role: 'system', content: 'You are a professional car inspector. Respond only with valid JSON. Be concise.' },
             { role: 'user', content: [imageContent, { type: 'text', text: buildCondensedPrompt(angleLabel, locale) }] },
           ],
-        }, angle)
+        }, angle, requestId, reqStart)
 
         if (condensedRes.ok) {
           const condensedResult = await condensedRes.json()
@@ -669,16 +735,19 @@ export async function POST(req: NextRequest) {
           if (condensedFinish !== 'length' && condensedText) {
             const recovered = parseAIText(condensedText)
             if (recovered) {
-              console.log('[analyze-photo] condensed recovery succeeded', { angle, imageQuality: recovered.imageQuality })
-              return NextResponse.json({ data: buildSuccessPayload(recovered) })
+              pipelineLog({ step: 'analyze-photo:condensed-recovery-succeeded', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, imageQuality: recovered.imageQuality } })
+              const recoveredPayload  = buildSuccessPayload(recovered)
+              const recoveredUsability = classifyImageUsability(recovered.imageQuality, recovered.confidenceScore, recoveredPayload.signal)
+              if (!recoveredUsability.isUsable) {
+                pipelineLog({ step: 'image:usability', requestId, success: true, durationMs: Date.now() - reqStart, meta: { usable: false, reason: recoveredUsability.usabilityReason, confidenceScore: recovered.confidenceScore, angle } })
+              }
+              pipelineLog({ step: 'analyze-photo:complete', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, path: 'condensed_recovery', imageQuality: recovered.imageQuality, detectedIssues: recovered.detectedIssues.length, possibleIssues: recovered.possibleIssues.length } })
+              return NextResponse.json({ data: { ...recoveredPayload, isUsable: recoveredUsability.isUsable, usabilityReason: recoveredUsability.usabilityReason } })
             }
           }
         }
       } catch (condensedErr) {
-        console.warn('[analyze-photo] condensed recovery failed', {
-          angle,
-          reason: condensedErr instanceof Error ? condensedErr.message : String(condensedErr),
-        })
+        pipelineLog({ step: 'analyze-photo:condensed-recovery-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, reason: condensedErr instanceof Error ? condensedErr.message : String(condensedErr) } })
       }
       // Both attempts truncated or condensed call failed â€” surface as parse failure
       throw new Error('PROVIDER_RESPONSE_TRUNCATED')
@@ -687,27 +756,25 @@ export async function POST(req: NextRequest) {
     // â”€â”€ Normal parse path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const analysis = parseAIText(rawText)
     if (!analysis) {
-      console.error('[analyze-photo] parse failed', { angle, rawText: rawText.slice(0, 200) })
+      pipelineLog({ step: 'analyze-photo:parse-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, contentLength: rawText.length } })
       throw new Error('Failed to parse AI response JSON')
     }
 
-    console.log('[analyze-photo] parsed result', {
-      angle,
-      severity: legacySeverity(analysis),
-      signal: legacySignal(analysis),
-      imageQuality: analysis.imageQuality,
-      confidenceScore: analysis.confidenceScore,
-      detectedIssues: analysis.detectedIssues.length,
-      possibleIssues: analysis.possibleIssues.length,
-      uncertainAreas: analysis.uncertainAreas.length,
-    })
+    pipelineLog({ step: 'analyze-photo:parsed-result', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, severity: legacySeverity(analysis), signal: legacySignal(analysis), imageQuality: analysis.imageQuality, confidenceScore: analysis.confidenceScore, detectedIssues: analysis.detectedIssues.length, possibleIssues: analysis.possibleIssues.length, uncertainAreas: analysis.uncertainAreas.length } })
 
-    return NextResponse.json({ data: buildSuccessPayload(analysis) })
+    const successPayload  = buildSuccessPayload(analysis)
+    const usability = classifyImageUsability(analysis.imageQuality, analysis.confidenceScore, successPayload.signal)
+    if (!usability.isUsable) {
+      pipelineLog({ step: 'image:usability', requestId, success: true, durationMs: Date.now() - reqStart, meta: { usable: false, reason: usability.usabilityReason, confidenceScore: analysis.confidenceScore, angle } })
+    }
+    pipelineLog({ step: 'analyze-photo:complete', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, imageQuality: analysis.imageQuality, detectedIssues: analysis.detectedIssues.length, possibleIssues: analysis.possibleIssues.length, model: 'gpt-4o' } })
+    return NextResponse.json({ data: { ...successPayload, isUsable: usability.isUsable, usabilityReason: usability.usabilityReason } })
   } catch (error) {
     const failureType = failureFromError(error)
     const reason = error instanceof Error ? error.message : String(error)
     logApiError('inspection/analyze-photo', 'analyze', error, { angle, failureType })
-    console.warn('[analyze-photo] returning fallback', { angle, failureType, reason })
+    pipelineLog({ step: 'analyze-photo:failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, error: reason.slice(0, 200) } })
+    pipelineLog({ step: 'analyze-photo:returning-fallback', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, reason } })
     const fallback = fallbackForFailure(locale, failureType)
     return NextResponse.json(
       {
@@ -724,6 +791,8 @@ export async function POST(req: NextRequest) {
           confidenceScore: 0,
           recommendation: fallback.recommendation,
           failureReason: failureType,
+          isUsable: false,
+          usabilityReason: 'LOW_QUALITY',
         },
       },
       { status: 200 } // Return 200 so UI still renders â€” just shows the fallback
