@@ -147,6 +147,10 @@ export interface AIAnalysisResult {
   processingMs?: number
   analyzedCount?: number
   failedCount?: number
+  /** T5+: photos that produced a usable AI analysis. Absent on pre-T5 records. */
+  usableCount?: number
+  /** T5+: photos that were unusable (low quality / not a vehicle / failed). Absent on pre-T5 records. */
+  unusableCount?: number
   createdAt: string
 }
 

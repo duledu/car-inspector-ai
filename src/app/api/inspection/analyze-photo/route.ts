@@ -1,6 +1,19 @@
 ﻿// =============================================================================
-// Analyze Photo â€” POST /api/inspection/analyze-photo
+// Analyze Photo — POST /api/inspection/analyze-photo
 // Sends a car photo to OpenAI Vision (gpt-4o) and returns structured findings.
+//
+// Pipeline steps (T5):
+//   1. Auth
+//   2. JSON parse
+//   3. stepValidateRequest  — Zod schema
+//   4. stepCheckImageSize   — 750 KB limit
+//   5. stepCheckAngle       — must be a recognised inspection angle
+//   6. stepGetApiKey        — OPENAI_API_KEY must be set
+//   7. OpenAI API call w/ retry
+//   8. Truncation recovery (condensed retry)
+//   9. Parse & normalize AI response
+//  10. Classify image usability
+//  11. Build and return structured response
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -9,6 +22,7 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
+import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
@@ -584,16 +598,91 @@ function buildSuccessPayload(analysis: StructuredPhotoAnalysis) {
   }
 }
 
-// â”€â”€â”€ Route handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── T5 Pipeline step functions ──────────────────────────────────────────────
+// Each returns PipelineResult so the route handler is a flat, readable sequence.
+// Steps 3–6 run before any I/O to fail fast and cheaply.
+
+type ValidatedRequest = z.infer<typeof schema>
+
+/** Step 3 — Validate the request body against the Zod schema. */
+function stepValidateRequest(body: unknown): PipelineResult<ValidatedRequest, 'VALIDATION_ERROR'> {
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    return pipelineErr('validate-request', 'VALIDATION_ERROR', `${parsed.error.issues.length} validation issue(s)`)
+  }
+  return pipelineOk('validate-request', parsed.data)
+}
+
+/** Step 4 — Reject images that are too large (>750 KB after base64 decode). */
+function stepCheckImageSize(
+  requestBytes: number,
+): PipelineResult<void, 'IMAGE_VALIDATION'> {
+  if (requestBytes <= MAX_IMAGE_BYTES) return pipelineOk('check-image-size', undefined)
+  return pipelineErr(
+    'check-image-size',
+    'IMAGE_VALIDATION',
+    `Image is ${Math.round(requestBytes / 1024)} KB — exceeds the ${Math.round(MAX_IMAGE_BYTES / 1024)} KB limit. The app compresses photos automatically; this image may be an unusual format.`,
+  )
+}
+
+/** Step 5 — Reject unknown inspection angles. */
+function stepCheckAngle(angle: string): PipelineResult<void, 'IMAGE_VALIDATION'> {
+  if (SUPPORTED_ANGLES.has(angle)) return pipelineOk('check-angle', undefined)
+  return pipelineErr(
+    'check-angle',
+    'IMAGE_VALIDATION',
+    `Angle “${angle}” is not a recognised inspection shot. Use one of the ${SUPPORTED_ANGLES.size} standard angles.`,
+  )
+}
+
+/** Step 6 — Verify the OpenAI API key is configured. */
+function stepGetApiKey(): PipelineResult<string, 'CONFIG_ERROR'> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (apiKey) return pipelineOk('get-api-key', apiKey)
+  return pipelineErr('get-api-key', 'CONFIG_ERROR', 'OPENAI_API_KEY is not set')
+}
+
+/**
+ * Build the shared fallback response payload.
+ * Consolidates the four previously identical inline objects into one helper
+ * so any future shape changes only need to be made here.
+ */
+function buildFallbackData(
+  fallback: { signal: string; detail: string; recommendation: string },
+  failureReason: AIProviderFailure,
+  detailOverride?: string,
+) {
+  return {
+    signal:         fallback.signal,
+    severity:       'warn' as const,
+    detail:         detailOverride ?? fallback.detail,
+    confidence:     0,
+    imageQuality:   'unusable' as const,
+    visibleAreas:   [],
+    detectedIssues: [],
+    possibleIssues: [],
+    uncertainAreas: [],
+    confidenceScore: 0,
+    recommendation: fallback.recommendation,
+    failureReason,
+    isUsable:        false,
+    usabilityReason: 'LOW_QUALITY' as const,
+  }
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const requestId = generateRequestId()
   const reqStart  = Date.now()
+
+  // Step 1: Auth
   const auth = await requireAuth(req)
   if (!auth.success) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
 
+  // Step 2: JSON parse
   let body: unknown
   try {
     body = await req.json()
@@ -602,85 +691,37 @@ export async function POST(req: NextRequest) {
     return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
   }
 
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    pipelineLog({ step: 'analyze-photo:validation-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { issues: parsed.error.issues.length } })
+  // Step 3: Validate request
+  const validated = stepValidateRequest(body)
+  if (!validated.success) {
+    pipelineLog({ step: `analyze-photo:${validated.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { error: validated.error.code } })
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
-  const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = parsed.data
+  const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = validated.data
   const requestBytes = Math.round((imageBase64.length * 3) / 4)
 
-  // ── Input validation (runs before any expensive work) ─────────────────────
-  if (requestBytes > MAX_IMAGE_BYTES) {
-    pipelineLog({ step: 'analyze-photo:rejected', requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'OVERSIZED', requestBytes, limitBytes: MAX_IMAGE_BYTES, mimeType, angle } })
-    const fallback = fallbackForFailure(locale, 'IMAGE_VALIDATION')
-    return NextResponse.json({
-      data: {
-        signal: fallback.signal,
-        severity: 'warn',
-        detail: `Image is ${Math.round(requestBytes / 1024)} KB — exceeds the ${Math.round(MAX_IMAGE_BYTES / 1024)} KB limit. The app compresses photos automatically; this image may be an unusual format.`,
-        confidence: 0,
-        imageQuality: 'unusable',
-        visibleAreas: [],
-        detectedIssues: [],
-        possibleIssues: [],
-        uncertainAreas: [],
-        confidenceScore: 0,
-        recommendation: fallback.recommendation,
-        failureReason: 'IMAGE_VALIDATION',
-        isUsable: false,
-        usabilityReason: 'LOW_QUALITY',
-      },
-    })
+  // Step 4: Image size check
+  const sizeCheck = stepCheckImageSize(requestBytes)
+  if (!sizeCheck.success) {
+    pipelineLog({ step: `analyze-photo:${sizeCheck.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'OVERSIZED', requestBytes, limitBytes: MAX_IMAGE_BYTES, mimeType, angle } })
+    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', sizeCheck.error.message) })
   }
 
-  if (!SUPPORTED_ANGLES.has(angle)) {
-    pipelineLog({ step: 'analyze-photo:rejected', requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'INVALID_ANGLE', angle, mimeType, requestBytes } })
-    const fallback = fallbackForFailure(locale, 'IMAGE_VALIDATION')
-    return NextResponse.json({
-      data: {
-        signal: fallback.signal,
-        severity: 'warn',
-        detail: `Angle "${angle}" is not a recognised inspection shot. Use one of the ${SUPPORTED_ANGLES.size} standard angles.`,
-        confidence: 0,
-        imageQuality: 'unusable',
-        visibleAreas: [],
-        detectedIssues: [],
-        possibleIssues: [],
-        uncertainAreas: [],
-        confidenceScore: 0,
-        recommendation: fallback.recommendation,
-        failureReason: 'IMAGE_VALIDATION',
-        isUsable: false,
-        usabilityReason: 'LOW_QUALITY',
-      },
-    })
+  // Step 5: Angle check
+  const angleCheck = stepCheckAngle(angle)
+  if (!angleCheck.success) {
+    pipelineLog({ step: `analyze-photo:${angleCheck.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'INVALID_ANGLE', angle, mimeType, requestBytes } })
+    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', angleCheck.error.message) })
   }
 
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    pipelineLog({ step: 'analyze-photo:failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType: 'CONFIG_ERROR' } })
-    const fallback = fallbackForFailure(locale, 'CONFIG_ERROR')
-    return NextResponse.json({
-      data: {
-        signal: fallback.signal,
-        severity: 'warn',
-        detail: fallback.detail,
-        confidence: 0,
-        imageQuality: 'unusable',
-        visibleAreas: [],
-        detectedIssues: [],
-        possibleIssues: [],
-        uncertainAreas: [],
-        confidenceScore: 0,
-        recommendation: fallback.recommendation,
-        failureReason: 'CONFIG_ERROR',
-        isUsable: false,
-        usabilityReason: 'LOW_QUALITY',
-      },
-    })
+  // Step 6: API key
+  const apiKeyResult = stepGetApiKey()
+  if (!apiKeyResult.success) {
+    pipelineLog({ step: `analyze-photo:${apiKeyResult.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType: 'CONFIG_ERROR' } })
+    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'CONFIG_ERROR'), 'CONFIG_ERROR') })
   }
+  const apiKey = apiKeyResult.data
 
   try {
     pipelineLog({ step: 'analyze-photo:request-received', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, mimeType, requestBytes, imageMeta, apiKeyPresent: true } })
@@ -777,25 +818,8 @@ export async function POST(req: NextRequest) {
     pipelineLog({ step: 'analyze-photo:returning-fallback', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, reason } })
     const fallback = fallbackForFailure(locale, failureType)
     return NextResponse.json(
-      {
-        data: {
-          signal: fallback.signal,
-          severity: 'warn',
-          detail: fallback.detail,
-          confidence: 0,
-          imageQuality: 'unusable',
-          visibleAreas: [],
-          detectedIssues: [],
-          possibleIssues: [],
-          uncertainAreas: [],
-          confidenceScore: 0,
-          recommendation: fallback.recommendation,
-          failureReason: failureType,
-          isUsable: false,
-          usabilityReason: 'LOW_QUALITY',
-        },
-      },
-      { status: 200 } // Return 200 so UI still renders â€” just shows the fallback
+      { data: buildFallbackData(fallback, failureType) },
+      { status: 200 } // Return 200 so UI still renders — just shows the fallback
     )
   }
 }
