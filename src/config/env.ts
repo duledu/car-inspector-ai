@@ -9,7 +9,7 @@ function requireEnv(key: string): string {
   const isBuild = process.env.NEXT_PHASE === 'phase-production-build'
   if (key === 'DATABASE_URL') {
     if (!value && process.env.NODE_ENV === 'production' && !isBuild) {
-      console.error('[env] DATABASE_URL is not set. Database-backed features will be unavailable.')
+      throw new Error('[env] DATABASE_URL is required in production. The application cannot start without a database connection.')
     }
     return value ?? ''
   }

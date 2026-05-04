@@ -239,9 +239,15 @@ async function handleRegister(body: unknown) {
   // Fire-and-forget — never block registration on email delivery
   sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     .then(result => {
-      if (!result.success) console.error('[auth/register] verification email failed:', result.error)
+      if (!result.success) console.error('[auth/register] verification email failed', {
+        userId: user.id,
+        errorCode: result.error ?? 'UNKNOWN',
+      })
     })
-    .catch(err => console.error('[auth/register] verification email unexpected error:', err))
+    .catch(err => console.error('[auth/register] verification email unexpected error', {
+      userId: user.id,
+      errorName: err instanceof Error ? err.name : 'unknown',
+    }))
 
   const res = NextResponse.json(
     { data: { expiresAt, user: toUserDto(user) } },
@@ -331,9 +337,8 @@ async function handleForgotPassword(body: unknown) {
     const emailResult = await sendResetPasswordEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     if (!emailResult.success) {
       console.error('[auth/forgot-password] reset email failed', {
-        emailHash,
         userId: user.id,
-        error: emailResult.error,
+        errorCode: emailResult.error ?? 'UNKNOWN',
       })
       // Surface real system failures — the user exists so we are not leaking account presence
       return apiError('Failed to send reset email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
@@ -388,7 +393,10 @@ async function handleSendVerification(req: NextRequest) {
 
     const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
     if (!emailResult.success) {
-      console.error('[auth/send-verification] email failed:', emailResult.error)
+      console.error('[auth/send-verification] email failed', {
+        userId: authResult.userId,
+        errorCode: emailResult.error ?? 'UNKNOWN',
+      })
       return apiError('Failed to send verification email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
     }
 

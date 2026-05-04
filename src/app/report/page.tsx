@@ -1512,6 +1512,33 @@ export default function ReportPage() {
                       </span>
                     </div>
                   )) : (() => {
+                    // T5.5: Aggregation failure guard — fires when photos were captured
+                    // but no AI aggregation result was stored for this vehicle.
+                    // aiResults is persisted to localStorage, so latestAI === null after
+                    // hydration means aggregation never completed (failed, timed out, or
+                    // the user navigated away before it finished).
+                    // reportPhotoCount is 0 during hydration and only set positive once
+                    // the store is ready, so this never fires prematurely.
+                    if (latestAI === null && reportPhotoCount > 0) {
+                      return (
+                        <div style={{ padding: '18px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>
+                              {t('inspection.analysisCouldNotComplete', { defaultValue: 'Photos could not be analyzed — retake for reliable results' })}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>
+                              {t('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photos or try again with a stable network connection.' })}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }
                     // Guard: if T5 usability data confirms all photos were unusable,
                     // show a clear warning instead of any "no flags / no damage" message.
                     // Only fires when usableCount is explicitly 0 (T5+ records).

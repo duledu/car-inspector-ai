@@ -1493,7 +1493,8 @@ export default function InspectionPage() {
     })
 
     const aggStart = Date.now()
-    pipelineLog({ step: 'inspection/ai-batch:aggregate-start', requestId: generateRequestId(), success: true, durationMs: 0, meta: { vehicleId, photoCount: photoResults.length } })
+    const batchRequestId = generateRequestId()
+    pipelineLog({ step: 'inspection/ai-batch:aggregate-start', requestId: batchRequestId, success: true, durationMs: 0, meta: { vehicleId, photoCount: photoResults.length } })
 
     fetch('/api/ai-analysis/analyze', {
       method:      'POST',
@@ -1503,10 +1504,10 @@ export default function InspectionPage() {
     })
       .then(r => r.json())
       .then(json => {
-        pipelineLog({ step: 'inspection/ai-batch:aggregate-complete', requestId: generateRequestId(), success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
+        pipelineLog({ step: 'inspection/ai-batch:aggregate-complete', requestId: batchRequestId, success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
         if (json?.data) pushAIResult(json.data)
       })
-      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: generateRequestId(), success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } }))
+      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: batchRequestId, success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPhase])
 
