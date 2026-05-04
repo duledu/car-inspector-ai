@@ -301,7 +301,7 @@ async function loadBitmapWithOrientation(file: File): Promise<ImageBitmap | null
     return await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch (err) {
     logPhotoFlow('image_bitmap_orientation_failed', {
-      reason: err instanceof Error ? err.message : String(err),
+      errorType: err instanceof Error ? err.name : 'unknown',
     }, false)
     return null
   }
@@ -362,6 +362,24 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string
 
 // Failure reasons from the server that are worth retrying on the client
 const RETRIABLE_SERVER_FAILURES = new Set(['RATE_LIMIT', 'TIMEOUT', 'PROVIDER_OUTAGE'])
+const KNOWN_AI_FAILURES = new Set([
+  'CONFIG_ERROR',
+  'RATE_LIMIT',
+  'TIMEOUT',
+  'BAD_REQUEST',
+  'IMAGE_VALIDATION',
+  'PROVIDER_OUTAGE',
+  'PROVIDER_RESPONSE',
+  'UNKNOWN',
+])
+
+function classifyClientAIFailure(reason: string): string {
+  if (KNOWN_AI_FAILURES.has(reason)) return reason
+  if (reason.includes('decode') || reason.includes('Unsupported') || reason.includes('dimensions')) return 'IMAGE_VALIDATION'
+  if (reason === 'NETWORK_ERROR') return 'TIMEOUT'
+  if (reason.startsWith('AI response was not JSON')) return 'PROVIDER_RESPONSE'
+  return 'UNKNOWN'
+}
 
 // clientRequestId is generated once per photo analysis by the caller (analyzePhotoEntry)
 // and flows through every log entry and the x-request-id request header so that
@@ -430,7 +448,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       })
 
       const raw = await res.text()
-      let json: { data?: MockAIResult; message?: string; error?: string } | null = null
+      let json: { data?: MockAIResult; message?: string; error?: string; requestId?: string } | null = null
       try {
         json = raw ? JSON.parse(raw) : null
       } catch {
@@ -439,7 +457,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
 
       // Use server-confirmed requestId when echoed back; otherwise keep the client-generated one.
       // This ensures the post-response log uses whichever id the server actually logged under.
-      const effectiveRequestId = json?.data?.requestId ?? clientRequestId
+      const effectiveRequestId = json?.data?.requestId ?? json?.requestId ?? clientRequestId
 
       logPhotoFlow('ai_response_received', {
         key, status: res.status, clientAttempt,
@@ -466,6 +484,21 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
           possibleIssues: json.data.possibleIssues?.length ?? 0,
           failureReason,
         }, true, effectiveRequestId)
+        // T5.3: When the server signals a failure, re-apply the client i18n system to
+        // produce the specific localized detail message. The server only has specific
+        // non-English text for RATE_LIMIT / TIMEOUT / CONFIG_ERROR; for all other
+        // failure reasons in non-English locales, the server returns a generic fallback.
+        // The client i18n files have specific keys for every failure reason in all 6
+        // locales, so running through friendlyAIDetail() here gives better messages
+        // for BAD_REQUEST, IMAGE_VALIDATION, PROVIDER_OUTAGE, PROVIDER_RESPONSE, and
+        // all Bulgarian (bg) locale failures regardless of the failure type.
+        // Successful responses (failureReason absent) are returned unchanged.
+        if (failureReason) {
+          return {
+            ...json.data,
+            detail: friendlyAIDetail(json.data.detail ?? fallbackDetail, failureReason, tFn),
+          }
+        }
         return json.data
       }
       if (res.status === 429) throw new Error('RATE_LIMIT')
@@ -476,8 +509,14 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     throw new Error('RATE_LIMIT')
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
-    logPhotoFlow('ai_failure', { key, reason, durationMs: Date.now() - startedAt }, false, clientRequestId)
-    const friendlyReason = reason.includes('decode') || reason.includes('Unsupported') || reason.includes('dimensions') ? 'IMAGE_VALIDATION' : reason
+    const friendlyReason = classifyClientAIFailure(reason)
+    logPhotoFlow('ai_failure', { key, failureReason: friendlyReason, durationMs: Date.now() - startedAt }, false, clientRequestId)
+    // T5.3: Classify client-thrown errors into known AIProviderFailure codes so
+    // the badge label and detail message are specific rather than falling through
+    // to the generic UNKNOWN / "Analysis issue" fallback.
+    //   NETWORK_ERROR   → TIMEOUT   (connectivity issue; same retake advice applies)
+    //   non-JSON body   → PROVIDER_RESPONSE (incomplete / unexpected server output)
+    //   image decode    → IMAGE_VALIDATION (unchanged from before)
     return {
       signal: fallbackSignal,
       severity: 'warn',
@@ -1467,7 +1506,7 @@ export default function InspectionPage() {
         pipelineLog({ step: 'inspection/ai-batch:aggregate-complete', requestId: generateRequestId(), success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
         if (json?.data) pushAIResult(json.data)
       })
-      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: generateRequestId(), success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, error: err?.message } }))
+      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: generateRequestId(), success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPhase])
 

@@ -19,7 +19,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/utils/auth.middleware'
-import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, parseRequestId, pipelineLog } from '@/lib/logger'
 import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
@@ -318,7 +317,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
         const errDetail = parseOpenAIError(rawBody, response.status)
         const failureType = failureFromOpenAIError(errDetail)
 
-        pipelineLog({ step: 'analyze-photo:openai-non-ok', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, status: errDetail.status, openAICode: errDetail.code || '(none)', openAIType: errDetail.type || '(none)', openAIMessage: errDetail.message || '(none)', classifiedAs: failureType } })
+        pipelineLog({ step: 'analyze-photo:openai-non-ok', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, status: errDetail.status, openAICode: errDetail.code || '(none)', openAIType: errDetail.type || '(none)', classifiedAs: failureType } })
 
         // Quota exhausted or invalid key â€” these are permanent; throw immediately,
         // no retry will help.
@@ -345,7 +344,7 @@ async function callOpenAIWithRetry(apiKey: string, payload: unknown, angle: stri
       }
       // Timeout (AbortError) or network failure â€” propagate immediately (no retry)
       const isTimeout = error instanceof DOMException && error.name === 'AbortError'
-      pipelineLog({ step: 'analyze-photo:openai-call-threw', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, errorType: isTimeout ? 'AbortError/timeout' : 'network', message: error instanceof Error ? error.message : String(error) } })
+      pipelineLog({ step: 'analyze-photo:openai-call-threw', requestId, success: false, durationMs: Date.now() - startedAt, meta: { angle, attempt, errorType: isTimeout ? 'AbortError/timeout' : 'network' } })
       throw error
     } finally {
       clearTimeout(timeout)
@@ -670,6 +669,19 @@ function buildFallbackData(
   }
 }
 
+function requestError(error: string, status: number, code: string, requestId: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      error,
+      message: error,
+      code,
+      requestId,
+    },
+    { status },
+  )
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -681,7 +693,7 @@ export async function POST(req: NextRequest) {
   // Step 1: Auth
   const auth = await requireAuth(req)
   if (!auth.success) {
-    return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+    return requestError(auth.reason, 401, 'UNAUTHORIZED', requestId)
   }
 
   // Step 2: JSON parse
@@ -690,14 +702,14 @@ export async function POST(req: NextRequest) {
     body = await req.json()
   } catch {
     pipelineLog({ step: 'analyze-photo:invalid-json', requestId, success: false, durationMs: Date.now() - reqStart, meta: {} })
-    return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
+    return requestError('Invalid JSON', 400, 'BAD_REQUEST', requestId)
   }
 
   // Step 3: Validate request
   const validated = stepValidateRequest(body)
   if (!validated.success) {
     pipelineLog({ step: `analyze-photo:${validated.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { error: validated.error.code } })
-    return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
+    return requestError('Validation failed', 422, 'VALIDATION_ERROR', requestId)
   }
 
   const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = validated.data
@@ -790,7 +802,8 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (condensedErr) {
-        pipelineLog({ step: 'analyze-photo:condensed-recovery-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, reason: condensedErr instanceof Error ? condensedErr.message : String(condensedErr) } })
+        const condensedFailureType = failureFromError(condensedErr)
+        pipelineLog({ step: 'analyze-photo:condensed-recovery-failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType: condensedFailureType } })
       }
       // Both attempts truncated or condensed call failed â€” surface as parse failure
       throw new Error('PROVIDER_RESPONSE_TRUNCATED')
@@ -814,10 +827,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: { ...successPayload, isUsable: usability.isUsable, usabilityReason: usability.usabilityReason, requestId } })
   } catch (error) {
     const failureType = failureFromError(error)
-    const reason = error instanceof Error ? error.message : String(error)
-    logApiError('inspection/analyze-photo', 'analyze', error, { angle, failureType })
-    pipelineLog({ step: 'analyze-photo:failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, error: reason.slice(0, 200) } })
-    pipelineLog({ step: 'analyze-photo:returning-fallback', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, reason } })
+    pipelineLog({ step: 'analyze-photo:failed', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType } })
+    pipelineLog({ step: 'analyze-photo:returning-fallback', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType } })
     const fallback = fallbackForFailure(locale, failureType)
     return NextResponse.json(
       { data: { ...buildFallbackData(fallback, failureType), requestId } },
