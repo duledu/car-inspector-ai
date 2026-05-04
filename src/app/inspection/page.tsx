@@ -68,6 +68,8 @@ type MockAIResult = {
   failureReason?: string
   isUsable?: boolean
   usabilityReason?: 'NOT_VEHICLE' | 'LOW_QUALITY' | 'UNCERTAIN' | 'OK'
+  /** Server-confirmed requestId for cross-log correlation (T5.2). */
+  requestId?: string
 }
 type ChecklistRow = { id: string; itemKey: string; itemLabel: string; status: ItemStatus; notes?: string | null }
 type PreparedAIImage = { imageBase64: string; mimeType: string; width: number; height: number; size: number }
@@ -113,13 +115,13 @@ function deriveUsability(result: MockAIResult): { isUsable: boolean; usabilityRe
   return { isUsable: true, usabilityReason: 'OK' }
 }
 
-function logPhotoFlow(step: string, details?: Record<string, unknown>, success = true) {
+function logPhotoFlow(step: string, details?: Record<string, unknown>, success = true, requestId?: string) {
   const durationMs = typeof details?.durationMs === 'number' ? details.durationMs : 0
   const meta = { ...(details ?? {}) }
   delete meta.durationMs
   pipelineLog({
     step: `inspection/photo:${step}`,
-    requestId: generateRequestId(),
+    requestId: requestId ?? generateRequestId(),
     success,
     durationMs,
     meta,
@@ -361,17 +363,20 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string
 // Failure reasons from the server that are worth retrying on the client
 const RETRIABLE_SERVER_FAILURES = new Set(['RATE_LIMIT', 'TIMEOUT', 'PROVIDER_OUTAGE'])
 
-async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn): Promise<MockAIResult> {
+// clientRequestId is generated once per photo analysis by the caller (analyzePhotoEntry)
+// and flows through every log entry and the x-request-id request header so that
+// client logs and server logs for the same photo share the same identifier.
+async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn, clientRequestId: string): Promise<MockAIResult> {
   const startedAt = Date.now()
   try {
-    logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type })
+    logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type }, true, clientRequestId)
     if (!file.type.startsWith('image/')) {
-      logPhotoFlow('ai_rejected_invalid_type', { key, fileType: file.type }, false)
+      logPhotoFlow('ai_rejected_invalid_type', { key, fileType: file.type }, false, clientRequestId)
       throw new Error('IMAGE_VALIDATION')
     }
     const prepared = await prepareImageForAI(file)
     if (prepared.size > MAX_CLIENT_IMAGE_BYTES) {
-      logPhotoFlow('ai_rejected_oversized', { key, preparedSize: prepared.size, limitBytes: MAX_CLIENT_IMAGE_BYTES }, false)
+      logPhotoFlow('ai_rejected_oversized', { key, preparedSize: prepared.size, limitBytes: MAX_CLIENT_IMAGE_BYTES }, false, clientRequestId)
       throw new Error('IMAGE_VALIDATION')
     }
     logPhotoFlow('ai_prepare_finished', {
@@ -380,7 +385,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       width: prepared.width,
       height: prepared.height,
       mimeType: prepared.mimeType,
-    })
+    }, true, clientRequestId)
 
     const requestBody = {
       imageBase64: prepared.imageBase64,
@@ -404,12 +409,15 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS)
         try {
-          logPhotoFlow('ai_request_sent', { key, label, clientAttempt })
+          logPhotoFlow('ai_request_sent', { key, label, clientAttempt }, true, clientRequestId)
           const response = await fetch('/api/inspection/analyze-photo', {
             method:      'POST',
             signal:      controller.signal,
             credentials: 'include',
-            headers:     { 'Content-Type': 'application/json' },
+            headers:     {
+              'Content-Type': 'application/json',
+              'x-request-id': clientRequestId,
+            },
             body:        JSON.stringify(requestBody),
           })
           return response
@@ -429,11 +437,15 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
         throw new Error(`AI response was not JSON (${res.status})`)
       }
 
+      // Use server-confirmed requestId when echoed back; otherwise keep the client-generated one.
+      // This ensures the post-response log uses whichever id the server actually logged under.
+      const effectiveRequestId = json?.data?.requestId ?? clientRequestId
+
       logPhotoFlow('ai_response_received', {
         key, status: res.status, clientAttempt,
         durationMs: Date.now() - startedAt, hasData: !!json?.data,
         failureReason: json?.data?.failureReason,
-      })
+      }, true, effectiveRequestId)
 
       if (json?.data) {
         const failureReason = json.data.failureReason
@@ -441,7 +453,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
         // Jitter prevents multiple images from retrying in lockstep after a rate-limit event.
         if (failureReason && RETRIABLE_SERVER_FAILURES.has(failureReason) && clientAttempt < AI_MAX_ATTEMPTS) {
           const delay = 700 + Math.floor(Math.random() * 400) // 700–1100 ms
-          logPhotoFlow('ai_client_retry_on_transient', { key, clientAttempt, failureReason, delayMs: delay })
+          logPhotoFlow('ai_client_retry_on_transient', { key, clientAttempt, failureReason, delayMs: delay }, true, clientRequestId)
           await sleep(delay)
           continue
         }
@@ -453,7 +465,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
           detectedIssues: json.data.detectedIssues?.length ?? 0,
           possibleIssues: json.data.possibleIssues?.length ?? 0,
           failureReason,
-        })
+        }, true, effectiveRequestId)
         return json.data
       }
       if (res.status === 429) throw new Error('RATE_LIMIT')
@@ -464,7 +476,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     throw new Error('RATE_LIMIT')
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)
-    logPhotoFlow('ai_failure', { key, reason, durationMs: Date.now() - startedAt }, false)
+    logPhotoFlow('ai_failure', { key, reason, durationMs: Date.now() - startedAt }, false, clientRequestId)
     const friendlyReason = reason.includes('decode') || reason.includes('Unsupported') || reason.includes('dimensions') ? 'IMAGE_VALIDATION' : reason
     return {
       signal: fallbackSignal,
@@ -480,6 +492,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
       failureReason: friendlyReason,
       isUsable: false,
       usabilityReason: 'LOW_QUALITY',
+      requestId: clientRequestId,
     }
   }
 }
@@ -1539,9 +1552,11 @@ export default function InspectionPage() {
 
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: true } : p))
     const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
-    const result = await runAI(entry.key, entry.label, entry.file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn)
+    const clientRequestId = generateRequestId()
+    const result = await runAI(entry.key, entry.label, entry.file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn, clientRequestId)
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
-    logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, failureReason: result.failureReason, isUsable: result.isUsable })
+    const effectiveRequestId = result.requestId ?? clientRequestId
+    logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, failureReason: result.failureReason, isUsable: result.isUsable }, true, effectiveRequestId)
 
     if (vehicleId && thumbUrl) {
       logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })

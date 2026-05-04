@@ -21,7 +21,7 @@ import { z } from 'zod'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
-import { generateRequestId, pipelineLog } from '@/lib/logger'
+import { generateRequestId, parseRequestId, pipelineLog } from '@/lib/logger'
 import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
@@ -673,7 +673,9 @@ function buildFallbackData(
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const requestId = generateRequestId()
+  // Resolve requestId: prefer the client-supplied header for cross-log correlation.
+  // Fall back to a server-generated id when the header is absent or fails validation.
+  const requestId = parseRequestId(req.headers.get('x-request-id')) ?? generateRequestId()
   const reqStart  = Date.now()
 
   // Step 1: Auth
@@ -705,21 +707,21 @@ export async function POST(req: NextRequest) {
   const sizeCheck = stepCheckImageSize(requestBytes)
   if (!sizeCheck.success) {
     pipelineLog({ step: `analyze-photo:${sizeCheck.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'OVERSIZED', requestBytes, limitBytes: MAX_IMAGE_BYTES, mimeType, angle } })
-    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', sizeCheck.error.message) })
+    return NextResponse.json({ data: { ...buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', sizeCheck.error.message), requestId } })
   }
 
   // Step 5: Angle check
   const angleCheck = stepCheckAngle(angle)
   if (!angleCheck.success) {
     pipelineLog({ step: `analyze-photo:${angleCheck.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { reason: 'INVALID_ANGLE', angle, mimeType, requestBytes } })
-    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', angleCheck.error.message) })
+    return NextResponse.json({ data: { ...buildFallbackData(fallbackForFailure(locale, 'IMAGE_VALIDATION'), 'IMAGE_VALIDATION', angleCheck.error.message), requestId } })
   }
 
   // Step 6: API key
   const apiKeyResult = stepGetApiKey()
   if (!apiKeyResult.success) {
     pipelineLog({ step: `analyze-photo:${apiKeyResult.step}`, requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType: 'CONFIG_ERROR' } })
-    return NextResponse.json({ data: buildFallbackData(fallbackForFailure(locale, 'CONFIG_ERROR'), 'CONFIG_ERROR') })
+    return NextResponse.json({ data: { ...buildFallbackData(fallbackForFailure(locale, 'CONFIG_ERROR'), 'CONFIG_ERROR'), requestId } })
   }
   const apiKey = apiKeyResult.data
 
@@ -783,7 +785,7 @@ export async function POST(req: NextRequest) {
                 pipelineLog({ step: 'image:usability', requestId, success: true, durationMs: Date.now() - reqStart, meta: { usable: false, reason: recoveredUsability.usabilityReason, confidenceScore: recovered.confidenceScore, angle } })
               }
               pipelineLog({ step: 'analyze-photo:complete', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, path: 'condensed_recovery', imageQuality: recovered.imageQuality, detectedIssues: recovered.detectedIssues.length, possibleIssues: recovered.possibleIssues.length } })
-              return NextResponse.json({ data: { ...recoveredPayload, isUsable: recoveredUsability.isUsable, usabilityReason: recoveredUsability.usabilityReason } })
+              return NextResponse.json({ data: { ...recoveredPayload, isUsable: recoveredUsability.isUsable, usabilityReason: recoveredUsability.usabilityReason, requestId } })
             }
           }
         }
@@ -809,7 +811,7 @@ export async function POST(req: NextRequest) {
       pipelineLog({ step: 'image:usability', requestId, success: true, durationMs: Date.now() - reqStart, meta: { usable: false, reason: usability.usabilityReason, confidenceScore: analysis.confidenceScore, angle } })
     }
     pipelineLog({ step: 'analyze-photo:complete', requestId, success: true, durationMs: Date.now() - reqStart, meta: { angle, imageQuality: analysis.imageQuality, detectedIssues: analysis.detectedIssues.length, possibleIssues: analysis.possibleIssues.length, model: 'gpt-4o' } })
-    return NextResponse.json({ data: { ...successPayload, isUsable: usability.isUsable, usabilityReason: usability.usabilityReason } })
+    return NextResponse.json({ data: { ...successPayload, isUsable: usability.isUsable, usabilityReason: usability.usabilityReason, requestId } })
   } catch (error) {
     const failureType = failureFromError(error)
     const reason = error instanceof Error ? error.message : String(error)
@@ -818,7 +820,7 @@ export async function POST(req: NextRequest) {
     pipelineLog({ step: 'analyze-photo:returning-fallback', requestId, success: false, durationMs: Date.now() - reqStart, meta: { angle, failureType, reason } })
     const fallback = fallbackForFailure(locale, failureType)
     return NextResponse.json(
-      { data: buildFallbackData(fallback, failureType) },
+      { data: { ...buildFallbackData(fallback, failureType), requestId } },
       { status: 200 } // Return 200 so UI still renders — just shows the fallback
     )
   }
