@@ -2,7 +2,15 @@
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
-// ─── Decision Block ───────────────────────────────────────────────────────────
+function safeT(t: Translate, key: string, fallbackSr: string, options?: Record<string, unknown>): string {
+  const resolved = t(key, options)
+  if (resolved && resolved !== key) return resolved
+  if (!options) return fallbackSr
+  return Object.entries(options).reduce(
+    (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
+    fallbackSr,
+  )
+}
 
 interface DecisionBlockProps {
   verdict: string
@@ -24,25 +32,25 @@ function buildDecisionContent(
   switch (verdict) {
     case 'STRONG_BUY':
       return {
-        headline: t('report.decision.headline.strongBuy', { defaultValue: 'Safe to proceed' }),
-        body: t('report.decision.body.strongBuy', { defaultValue: 'No significant issues detected. This vehicle appears suitable for purchase.' }),
+        headline: safeT(t, 'report.decision.headline.strongBuy', 'Može se nastaviti'),
+        body: safeT(t, 'report.decision.body.strongBuy', 'Nisu uočeni značajni problemi. Vozilo deluje pogodno za kupovinu uz standardnu proveru.'),
       }
     case 'BUY_WITH_CAUTION':
       return {
-        headline: t('report.decision.headline.caution', { defaultValue: 'Proceed with caution' }),
+        headline: safeT(t, 'report.decision.headline.caution', 'Nastavite oprezno'),
         body: total > 0
-          ? t('report.decision.body.cautionIssues', { count: total, defaultValue: `${total} concern(s) need attention. Address these before finalising any deal.` })
-          : t('report.decision.body.caution', { defaultValue: 'Minor risks present. Review flagged items with the seller before committing.' }),
+          ? safeT(t, 'report.decision.body.cautionIssues', '{{count}} nalaza zahteva pažnju. Razjasnite ih sa prodavcem pre konačne odluke.', { count: total })
+          : safeT(t, 'report.decision.body.caution', 'Postoje manji rizici. Proverite označene stavke sa prodavcem pre dogovora.'),
       }
     case 'HIGH_RISK':
       return {
-        headline: t('report.decision.headline.highRisk', { defaultValue: 'High risk — do not buy without inspection' }),
-        body: t('report.decision.body.highRisk', { defaultValue: 'Serious issues detected. Get a professional inspection before making any decision.' }),
+        headline: safeT(t, 'report.decision.headline.highRisk', 'Visok rizik - ne kupovati bez pregleda'),
+        body: safeT(t, 'report.decision.body.highRisk', 'Uočeni su ozbiljni problemi. Zatražite profesionalni pregled pre bilo kakve odluke.'),
       }
     case 'WALK_AWAY':
       return {
-        headline: t('report.decision.headline.walkAway', { defaultValue: 'Not recommended' }),
-        body: t('report.decision.body.walkAway', { defaultValue: 'Multiple critical problems found. The risks outweigh the value of this vehicle at the asking price.' }),
+        headline: safeT(t, 'report.decision.headline.walkAway', 'Ne preporučuje se kupovina'),
+        body: safeT(t, 'report.decision.body.walkAway', 'Pronađeno je više kritičnih problema. Rizik je veći od vrednosti vozila po traženoj ceni.'),
       }
     default:
       return null
@@ -102,7 +110,7 @@ export function DecisionBlock({
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 5 }}>
-            {t('report.finalRecommendation', { defaultValue: 'Final Recommendation' })}
+            {safeT(t, 'report.finalRecommendation', 'Konačna preporuka')}
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: verdictColor, marginBottom: 6, letterSpacing: '-0.1px', lineHeight: 1.3 }}>
             {content.headline}
@@ -115,8 +123,6 @@ export function DecisionBlock({
     </div>
   )
 }
-
-// ─── Confidence Indicator ─────────────────────────────────────────────────────
 
 interface ConfidenceIndicatorProps {
   photoCount: number
@@ -134,9 +140,9 @@ function computeConfidence(
   checklistComplete: boolean,
   hasAnyChecklist: boolean,
 ): ConfLevel {
-  const photoScore    = Math.min(photoCount / 6, 1)
-  const checkScore    = checklistComplete ? 1 : hasAnyChecklist ? 0.5 : 0
-  const aiScore       = hasAI ? 1 : 0
+  const photoScore = Math.min(photoCount / 6, 1)
+  const checkScore = checklistComplete ? 1 : hasAnyChecklist ? 0.5 : 0
+  const aiScore = hasAI ? 1 : 0
   const total = photoScore * 0.40 + checkScore * 0.35 + aiScore * 0.25
   if (total >= 0.70) return 'high'
   if (total >= 0.38) return 'medium'
@@ -155,10 +161,10 @@ const CONF_TEXT_KEY: Record<ConfLevel, string> = {
   low:    'report.confidence.low',
 }
 
-const CONF_TEXT_DEFAULT: Record<ConfLevel, string> = {
-  high:   'High — sufficient data for reliable analysis',
-  medium: 'Moderate — partial data, results are indicative',
-  low:    'Low — limited data, treat results with caution',
+const CONF_TEXT_FALLBACK_SR: Record<ConfLevel, string> = {
+  high:   'Visoka - dovoljno podataka za pouzdanu analizu',
+  medium: 'Srednja - podaci su delimični, rezultat je indikativan',
+  low:    'Niska - podaci su ograničeni, rezultat tumačite oprezno',
 }
 
 export function ConfidenceIndicator({
@@ -169,7 +175,7 @@ export function ConfidenceIndicator({
   t,
 }: Readonly<ConfidenceIndicatorProps>) {
   const level = computeConfidence(photoCount, hasAIResults, checklistComplete, hasAnyChecklistData)
-  const s     = CONF_STYLE[level]
+  const s = CONF_STYLE[level]
 
   return (
     <div style={{
@@ -178,7 +184,7 @@ export function ConfidenceIndicator({
       background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10,
     }}>
       <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-        {t('report.confidenceLabel', { defaultValue: 'Confidence' })}
+        {safeT(t, 'report.confidenceLabel', 'Pouzdanost')}
       </span>
       <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
         {([1, 2, 3] as const).map(i => (
@@ -186,7 +192,7 @@ export function ConfidenceIndicator({
         ))}
       </div>
       <span style={{ fontSize: 11.5, color: s.color, fontWeight: 600, lineHeight: 1.3 }}>
-        {t(CONF_TEXT_KEY[level], { defaultValue: CONF_TEXT_DEFAULT[level] })}
+        {safeT(t, CONF_TEXT_KEY[level], CONF_TEXT_FALLBACK_SR[level])}
       </span>
     </div>
   )

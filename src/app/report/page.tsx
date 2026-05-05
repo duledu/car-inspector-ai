@@ -90,61 +90,153 @@ function normalizeReportTextV2(text: string): string {
     .trim()
 }
 
+function safeReportT(t: Translate, key: string, fallbackSr: string, options?: Record<string, unknown>): string {
+  const resolved = t(key, options)
+  if (resolved && resolved !== key) return resolved
+  if (!options) return fallbackSr
+  return Object.entries(options).reduce(
+    (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
+    fallbackSr,
+  )
+}
+
+function translateAiFindingTitle(text: string | undefined, t: Translate): string {
+  const normalized = normalizeReportTextV2(text ?? '').toLowerCase()
+  if (!normalized) return safeReportT(t, 'report.aiIssue.unknown', 'vizuelna nepravilnost')
+
+  if (normalized.includes('paint') || normalized.includes('repaint') || normalized.includes('overspray')) {
+    return safeReportT(t, 'report.aiIssue.paintMismatch', 'neujednačen lak ili trag popravke')
+  }
+  if (normalized.includes('gap') || normalized.includes('panel') || normalized.includes('alignment')) {
+    return safeReportT(t, 'report.aiIssue.panelGap', 'nepravilan zazor panela')
+  }
+  if (normalized.includes('scratch')) return safeReportT(t, 'report.aiIssue.scratch', 'ogrebotina')
+  if (normalized.includes('dent')) return safeReportT(t, 'report.aiIssue.dent', 'udubljenje')
+  if (normalized.includes('rust') || normalized.includes('corrosion')) return safeReportT(t, 'report.aiIssue.rust', 'korozija')
+  if (normalized.includes('oil') || normalized.includes('leak')) return safeReportT(t, 'report.aiIssue.oilLeak', 'moguće curenje ulja')
+  if (normalized.includes('warning') || normalized.includes('light') || normalized.includes('dashboard')) {
+    return safeReportT(t, 'report.aiIssue.warningLight', 'upozorenje na instrument tabli')
+  }
+  if (normalized.includes('damage') || normalized.includes('bumper') || normalized.includes('trim')) {
+    return safeReportT(t, 'report.aiIssue.bodyDamage', 'oštećenje karoserije ili opreme')
+  }
+  if (normalized.includes('visual') || normalized.includes('anomaly')) {
+    return safeReportT(t, 'report.aiIssue.visualAnomaly', 'vizuelna nepravilnost')
+  }
+
+  return safeReportT(t, 'report.aiIssue.unknown', 'vizuelna nepravilnost')
+}
+
+function translateAiArea(text: string | undefined, t: Translate): string {
+  const normalized = normalizeReportTextV2(text ?? '').toLowerCase()
+  if (!normalized) return safeReportT(t, 'report.aiSummary.visibleArea', 'prikazane vidljive oblasti')
+
+  if (normalized.includes('front')) return safeReportT(t, 'report.aiArea.front', 'prednji deo vozila')
+  if (normalized.includes('rear') || normalized.includes('back')) return safeReportT(t, 'report.aiArea.rear', 'zadnji deo vozila')
+  if (normalized.includes('left')) return safeReportT(t, 'report.aiArea.left', 'leva strana vozila')
+  if (normalized.includes('right')) return safeReportT(t, 'report.aiArea.right', 'desna strana vozila')
+  if (normalized.includes('interior') || normalized.includes('cabin')) return safeReportT(t, 'report.aiArea.interior', 'enterijer')
+  if (normalized.includes('dashboard')) return safeReportT(t, 'report.aiArea.dashboard', 'instrument tabla')
+  if (normalized.includes('wheel') || normalized.includes('tire') || normalized.includes('tyre')) return safeReportT(t, 'report.aiArea.wheels', 'točkovi i pneumatici')
+  if (normalized.includes('engine')) return safeReportT(t, 'report.aiArea.engine', 'motorni prostor')
+
+  return safeReportT(t, 'report.aiSummary.visibleArea', 'prikazane vidljive oblasti')
+}
+
+function translateAiFindingDescription(text: string | undefined, t: Translate): string | undefined {
+  const normalized = normalizeReportTextV2(text ?? '').toLowerCase()
+  if (!normalized) return undefined
+
+  if (normalized.includes('confidence') || normalized.includes('manual inspection') || normalized.includes('further inspection')) {
+    return safeReportT(t, 'report.aiFinding.description.inspect', 'AI je označio ovaj deo za dodatnu proveru. Potvrdite nalaz uživo pre odluke o kupovini.')
+  }
+  if (normalized.includes('paint') || normalized.includes('panel') || normalized.includes('gap') || normalized.includes('damage')) {
+    return safeReportT(t, 'report.aiFinding.description.body', 'Vizuelni nalaz može ukazivati na popravku, oštećenje ili neusklađenost panela.')
+  }
+  if (normalized.includes('photo') || normalized.includes('image') || normalized.includes('lighting')) {
+    return safeReportT(t, 'report.aiFinding.description.photoQuality', 'Kvalitet fotografije ograničava procenu. Ponovite snimanje za sigurniji rezultat.')
+  }
+
+  return safeReportT(t, 'report.aiFinding.description.generic', 'AI je uočio potencijalnu nepravilnost. Proverite ovaj deo vozila uživo.')
+}
+
+function translateAiRecommendation(text: string | undefined, t: Translate): string {
+  const normalized = normalizeReportTextV2(text ?? '').toLowerCase()
+  if (!normalized) return safeReportT(t, 'report.nextStepFallback', 'Pre donošenja odluke o kupovini proverite sve nalaze lično')
+
+  if (normalized.includes('mechanic') || normalized.includes('manual inspection') || normalized.includes('professional inspection')) {
+    return safeReportT(t, 'report.recommendMechanic', 'Pre kupovine zamolite kvalifikovanog mehaničara da pregleda identifikovane oblasti')
+  }
+  if (normalized.includes('diagnostic') || normalized.includes('obd') || normalized.includes('fault code')) {
+    return safeReportT(t, 'report.recommendDiagnostic', 'Zatražite dijagnostičko skeniranje vozila radi provere grešaka')
+  }
+  if (normalized.includes('photo') || normalized.includes('retake') || normalized.includes('lighting')) {
+    return safeReportT(t, 'report.recommendBetterPhotos', 'Ponovo snimite fotografije pri boljem osvetljenju za potpuniju analizu')
+  }
+  if (normalized.includes('seller') || normalized.includes('negotiate') || normalized.includes('price')) {
+    return safeReportT(t, 'report.hint.genericNegotiation', 'Iskoristite ovaj nalaz kao osnov za dodatnu proveru i pregovor sa prodavcem.')
+  }
+
+  return safeReportT(t, 'report.nextStepFallback', 'Pre donošenja odluke o kupovini proverite sve nalaze lično')
+}
+
 function translateDimensionExplanationV2(key: string, text: string | undefined, t: Translate): string | undefined {
   if (!text) return undefined
 
   const normalizedText = normalizeReportTextV2(text)
 
-  // All t() calls below include defaultValue so they never render raw keys
-  // during the brief SSR/hydration gap when i18next is not yet fully ready.
-  if (normalizedText === 'No obvious issues detected from available photos. Results are advisory only.') return t('report.dimExplanation.ai.clean', { defaultValue: 'No obvious issues were detected from the available photos. Results are advisory only.' })
-  if (normalizedText === 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.') return t('report.dimExplanation.ai.limited', { defaultValue: 'No obvious issues detected, but limited photo coverage reduces confidence.' })
-  if (normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') return t('report.dimExplanation.ai.noData', { defaultValue: 'No photo analysis data is available yet. Upload more clear photos for a more reliable AI assessment.' })
+  if (normalizedText === 'No obvious issues detected from available photos. Results are advisory only.') {
+    return safeReportT(t, 'report.dimExplanation.ai.clean', 'Na dostupnim fotografijama nisu uočene očigledne nepravilnosti. Rezultati su samo savetodavni.')
+  }
+  if (normalizedText === 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.') {
+    return safeReportT(t, 'report.dimExplanation.ai.limited', 'Na dostupnim fotografijama nisu uočene očigledne nepravilnosti, ali ograničen broj fotografija smanjuje pouzdanost procene.')
+  }
+  if (normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') {
+    return safeReportT(t, 'report.dimExplanation.ai.noData', 'AI analiza fotografija još nije dostupna. Dodajte više jasnih fotografija za pouzdaniju procenu.')
+  }
 
   const aiVeryLimitedMatch = normalizedText.match(/^No issues detected in (\d+) of (\d+) analyzed photos\. Very limited coverage/)
   if (aiVeryLimitedMatch) {
-    return t('report.dimExplanation.ai.veryLimited', {
+    return safeReportT(t, 'report.dimExplanation.ai.veryLimited', 'Na {{count}} od {{total}} analiziranih fotografija nisu pronađeni problemi. Veoma ograničena pokrivenost - većina vozila nije pregledana.', {
       count: Number(aiVeryLimitedMatch[1]),
       total: Number(aiVeryLimitedMatch[2]),
-      defaultValue: `No issues detected in ${aiVeryLimitedMatch[1]} of ${aiVeryLimitedMatch[2]} analyzed photos. Very limited coverage.`,
     })
   }
   const aiPartialMatch = normalizedText.match(/^No issues detected in (\d+) of (\d+) analyzed photos\. Partial coverage/)
   if (aiPartialMatch) {
-    return t('report.dimExplanation.ai.partialCoverage', {
+    return safeReportT(t, 'report.dimExplanation.ai.partialCoverage', 'Na {{count}} od {{total}} analiziranih fotografija nisu pronađeni problemi. Delimična pokrivenost - rezultati možda ne odražavaju celokupno stanje vozila.', {
       count: Number(aiPartialMatch[1]),
       total: Number(aiPartialMatch[2]),
-      defaultValue: `No issues detected in ${aiPartialMatch[1]} of ${aiPartialMatch[2]} analyzed photos. Partial coverage.`,
     })
   }
-  if (normalizedText === 'Checklist not completed for this section.') return t('report.dimExplanation.checklist.notCompleted', { defaultValue: 'This section of the checklist has not been completed.' })
-  if (normalizedText === 'No items assessed yet.') return t('report.dimExplanation.checklist.notAssessed', { defaultValue: 'No checklist items have been assessed yet.' })
-  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return t('report.dimExplanation.vin.basic', { defaultValue: 'Only basic VIN data is available. Unlock premium history for full history scoring.' })
-  if (normalizedText === 'Test drive not yet completed.') return t('report.dimExplanation.testDrive.notCompleted', { defaultValue: 'The test drive section has not been completed.' })
+  if (normalizedText === 'Checklist not completed for this section.') return safeReportT(t, 'report.dimExplanation.checklist.notCompleted', 'Ovaj deo ček-liste nije završen.')
+  if (normalizedText === 'No items assessed yet.') return safeReportT(t, 'report.dimExplanation.checklist.notAssessed', 'Još nema ocenjenih stavki u ček-listi.')
+  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return safeReportT(t, 'report.dimExplanation.vin.basic', 'Dostupni su samo osnovni VIN podaci. Otključajte premium istoriju za punu ocenu istorije vozila.')
+  if (normalizedText === 'Test drive not yet completed.') return safeReportT(t, 'report.dimExplanation.testDrive.notCompleted', 'Test vožnja nije završena.')
 
   const aiPhotoMatch = normalizedText.match(/^Issues detected in (\d+) of (\d+) photos\. Main concern: (.+?)\. Confidence: (\d+)%\. Further manual inspection recommended\.$/)
   if (aiPhotoMatch) {
-    return t('report.dimExplanation.ai.issues', {
+    return safeReportT(t, 'report.dimExplanation.ai.issues', 'Problemi su otkriveni na {{count}} od {{total}} fotografija. Glavna nedoumica: {{title}}. Pouzdanost: {{confidence}}%. Preporučuje se dodatni ručni pregled.', {
       count: Number(aiPhotoMatch[1]),
       total: Number(aiPhotoMatch[2]),
-      title: aiPhotoMatch[3],
+      title: translateAiFindingTitle(aiPhotoMatch[3], t),
       confidence: Number(aiPhotoMatch[4]),
     })
   }
 
   const aiMatch = normalizedText.match(/^(\d+) issue(s)? detected\. Primary concern: (.+) \(confidence (\d+)%\)\.$/)
   if (aiMatch) {
-    return t('report.dimExplanation.ai.issues', {
+    return safeReportT(t, 'report.dimExplanation.ai.issues', 'Problemi su otkriveni na {{count}} od {{total}} fotografija. Glavna nedoumica: {{title}}. Pouzdanost: {{confidence}}%. Preporučuje se dodatni ručni pregled.', {
       count: Number(aiMatch[1]),
       total: Number(aiMatch[1]),
-      title: aiMatch[3],
+      title: translateAiFindingTitle(aiMatch[3], t),
       confidence: Number(aiMatch[4]),
     })
   }
 
   const checklistMatch = normalizedText.match(/^(\d+) OK [·] (\d+) warnings [·] (\d+) problems across (\d+) items\.$/)
   if (checklistMatch) {
-    return t('report.dimExplanation.checklist.summary', {
+    return safeReportT(t, 'report.dimExplanation.checklist.summary', '{{ok}} OK · {{warnings}} upozorenja · {{problems}} problema kroz {{total}} stavki.', {
       ok: Number(checklistMatch[1]),
       warnings: Number(checklistMatch[2]),
       problems: Number(checklistMatch[3]),
@@ -154,23 +246,23 @@ function translateDimensionExplanationV2(key: string, text: string | undefined, 
 
   const vinMatch = normalizedText.match(/^(\d+) accident\(s\)\. (\d+) open recall\(s\)\. Mileage: (consistent|inconsistent)\.$/)
   if (vinMatch) {
-    return t('report.dimExplanation.vin.summary', {
+    return safeReportT(t, 'report.dimExplanation.vin.summary', '{{accidents}} zapisa o nezgodama. {{recalls}} otvorenih opoziva. Kilometraža je {{mileage}}.', {
       accidents: Number(vinMatch[1]),
       recalls: Number(vinMatch[2]),
-      mileage: t(`report.mileage.${vinMatch[3]}`),
+      mileage: safeReportT(t, `report.mileage.${vinMatch[3]}`, vinMatch[3] === 'consistent' ? 'dosledna' : 'nedosledna'),
     })
   }
 
   const testDriveMatch = normalizedText.match(/^(\d+) good [·] (\d+) concerns [·] (\d+) problems observed during test drive\.$/)
   if (testDriveMatch) {
-    return t('report.dimExplanation.testDrive.summary', {
+    return safeReportT(t, 'report.dimExplanation.testDrive.summary', '{{good}} dobro · {{concerns}} nedoumica · {{problems}} problema primećeno tokom test vožnje.', {
       good: Number(testDriveMatch[1]),
       concerns: Number(testDriveMatch[2]),
       problems: Number(testDriveMatch[3]),
     })
   }
 
-  return t(`report.dimExplanation.${key}.fallback`, { defaultValue: normalizedText })
+  return safeReportT(t, `report.dimExplanation.${key}.fallback`, 'Procena trenutno nije dostupna u lokalizovanom obliku.')
 }
 
 function translateReasonV2(text: string, t: Translate): string {
@@ -215,7 +307,7 @@ function translateReasonV2(text: string, t: Translate): string {
   const problemMatch = normalizedText.match(/^(\d+) checklist item\(s\) marked as problem$/)
   if (problemMatch) return t('report.reason.checklistProblems', { count: Number(problemMatch[1]) })
 
-  return normalizedText
+  return safeReportT(t, 'report.reason.genericFinding', 'Nalaz zahteva dodatnu proveru.')
 }
 
 function translateNegotiationHintV2(text: string, t: Translate, locale: string): string {
@@ -259,7 +351,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
   const repairMatch = normalizedText.match(/^High recorded repair costs \(> ?(.+) EUR\) [â€”-] budget for potential recurring issues\.$/)
   if (repairMatch) return t('report.hint.highRepairCosts', { amount: repairMatch[1] })
 
-  return normalizedText
+  return safeReportT(t, 'report.hint.genericNegotiation', 'Iskoristite ovaj nalaz kao osnov za dodatnu proveru i pregovor sa prodavcem.')
 }
 
 // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Score ring ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
@@ -380,14 +472,12 @@ function DimBar({
 
 type ChecklistStatus = 'ok' | 'warning' | 'problem' | 'mixed' | 'incomplete'
 
-// English fallbacks — shown if the i18n bundle hasn't hydrated yet or the key
-// is missing. Prevents raw keys ever appearing in the UI.
-const CHECKLIST_STATUS_EN: Record<ChecklistStatus, string> = {
-  ok:         'All clear',
-  warning:    'Needs attention',
-  problem:    'Issues found',
-  mixed:      'Mixed results',
-  incomplete: 'Not completed',
+const CHECKLIST_STATUS_FALLBACK_SR: Record<ChecklistStatus, string> = {
+  ok:         'Sve u redu',
+  warning:    'Potrebna pažnja',
+  problem:    'Uočeni problemi',
+  mixed:      'Mešoviti rezultati',
+  incomplete: 'Nije završeno',
 }
 
 function getChecklistStatus(rawExplanation: string | undefined, score: number): ChecklistStatus {
@@ -438,10 +528,8 @@ function ChecklistDimBar({
     : getDimensionSeverity(score, visualMaxScore)
 
   const barColor = status === 'incomplete' ? 'rgba(255,255,255,0.1)' : severity.color
-  // Detect when t() returned the raw i18n key (e.g. during SSR/hydration gap).
-  // A raw key equals the key pattern itself; in that case fall back to English.
   const rawKey = `report.checklistStatus.${status}`
-  const resolvedLabel = (statusLabel && statusLabel !== rawKey) ? statusLabel : CHECKLIST_STATUS_EN[status]
+  const resolvedLabel = (statusLabel && statusLabel !== rawKey) ? statusLabel : CHECKLIST_STATUS_FALLBACK_SR[status]
 
   return (
     <div style={{ padding: '11px 13px', background: `linear-gradient(180deg, ${severity.background}, rgba(255,255,255,0.015))`, border: `1px solid ${severity.border}`, borderRadius: 11 }}>
@@ -495,9 +583,10 @@ function deriveNextSteps(
 
   for (const f of findings) {
     const rec = (f as any).recommendation as string | undefined
-    if (rec && rec.length > 5 && !seen.has(rec)) {
-      seen.add(rec)
-      steps.push(rec)
+    const localizedRec = translateAiRecommendation(rec, t)
+    if (rec && rec.length > 5 && !seen.has(localizedRec)) {
+      seen.add(localizedRec)
+      steps.push(localizedRec)
     }
   }
 
@@ -550,8 +639,8 @@ function summarizeVehicleAIFindings(
     : 1
 
   const confidence = Math.max(0, Math.round(Number(strongestFinding?.confidence) || 0))
-  const title = (strongestFinding?.title ?? t('report.aiSummary.issueFallback')).trim()
-  const area = (strongestFinding?.area ?? t('report.aiSummary.visibleArea')).trim()
+  const title = translateAiFindingTitle(strongestFinding?.title, t)
+  const area = translateAiArea(strongestFinding?.area, t)
   const tone =
     confidence >= 80 || strongestFinding?.severity === 'critical' || repeatedConcernCount >= 2
       ? 'strong'
@@ -622,9 +711,7 @@ export default function ReportPage() {
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
 
-  const accessRequiredMessage = t('report.accessRequired.message', {
-    defaultValue: 'An active report credit is required to generate this report.',
-  })
+  const accessRequiredMessage = safeReportT(t, 'report.accessRequired.message', 'Za generisanje izveštaja potreban je aktivan kredit.')
 
   const mapReportGenerationError = (err: unknown): string => {
     const code = (err as { code?: string })?.code
@@ -634,26 +721,18 @@ export default function ReportPage() {
       return accessRequiredMessage
     }
     if (code === 'GENERATION_IN_PROGRESS') {
-      return t('report.accessRequired.generationInProgress', {
-        defaultValue: 'Generisanje izveštaja je već u toku. Sačekajte trenutak i pokušajte ponovo.',
-      })
+      return safeReportT(t, 'report.accessRequired.generationInProgress', 'Generisanje izveštaja je već u toku. Sačekajte trenutak i pokušajte ponovo.')
     }
     if (code === 'DATABASE_UNAVAILABLE') {
       setReportUnavailable(true)
-      return t('report.unavailableTitle', { defaultValue: 'Izveštaj trenutno nije dostupan' })
+      return safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan')
     }
     if (code === 'INTERNAL_ERROR' || code === 'UNKNOWN_ERROR' || (statusCode && statusCode >= 500)) {
-      return t('report.error.temporaryUnavailable', {
-        defaultValue: 'The report is temporarily unavailable. Please try again in a moment.',
-      })
+      return safeReportT(t, 'report.error.temporaryUnavailable', 'Izveštaj trenutno nije dostupan. Pokušajte ponovo za nekoliko trenutaka.')
     }
     // For all server errors (INTERNAL_ERROR, UNKNOWN_ERROR, etc.) show a
     // friendly message instead of leaking the raw axios error string.
-    const serverMsg = (err as { message?: string })?.message ?? ''
-    const isRawAxiosMsg = serverMsg.startsWith('Request failed with status code')
-    return isRawAxiosMsg
-      ? t('report.error.calculateFailed')
-      : (serverMsg || t('report.error.calculateFailed'))
+    return safeReportT(t, 'report.error.calculateFailed', 'Ocena izveštaja trenutno nije mogla biti izračunata. Pokušajte ponovo.')
   }
 
   // Guard: the inspection store is hydrated from localStorage and may still hold data
@@ -754,25 +833,24 @@ export default function ReportPage() {
     missingChecklistCategories: inspectionCompletion.missingCategories,
     vehicle: activeVehicle,
     vehicleFieldLabels: {
-      vin: t('report.missingField.vin', { defaultValue: 'VIN broj' }),
-      mileage: t('report.missingField.mileage', { defaultValue: 'Kilometraza' }),
-      askingPrice: t('report.missingField.askingPrice', { defaultValue: 'Cena vozila' }),
-      fuelType: t('report.missingField.fuelType', { defaultValue: 'Gorivo' }),
-      transmission: t('report.missingField.transmission', { defaultValue: 'Menjac' }),
+      vin: safeReportT(t, 'report.missingField.vin', 'VIN broj'),
+      mileage: safeReportT(t, 'report.missingField.mileage', 'Kilometraža'),
+      askingPrice: safeReportT(t, 'report.missingField.askingPrice', 'Cena vozila'),
+      fuelType: safeReportT(t, 'report.missingField.fuelType', 'Gorivo'),
+      transmission: safeReportT(t, 'report.missingField.transmission', 'Menjač'),
     },
     checklistCategoryLabels: {
-      PRE_SCREENING: t('phase.PRE_SCREENING', { defaultValue: 'Pre-screening' }),
+      PRE_SCREENING: safeReportT(t, 'phase.PRE_SCREENING', 'Početna provera'),
       EXTERIOR: t('phase.EXTERIOR'),
       INTERIOR: t('phase.INTERIOR'),
       MECHANICAL: t('phase.MECHANICAL'),
       TEST_DRIVE: t('phase.TEST_DRIVE'),
       DOCUMENTS: t('phase.VIN_DOCS'),
     },
-    photoLabel: t('report.missingData.photos', { defaultValue: 'Slike' }),
-    checklistLabel: t('report.missingData.checklist', { defaultValue: 'Checklist' }),
-    vehicleLabel: t('report.missingData.vehicle', { defaultValue: 'Podaci o vozilu' }),
-    photoDetailFormatter: (missingCount, minimumCount) => t('report.missingPhotosDetail', {
-      defaultValue: 'Jos {{count}} fotografija (minimum {{minimum}}).',
+    photoLabel: safeReportT(t, 'report.missingData.photos', 'Fotografije'),
+    checklistLabel: safeReportT(t, 'report.missingData.checklist', 'Ček-lista'),
+    vehicleLabel: safeReportT(t, 'report.missingData.vehicle', 'Podaci o vozilu'),
+    photoDetailFormatter: (missingCount, minimumCount) => safeReportT(t, 'report.missingPhotosDetail', 'Još {{count}} fotografija (minimum {{minimum}}).', {
       count: missingCount,
       minimum: minimumCount,
     }),
@@ -886,14 +964,12 @@ export default function ReportPage() {
         const code = (err as { code?: string })?.code
         if (code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
-          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izveštaj trenutno nije dostupan' }))
+          setCalcError(safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan'))
         } else if (code && code !== 'NOT_FOUND' && code !== 'INSPECTION_INCOMPLETE') {
           // Surface unexpected server errors rather than leaving the page in a
           // silent broken state. NOT_FOUND and INSPECTION_INCOMPLETE are handled
           // downstream (no-vehicle state and preliminary mode respectively).
-          setCalcError(t('report.error.temporaryUnavailable', {
-            defaultValue: 'The report is temporarily unavailable. Please try again in a moment.',
-          }))
+          setCalcError(safeReportT(t, 'report.error.temporaryUnavailable', 'Izveštaj trenutno nije dostupan. Pokušajte ponovo za nekoliko trenutaka.'))
         }
         setLoading(false)
       })
@@ -908,7 +984,7 @@ export default function ReportPage() {
       console.error('[report] failed to recover active vehicle from inspection session', err, { sessionVehicleId: session.vehicleId })
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
         setReportUnavailable(true)
-        setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+        setCalcError(safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan'))
       }
     })
   }, [activeVehicle, session?.vehicleId, storesHydrated, t])
@@ -942,7 +1018,7 @@ export default function ReportPage() {
         if (!isMountedRef.current) return
         if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
-          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+          setCalcError(safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan'))
         } else {
           setCalcError(mapReportGenerationError(err))
         }
@@ -978,7 +1054,7 @@ export default function ReportPage() {
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
         setReportUnavailable(true)
-        setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+        setCalcError(safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan'))
       } else {
         setCalcError(mapReportGenerationError(err))
       }
@@ -991,7 +1067,7 @@ export default function ReportPage() {
     if (!vehicleId || promoLoading) return
     const code = promoCode.trim()
     if (!code) {
-      setPromoError(t('report.accessRequired.promoRequired', { defaultValue: 'Unesite promo kod.' }))
+      setPromoError(safeReportT(t, 'report.accessRequired.promoRequired', 'Unesite promo kod.'))
       setPromoSuccess(null)
       return
     }
@@ -1004,15 +1080,13 @@ export default function ReportPage() {
       setAccessRequired(true)
       setPromoCode('')
       setCalcError(null)
-      setPromoSuccess(t('report.accessGate.promoSuccess', {
-        defaultValue: 'Report credit activated. You can continue with report generation.',
-      }))
+      setPromoSuccess(safeReportT(t, 'report.accessGate.promoSuccess', 'Kredit za izveštaj je aktiviran. Možete nastaviti sa generisanjem.'))
     } catch (err: unknown) {
       const apiCode = (err as { code?: string })?.code
       setPromoError(
         apiCode === 'INVALID_PROMO_CODE'
-          ? t('report.accessRequired.invalidPromo', { defaultValue: 'Promo kod nije važeći.' })
-          : t('report.accessRequired.promoFailed', { defaultValue: 'Promo kod nije moguće primeniti. Pokušajte ponovo.' })
+          ? safeReportT(t, 'report.accessRequired.invalidPromo', 'Promo kod nije važeći.')
+          : safeReportT(t, 'report.accessRequired.promoFailed', 'Promo kod nije moguće primeniti. Pokušajte ponovo.')
       )
     } finally {
       setPromoLoading(false)
@@ -1037,7 +1111,7 @@ export default function ReportPage() {
       setIsPreliminaryScore(true)
     } catch (err) {
       console.error('[report] failed to calculate preliminary report', err, { vehicleId, preliminaryInput, sectionProgress })
-      setCalcError(t('report.preliminaryFailed', { defaultValue: 'Preliminarni izvestaj trenutno nije mogao da se generise.' }))
+      setCalcError(safeReportT(t, 'report.preliminaryFailed', 'Preliminarni izveštaj trenutno nije mogao da se generiše.'))
       setRiskScore(null)
       setIsPreliminaryScore(true)
     }
@@ -1084,16 +1158,16 @@ export default function ReportPage() {
         <EmptyReport
           icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
           title={reportUnavailable
-            ? t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' })
+            ? safeReportT(t, 'report.unavailableTitle', 'Izveštaj trenutno nije dostupan')
             : t('report.noVehicle')}
           sub={reportUnavailable
-            ? t('report.unavailableSub', { defaultValue: 'Podaci trenutno nisu dostupni.' })
+            ? safeReportT(t, 'report.unavailableSub', 'Podaci trenutno nisu dostupni.')
             : t('report.noVehicleSub')}
         />
         <div style={{ textAlign: 'center', marginTop: 4 }}>
           <Link href={reportUnavailable ? '/inspection' : '/vehicle'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 22px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
             {reportUnavailable
-              ? t('report.continueInspection', { defaultValue: 'Nastavi pregled' })
+              ? safeReportT(t, 'report.continueInspection', 'Nastavi pregled')
               : t('report.goToVehicles')}
           </Link>
         </div>
@@ -1115,20 +1189,21 @@ export default function ReportPage() {
   const preliminaryMissingDataCard = preliminaryMissingData.items.length > 0 ? (
     <div style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 12 }}>
-        {t('report.preliminaryMissingDataTitle', { defaultValue: 'Nedostaju podaci:' })}
+        {safeReportT(t, 'report.preliminaryMissingDataTitle', 'Nedostaju podaci:')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {preliminaryMissingData.items.map((item) => (
           <div key={item.id}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.72)', marginBottom: 6 }}>
-              {t(`report.missingData.${item.id}`, {
-                defaultValue:
-                  item.id === 'photos'
-                    ? 'Slike'
-                    : item.id === 'checklist'
-                      ? 'Kontrolna lista'
-                      : 'Podaci o vozilu',
-              })}
+              {safeReportT(
+                t,
+                `report.missingData.${item.id}`,
+                item.id === 'photos'
+                  ? 'Fotografije'
+                  : item.id === 'checklist'
+                    ? 'Ček-lista'
+                    : 'Podaci o vozilu',
+              )}
             </div>
             <ul style={{ margin: 0, paddingLeft: 18, color: 'rgba(255,255,255,0.55)', fontSize: 12.5, lineHeight: 1.6 }}>
               {item.details.map((detail) => (
@@ -1159,7 +1234,7 @@ export default function ReportPage() {
         textDecoration: 'none',
         boxShadow: '0 12px 28px rgba(34,211,238,0.16)',
       }}>
-      {t('report.completeInspection', { defaultValue: 'Zavrsi pregled' })}
+      {safeReportT(t, 'report.completeInspection', 'Završi pregled')}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </Link>
   ) : null
@@ -1209,7 +1284,7 @@ export default function ReportPage() {
         {(loading || autoRecalculating) && (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
             {autoRecalculating
-              ? t('report.autoRecalculating', { defaultValue: 'Updating report with latest answers…' })
+              ? safeReportT(t, 'report.autoRecalculating', 'Izveštaj se ažurira najnovijim odgovorima...')
               : t('report.loading')}
           </div>
         )}
@@ -1221,10 +1296,10 @@ export default function ReportPage() {
               <div style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(255,255,255,0.025))', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 16, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: '#22d3ee', marginBottom: 6 }}>
-                    {t('report.preliminaryTitle', { defaultValue: 'Preliminarni izvestaj' })}
+                    {safeReportT(t, 'report.preliminaryTitle', 'Preliminarni izveštaj')}
                   </div>
                   <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.6 }}>
-                    {t('report.preliminaryAccuracyMessage', { defaultValue: 'Ovaj izvestaj je generisan bez svih potrebnih podataka i moze biti manje tacan. Za potpunu i preciznu analizu, preporucujemo da zavrsite sve korake pregleda.' })}
+                    {safeReportT(t, 'report.preliminaryAccuracyMessage', 'Ovaj izveštaj je generisan bez svih potrebnih podataka i može biti manje tačan. Za potpunu i preciznu analizu preporučujemo da završite sve korake pregleda.')}
                   </div>
                 </div>
 
@@ -1233,23 +1308,23 @@ export default function ReportPage() {
                     <div style={{ width: 112, height: 112, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', background: 'radial-gradient(circle at 50% 30%, rgba(34,211,238,0.12), rgba(255,255,255,0.02))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                          {t('report.preliminaryBadge', { defaultValue: 'Preliminarna ocena' })}
+                          {safeReportT(t, 'report.preliminaryBadge', 'Preliminarna ocena')}
                         </div>
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginTop: 6 }}>
-                          {t('report.limitedAssessment', { defaultValue: 'Ogranicena procena' })}
+                          {safeReportT(t, 'report.limitedAssessment', 'Ograničena procena')}
                         </div>
                       </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 220 }}>
                       <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
                         {sectionProgress.hasAnyData
-                          ? t('report.preliminaryScorePendingTitle', { defaultValue: 'Preliminarna ocena se priprema' })
-                          : t('report.preliminaryUnavailableTitle', { defaultValue: 'Preliminarni izvestaj trenutno nije dostupan' })}
+                          ? safeReportT(t, 'report.preliminaryScorePendingTitle', 'Preliminarna ocena se priprema')
+                          : safeReportT(t, 'report.preliminaryUnavailableTitle', 'Preliminarni izveštaj trenutno nije dostupan')}
                       </div>
                       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.56)', lineHeight: 1.6 }}>
                         {sectionProgress.hasAnyData
-                          ? t('report.preliminaryScorePendingSub', { defaultValue: 'Dostupni podaci jos nisu dovoljni za pouzdanu brojcanu ocenu. Ispod prikazujemo ogranicenu procenu i sta jos treba dopuniti.' })
-                          : t('report.preliminaryUnavailableSub', { defaultValue: 'Nema dovoljno unetih podataka za generisanje preliminarnog izvestaja.' })}
+                          ? safeReportT(t, 'report.preliminaryScorePendingSub', 'Dostupni podaci još nisu dovoljni za pouzdanu brojčanu ocenu. Ispod prikazujemo ograničenu procenu i šta još treba dopuniti.')
+                          : safeReportT(t, 'report.preliminaryUnavailableSub', 'Nema dovoljno unetih podataka za generisanje preliminarnog izveštaja.')}
                       </div>
                     </div>
                   </div>
@@ -1278,7 +1353,7 @@ export default function ReportPage() {
                         fontFamily: 'var(--font-sans)',
                         boxShadow: '0 12px 28px rgba(34,211,238,0.16)',
                       }}>
-                      {t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })}
+                      {safeReportT(t, 'report.generatePreliminaryReport', 'Generiši preliminarni izveštaj')}
                     </button>
                   )}
                   {preliminaryCta}
@@ -1290,8 +1365,8 @@ export default function ReportPage() {
               <>
                 <EmptyReport
                   icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
-                  title={t('report.noScore', { defaultValue: 'Ocena jos nije izracunata' })}
-                  sub={t('report.noScoreSub', { defaultValue: 'Pregled je zavrsen. Izracunajte finalnu ocenu pouzdanosti za ovaj izvestaj.' })}
+                  title={safeReportT(t, 'report.noScore', 'Ocena još nije izračunata')}
+                  sub={safeReportT(t, 'report.noScoreSub', 'Pregled je završen. Izračunajte finalnu ocenu pouzdanosti za ovaj izveštaj.')}
                 />
                 <div style={{ padding: '0 24px 28px', display: 'flex', gap: 10, justifyContent: 'center' }}>
                   <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
@@ -1307,20 +1382,18 @@ export default function ReportPage() {
               <>
                 <EmptyReport
                   icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}
-                  title={t('report.noScorePendingTitle', { defaultValue: 'Ocena jos nije dostupna' })}
-                  sub={t('report.noScorePendingSub', { defaultValue: 'Pregled nije u potpunosti zavrsen. Mozete generisati preliminarni izvestaj, ali nedostajuce stavke mogu uticati na tacnost i potpunost rezultata.' })}
+                  title={safeReportT(t, 'report.noScorePendingTitle', 'Ocena još nije dostupna')}
+                  sub={safeReportT(t, 'report.noScorePendingSub', 'Pregled nije u potpunosti završen. Možete generisati preliminarni izveštaj, ali nedostajuće stavke mogu uticati na tačnost i potpunost rezultata.')}
                 />
                 <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(255,255,255,0.02))', border: '1px solid rgba(34,211,238,0.12)', borderRadius: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                      {t('report.progressComplete', {
-                        defaultValue: 'Zavrseno: {{done}} od {{total}} stavki',
+                      {safeReportT(t, 'report.progressComplete', 'Završeno: {{done}} od {{total}} stavki', {
                         done: sectionProgress.done,
                         total: sectionProgress.total,
                       })}
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#22d3ee', whiteSpace: 'nowrap' }}>
-                        {t('report.progressPercent', {
-                          defaultValue: '{{percent}}% zavrseno',
+                        {safeReportT(t, 'report.progressPercent', '{{percent}}% završeno', {
                           percent: sectionProgress.percent,
                         })}
                       </span>
@@ -1337,8 +1410,7 @@ export default function ReportPage() {
                     </div>
                     {sectionProgress.missing.length > 0 && (
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55 }}>
-                        {t('report.progressMissing', {
-                          defaultValue: 'Nedostaju: {{sections}}',
+                        {safeReportT(t, 'report.progressMissing', 'Nedostaju: {{sections}}', {
                           sections: sectionProgress.missing.join(', ').toLowerCase(),
                         })}
                       </div>
@@ -1366,16 +1438,16 @@ export default function ReportPage() {
                         fontFamily: 'var(--font-sans)',
                         boxShadow: '0 10px 26px rgba(34,211,238,0.18)',
                       }}>
-                      {t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })}
+                      {safeReportT(t, 'report.generatePreliminaryReport', 'Generiši preliminarni izveštaj')}
                     </button>
                     <Link href="/inspection" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 18px', background: 'transparent', color: 'rgba(255,255,255,0.72)', borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: 'none', minWidth: 180, border: '1px solid rgba(255,255,255,0.1)' }}>
-                      {t('report.continueInspection', { defaultValue: 'Nastavi pregled' })}
+                      {safeReportT(t, 'report.continueInspection', 'Nastavi pregled')}
                     </Link>
                   </div>
 
                   {!sectionProgress.hasAnyData && (
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', textAlign: 'center' }}>
-                      {t('report.noScoreNoInputs', { defaultValue: 'Unesite barem jedan deo pregleda da biste dobili preliminarnu ocenu.' })}
+                      {safeReportT(t, 'report.noScoreNoInputs', 'Unesite barem jedan deo pregleda da biste dobili preliminarnu ocenu.')}
                     </div>
                   )}
                 </div>
@@ -1387,21 +1459,21 @@ export default function ReportPage() {
         {!loading && riskScore && (!verdict || !svcLabel || safeBuyScore === null) && (
           <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: 16, padding: '22px 20px' }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#fca5a5', marginBottom: 6 }}>
-              {t('report.renderIssue', { defaultValue: 'Izvestaj trenutno nije mogao pravilno da se prikaze.' })}
+              {safeReportT(t, 'report.renderIssue', 'Izveštaj trenutno nije mogao pravilno da se prikaže.')}
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.56)', lineHeight: 1.6, marginBottom: 14 }}>
-              {t('report.renderIssueSub', { defaultValue: 'Neki podaci nedostaju ili nisu u ocekivanom formatu. Pokusajte ponovo ili nastavite pregled.' })}
+              {safeReportT(t, 'report.renderIssueSub', 'Neki podaci nedostaju ili nisu u očekivanom formatu. Pokušajte ponovo ili nastavite pregled.')}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 onClick={isPreliminaryScore ? handleCalculatePreliminary : handleCalculate}
                 style={{ padding: '10px 18px', background: 'linear-gradient(135deg, #67e8f9, #22d3ee)', color: '#041014', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                 {isPreliminaryScore
-                  ? t('report.generatePreliminaryReport', { defaultValue: 'Generisi preliminarni izvestaj' })
+                  ? safeReportT(t, 'report.generatePreliminaryReport', 'Generiši preliminarni izveštaj')
                   : t('report.calculateScore')}
               </button>
               <Link href={inspectionReturnHref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 18px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}>
-                {t('report.continueInspection', { defaultValue: 'Nastavi pregled' })}
+                {safeReportT(t, 'report.continueInspection', 'Nastavi pregled')}
               </Link>
             </div>
           </div>
@@ -1412,10 +1484,10 @@ export default function ReportPage() {
             {showPreliminaryMode && (
               <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(255,255,255,0.025))', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 16, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#22d3ee', marginBottom: 6 }}>
-                  {t('report.preliminaryTitle', { defaultValue: 'Preliminarni izvestaj' })}
+                  {safeReportT(t, 'report.preliminaryTitle', 'Preliminarni izveštaj')}
                 </div>
                 <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-                  {t('report.preliminaryAccuracyMessage', { defaultValue: 'Ovaj izvestaj je generisan bez svih potrebnih podataka i moze biti manje tacan. Za potpunu i preciznu analizu, preporucujemo da zavrsite sve korake pregleda.' })}
+                  {safeReportT(t, 'report.preliminaryAccuracyMessage', 'Ovaj izveštaj je generisan bez svih potrebnih podataka i može biti manje tačan. Za potpunu i preciznu analizu preporučujemo da završite sve korake pregleda.')}
                 </div>
               </div>
             )}
@@ -1450,7 +1522,7 @@ export default function ReportPage() {
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 }}>
                     {isPreliminaryScore
-                      ? t('report.preliminaryBadge', { defaultValue: 'Preliminarna ocena' })
+                      ? safeReportT(t, 'report.preliminaryBadge', 'Preliminarna ocena')
                       : t('report.aiConfidenceScore')}
                   </div>
                   {/* Verdict pill */}
@@ -1459,7 +1531,7 @@ export default function ReportPage() {
                   </div>
                   {/* Recommendation text — the most important sentence */}
                   {(() => {
-                    const rec = t(recommendationKey(riskScore.verdict), { defaultValue: '' })
+                    const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
                     return rec && !rec.startsWith('report.') ? (
                       <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: 10 }}>
                         {rec}
@@ -1490,14 +1562,14 @@ export default function ReportPage() {
                     style={{ minHeight: 44, padding: '10px 15px', background: pdfLoading || isPreliminaryScore ? 'rgba(34,211,238,0.55)' : 'linear-gradient(135deg, #67e8f9, #22d3ee)', border: '1px solid rgba(103,232,249,0.42)', borderRadius: 9, fontSize: 12, fontWeight: 800, color: '#041014', cursor: pdfLoading || isPreliminaryScore ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 12px 28px rgba(34,211,238,0.16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, whiteSpace: 'normal', lineHeight: 1.18 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     {isPreliminaryScore
-                      ? t('report.pdf.preliminaryDisabled', { defaultValue: 'Zavrsite pregled za PDF izvestaj' })
+                      ? safeReportT(t, 'report.pdf.preliminaryDisabled', 'Završite pregled za PDF izveštaj')
                       : pdfLoading ? t('report.pdf.loading') : t('report.pdf.cta')}
                   </button>
                   {showPreliminaryMode ? (
                     <Link
                       href={inspectionReturnHref}
                       style={{ minHeight: 42, padding: '10px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,0.78)', textDecoration: 'none', fontFamily: 'var(--font-sans)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {t('report.reviewMissingItems', { defaultValue: 'Pregledaj nedostajuce stavke' })}
+                      {safeReportT(t, 'report.reviewMissingItems', 'Pregledaj nedostajuće stavke')}
                     </Link>
                   ) : (
                     <button onClick={handleCalculate} disabled={calculating}
@@ -1514,7 +1586,7 @@ export default function ReportPage() {
                 <Link
                   href={inspectionReturnHref}
                   style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.58)', textDecoration: 'none', padding: '2px 0' }}>
-                  {t('report.reviewMissingItems', { defaultValue: 'Pregledaj nedostajuce stavke' })}
+                  {safeReportT(t, 'report.reviewMissingItems', 'Pregledaj nedostajuće stavke')}
                 </Link>
               </div>
             )}
@@ -1635,7 +1707,7 @@ export default function ReportPage() {
                         label={t(`dim.${d.key}`)}
                         score={dim.score}
                         status={status}
-                        statusLabel={t(`report.checklistStatus.${status}`, { defaultValue: CHECKLIST_STATUS_EN[status] })}
+                        statusLabel={safeReportT(t, `report.checklistStatus.${status}`, CHECKLIST_STATUS_FALLBACK_SR[status])}
                         explanation={translated}
                         visualMaxScore={vms}
                       />
@@ -1682,7 +1754,7 @@ export default function ReportPage() {
                   </div>
                   {/* Overall recommendation */}
                   {(() => {
-                    const rec = t(recommendationKey(riskScore.verdict), { defaultValue: '' })
+                    const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
                     return rec && !rec.startsWith('report.') ? (
                       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(245,158,11,0.18)', fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.68)', lineHeight: 1.6 }}>
                         {rec}
@@ -1726,11 +1798,11 @@ export default function ReportPage() {
                     <div key={i} className="report-ai-finding-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: i < latestAI.findings.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
                       <div style={{ width: 7, height: 7, borderRadius: '50%', background: SEV_COLOR[f.severity] ?? '#fff', marginTop: 5, flexShrink: 0, boxShadow: `0 0 10px ${SEV_COLOR[f.severity] ?? '#fff'}55` }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 650, color: 'rgba(255,255,255,0.86)', lineHeight: 1.35 }}>{f.title}</div>
-                        {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.44)', marginTop: 4, lineHeight: 1.55 }}>{f.description}</div>}
+                        <div style={{ fontSize: 13, fontWeight: 650, color: 'rgba(255,255,255,0.86)', lineHeight: 1.35 }}>{translateAiFindingTitle(f.title, t)}</div>
+                        {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.44)', marginTop: 4, lineHeight: 1.55 }}>{translateAiFindingDescription(f.description, t)}</div>}
                         {(f as any).recommendation && (f as any).recommendation.length > 5 && (
                           <div style={{ marginTop: 5, fontSize: 11, color: 'rgba(34,211,238,0.6)', lineHeight: 1.45 }}>
-                            {t('report.aiNextStep')} {(f as any).recommendation}
+                            {t('report.aiNextStep')} {translateAiRecommendation((f as any).recommendation, t)}
                           </div>
                         )}
                       </div>
@@ -1757,10 +1829,10 @@ export default function ReportPage() {
                           </div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>
-                              {t('inspection.analysisCouldNotComplete', { defaultValue: 'Photos could not be analyzed — retake for reliable results' })}
+                              {safeReportT(t, 'inspection.analysisCouldNotComplete', 'Fotografije nisu mogle da se analiziraju - ponovite snimanje za pouzdan rezultat')}
                             </div>
                             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>
-                              {t('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photos or try again with a stable network connection.' })}
+                              {safeReportT(t, 'inspection.analysisRetakeAdvice', 'Ponovo snimite fotografije ili pokušajte uz stabilnu internet vezu.')}
                             </div>
                           </div>
                         </div>
@@ -1783,10 +1855,10 @@ export default function ReportPage() {
                           </div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.78)', marginBottom: 3 }}>
-                              {t('inspection.analysisCouldNotComplete', { defaultValue: 'Photos could not be analyzed — retake for reliable results' })}
+                              {safeReportT(t, 'inspection.analysisCouldNotComplete', 'Fotografije nisu mogle da se analiziraju - ponovite snimanje za pouzdan rezultat')}
                             </div>
                             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.55 }}>
-                              {t('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photos or try again with a stable network connection.' })}
+                              {safeReportT(t, 'inspection.analysisRetakeAdvice', 'Ponovo snimite fotografije ili pokušajte uz stabilnu internet vezu.')}
                             </div>
                           </div>
                         </div>
