@@ -456,6 +456,7 @@ const sr = {
   'report.recommendBetterPhotos':    'Ponovo snimite fotografije pri boljem osvetljenju za potpuniju analizu',
   'report.premiumUnlock':            'Otključajte potpunu istoriju vozila',
   'report.error.calculateFailed':    'Ocena izveštaja trenutno nije mogla biti izračunata. Pokušajte ponovo.',
+  'report.error.loadTimeout':        'Učitavanje predugo traje. Pokušajte ponovo.',
   'report.severity.critical':        'Kritično',
   'report.severity.warning':         'Upozorenje',
   'report.severity.info':            'Info',

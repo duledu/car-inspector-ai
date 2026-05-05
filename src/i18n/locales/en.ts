@@ -530,6 +530,7 @@ const en = {
   'report.recommendBetterPhotos':    'Retake the failed photos in better lighting for a more complete analysis',
   'report.premiumUnlock':            'Unlock Full Vehicle History',
   'report.error.calculateFailed':    'Your report score couldn\'t be calculated right now. Please try again.',
+  'report.error.loadTimeout':        'Loading is taking too long. Please try again.',
   'report.severity.critical':        'Critical',
   'report.severity.warning':         'Warning',
   'report.severity.info':            'Info',

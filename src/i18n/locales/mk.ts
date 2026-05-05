@@ -437,6 +437,7 @@ const mk = {
   'report.recommendBetterPhotos':    'Повторно снимете ги неуспешните фотографии при подобро осветлување за посеопфатна анализа',
   'report.premiumUnlock':            'Отклучете целосна историја на возилото',
   'report.error.calculateFailed':    'Оцената на извештајот тренутно не може да биде пресметана. Обидете се повторно.',
+  'report.error.loadTimeout':        'Учитувањето траеше предолго. Обидете се повторно.',
   'report.severity.critical':        'Критично',
   'report.severity.warning':         'Предупредување',
   'report.severity.info':            'Инфо',

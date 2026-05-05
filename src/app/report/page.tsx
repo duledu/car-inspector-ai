@@ -602,6 +602,13 @@ export default function ReportPage() {
   const [inspectionStoreHydrated, setInspectionStoreHydrated] = useState(false)
   const [reportUnavailable, setReportUnavailable] = useState(false)
 
+  // Ref guard for the auto-recalculate effect — prevents duplicate concurrent
+  // invocations that the stale-closure check on `autoRecalculating` state alone
+  // cannot reliably catch when the effect fires due to a different dependency.
+  const autoRecalcGuardRef = useRef(false)
+  // Tracks mount status so setState is never called after unmount/navigation.
+  const isMountedRef = useRef(true)
+
   const vehicleId  = activeVehicle?.id ?? ''
   const preliminaryMode = searchParams.get('mode') === 'preliminary'
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
@@ -734,6 +741,12 @@ export default function ReportPage() {
     [preliminaryMissingData.firstFocusPhase]
   )
 
+  // Mark unmounted so async setState calls from in-flight API calls are no-ops.
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
   useEffect(() => {
     const unsubVehicleHydrate = useVehicleStore.persist.onHydrate(() => setVehicleStoreHydrated(false))
     const unsubVehicleFinish = useVehicleStore.persist.onFinishHydration(() => setVehicleStoreHydrated(true))
@@ -750,6 +763,34 @@ export default function ReportPage() {
       unsubInspectionFinish()
     }
   }, [])
+
+  // Hydration timeout — if Zustand onFinishHydration never fires within 4 s
+  // (e.g. localStorage is locked or the persist middleware stalls), force both
+  // flags to true so the page can still proceed to load the score.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isMountedRef.current) return
+      setVehicleStoreHydrated(true)
+      setInspectionStoreHydrated(true)
+    }, 4_000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Hard loading timeout — if `loading` or `autoRecalculating` is still true
+  // after 12 s, the API call has stalled. Unblock the UI and show an error so
+  // the user always has a retry path instead of a forever-spinner.
+  useEffect(() => {
+    const isStuck = loading || autoRecalculating
+    if (!isStuck) return
+    const timer = setTimeout(() => {
+      if (!isMountedRef.current) return
+      setLoading(false)
+      setAutoRecalculating(false)
+      autoRecalcGuardRef.current = false
+      setCalcError(prev => prev ?? t('report.error.loadTimeout'))
+    }, 12_000)
+    return () => clearTimeout(timer)
+  }, [loading, autoRecalculating, t])
 
   // Reset report state when the active vehicle changes. Without this, a riskScore
   // computed for Vehicle A blocks the preliminary calculation for Vehicle B because
@@ -781,15 +822,20 @@ export default function ReportPage() {
   useEffect(() => {
     if (!storesHydrated) return
     if (!vehicleId) return
+    // `cancelled` prevents setState on a stale invocation when vehicleId changes
+    // or the component unmounts before the API call resolves.
+    let cancelled = false
     setLoading(true)
     inspectionApi.getScore(vehicleId)
       .then(s  => {
+        if (cancelled) return
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
         setLoading(false)
       })
       .catch((err) => {
+        if (cancelled) return
         console.error('[report] failed to load persisted score', err)
         if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
@@ -797,6 +843,7 @@ export default function ReportPage() {
         }
         setLoading(false)
       })
+    return () => { cancelled = true }
   }, [storesHydrated, t, vehicleId])
 
   useEffect(() => {
@@ -815,21 +862,30 @@ export default function ReportPage() {
   // Auto-recalculate when the stored score was stale (getLatest returned null)
   // and the inspection is complete. This fires when the user navigates to /report
   // after changing checklist answers — no manual "Recalculate" click required.
+  //
+  // Uses a ref guard (autoRecalcGuardRef) rather than reading autoRecalculating
+  // state from the closure: the state check is susceptible to a stale-closure
+  // race when the effect re-fires due to a different dependency while a call is
+  // already in-flight. The ref is always current and immune to that race.
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
-    if (loading || riskScore || autoRecalculating) return
+    if (loading || riskScore) return
+    if (autoRecalcGuardRef.current) return    // ref-based guard (stale-closure safe)
     if (preliminaryMode) return               // preliminary has its own flow
     if (!sectionProgress.isComplete) return   // checklist not yet done
 
+    autoRecalcGuardRef.current = true
     setAutoRecalculating(true)
     setCalcError(null)
     inspectionApi.calculateScore(vehicleId)
       .then(s => {
+        if (!isMountedRef.current) return
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
       })
       .catch((err: unknown) => {
+        if (!isMountedRef.current) return
         if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
           setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
@@ -837,9 +893,11 @@ export default function ReportPage() {
           setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
         }
       })
-      .finally(() => setAutoRecalculating(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, preliminaryMode, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId])
+      .finally(() => {
+        autoRecalcGuardRef.current = false
+        if (isMountedRef.current) setAutoRecalculating(false)
+      })
+  }, [loading, preliminaryMode, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId, t])
 
   useEffect(() => {
     if (!storesHydrated) return

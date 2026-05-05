@@ -528,6 +528,7 @@ const bg: Record<string, string> = {
   'report.recommendBetterPhotos': 'ÐÐ°Ð¿Ñ€Ð°Ð²ÐµÑ‚Ðµ Ð¾Ñ‚Ð½Ð¾Ð²Ð¾ Ð½ÐµÑƒÑÐ¿ÐµÑˆÐ½Ð¸Ñ‚Ðµ ÑÐ½Ð¸Ð¼ÐºÐ¸ Ð¿Ñ€Ð¸ Ð¿Ð¾-Ð´Ð¾Ð±Ñ€Ð° ÑÐ²ÐµÑ‚Ð»Ð¸Ð½Ð° Ð·Ð° Ð¿Ð¾-Ð¿ÑŠÐ»ÐµÐ½ Ð°Ð½Ð°Ð»Ð¸Ð·',
   'report.premiumUnlock': 'ÐžÑ‚ÐºÐ»ÑŽÑ‡Ð¸ Ð¿ÑŠÐ»Ð½Ð°Ñ‚Ð° Ð¸ÑÑ‚Ð¾Ñ€Ð¸Ñ Ð½Ð° Ð°Ð²Ñ‚Ð¾Ð¼Ð¾Ð±Ð¸Ð»Ð°',
   'report.error.calculateFailed': 'ÐžÑ†ÐµÐ½ÐºÐ°Ñ‚Ð° Ð½Ð° Ð´Ð¾ÐºÐ»Ð°Ð´Ð° Ð½Ðµ Ð¼Ð¾Ð¶Ð° Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¸Ð·Ñ‡Ð¸ÑÐ»ÐµÐ½Ð°. ÐžÐ¿Ð¸Ñ‚Ð°Ð¹Ñ‚Ðµ Ð¾Ñ‚Ð½Ð¾Ð²Ð¾.',
+  'report.error.loadTimeout': 'Zaredvaneto otne prekalneno dalgo. Opitajte otnovo.',
   'report.severity.critical': 'ÐšÑ€Ð¸Ñ‚Ð¸Ñ‡Ð½Ð¾',
   'report.severity.warning': 'ÐŸÑ€ÐµÐ´ÑƒÐ¿Ñ€ÐµÐ¶Ð´ÐµÐ½Ð¸Ðµ',
   'report.severity.info': 'Ð˜Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ',

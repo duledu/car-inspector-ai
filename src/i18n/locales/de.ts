@@ -438,6 +438,7 @@ const de = {
   'report.recommendBetterPhotos':    'Fehlgeschlagene Fotos bei besserer Beleuchtung für eine vollständigere Analyse neu aufnehmen',
   'report.premiumUnlock':            'Vollständige Fahrzeughistorie freischalten',
   'report.error.calculateFailed':    'Die Berichtsbewertung konnte gerade nicht berechnet werden. Bitte erneut versuchen.',
+  'report.error.loadTimeout':        'Laden dauert zu lange. Bitte erneut versuchen.',
   'report.severity.critical':        'Kritisch',
   'report.severity.warning':         'Warnung',
   'report.severity.info':            'Info',

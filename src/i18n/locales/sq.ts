@@ -437,6 +437,7 @@ const sq = {
   'report.recommendBetterPhotos':    'Rifotografoni fotot e dështuara në ndriçim më të mirë për analizë më të plotë',
   'report.premiumUnlock':            'Zhblloko historinë e plotë të automjetit',
   'report.error.calculateFailed':    'Rezultati i raportit nuk mund të llogaritej tani. Provoni përsëri.',
+  'report.error.loadTimeout':        'Ngarkimi po zgjat shumë. Provoni përsëri.',
   'report.severity.critical':        'Kritike',
   'report.severity.warning':         'Paralajmërim',
   'report.severity.info':            'Info',
