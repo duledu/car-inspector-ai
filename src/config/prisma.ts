@@ -7,7 +7,7 @@
 // Useful when the same codebase runs on machines with different PG port setups.
 // =============================================================================
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 export const DATABASE_UNAVAILABLE_CODE = 'DATABASE_UNAVAILABLE'
 
@@ -87,6 +87,36 @@ export function isDatabaseUnavailableError(err: unknown): boolean {
     typeof err === 'object' &&
     'code' in err &&
     (err as { code?: string }).code === DATABASE_UNAVAILABLE_CODE
+  )
+}
+
+/**
+ * Returns true when the error indicates a table or column that the Prisma schema
+ * references does not yet exist in the live database — typically because a
+ * migration has not been applied yet, or was rolled back partway through.
+ *
+ * Callers should degrade gracefully (e.g. return a safe legacy fallback) rather
+ * than propagating the error as a 500.
+ */
+export function isMissingTableOrColumnError(err: unknown): boolean {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    // P2021 = table does not exist, P2022 = column does not exist
+    return err.code === 'P2021' || err.code === 'P2022'
+  }
+  const code = (err as { code?: string })?.code
+  if (code === '42P01' || code === '42703') {
+    return true
+  }
+  const cause = (err as { cause?: unknown })?.cause
+  if (cause && cause !== err && isMissingTableOrColumnError(cause)) {
+    return true
+  }
+  // Raw PostgreSQL errors (e.g. wrapped in PrismaClientUnknownRequestError)
+  // carry the "does not exist" message from the DB engine.
+  const msg = ((err as { message?: string })?.message ?? '').toLowerCase()
+  return (
+    (msg.includes('relation') || msg.includes('column') || msg.includes('table')) &&
+    msg.includes('does not exist')
   )
 }
 

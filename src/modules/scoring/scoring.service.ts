@@ -3,7 +3,7 @@
 // Orchestrates: read inspection data → run logic → persist result
 // =============================================================================
 
-import { prisma } from '@/config/prisma'
+import { prisma, isMissingTableOrColumnError } from '@/config/prisma'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS } from './scoring.logic'
@@ -160,30 +160,53 @@ export class ScoringService {
 
     const dbPersistStart = Date.now()
     let saved
-    if (opts.inspectionReportId) {
-      saved = await prisma.riskScore.create({
-        data: {
-          vehicle: { connect: { id: vehicleId } },
-          ...(session?.id ? { session: { connect: { id: session.id } } } : {}),
-          inspectionReport: { connect: { id: opts.inspectionReportId } },
-          ...scoreData,
-        },
-      })
-    } else if (session?.id) {
+    const persistSessionScore = async (filterOpenReport: boolean) => {
+      if (!session?.id) return null
       const existing = await prisma.riskScore.findFirst({
-        where: { sessionId: session.id, inspectionReportId: null },
+        where: filterOpenReport ? { sessionId: session.id, inspectionReportId: null } : { sessionId: session.id },
         orderBy: { createdAt: 'desc' },
       })
 
-      saved = existing
-        ? await prisma.riskScore.update({ where: { id: existing.id }, data: scoreData })
-        : await prisma.riskScore.create({
+      return existing
+        ? prisma.riskScore.update({ where: { id: existing.id }, data: scoreData })
+        : prisma.riskScore.create({
             data: {
               vehicle: { connect: { id: vehicleId } },
               session: { connect: { id: session.id } },
               ...scoreData,
             },
           })
+    }
+
+    if (opts.inspectionReportId) {
+      try {
+        saved = await prisma.riskScore.create({
+          data: {
+            vehicle: { connect: { id: vehicleId } },
+            ...(session?.id ? { session: { connect: { id: session.id } } } : {}),
+            inspectionReport: { connect: { id: opts.inspectionReportId } },
+            ...scoreData,
+          },
+        })
+      } catch (err) {
+        if (!isMissingTableOrColumnError(err)) throw err
+        saved = await persistSessionScore(false)
+        if (!saved) {
+          saved = await prisma.riskScore.create({
+            data: {
+              vehicle: { connect: { id: vehicleId } },
+              ...scoreData,
+            },
+          })
+        }
+      }
+    } else if (session?.id) {
+      // Guard: inspectionReportId column may not exist if the migration is pending.
+      // Fall back to a filter without it so existing vehicles are never blocked.
+      saved = await persistSessionScore(true).catch(async (err: unknown) => {
+        if (!isMissingTableOrColumnError(err)) throw err
+        return persistSessionScore(false)
+      })
     } else {
       const existing = await prisma.riskScore.findFirst({
         where: { vehicleId, sessionId: null },
@@ -220,46 +243,53 @@ export class ScoringService {
    * (i.e., the score is stale), forcing the caller to recalculate.
    */
   async getLatest(vehicleId: string): Promise<RiskScore | null> {
-    const session = await prisma.inspectionSession.findFirst({
-      where: { vehicleId },
-      include: { checklistItems: true },
-      orderBy: { createdAt: 'desc' },
-    })
-    const completion = getInspectionCompletion((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
-      id: item.id,
-      sessionId: item.sessionId,
-      category: item.category as any,
-      itemKey: item.itemKey,
-      itemLabel: item.itemLabel,
-      status: item.status as any,
-      notes: item.notes,
-      photoUrl: item.photoUrl,
-    })))
-    if (!completion.isComplete) return null
+    try {
+      const session = await prisma.inspectionSession.findFirst({
+        where: { vehicleId },
+        include: { checklistItems: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      const completion = getInspectionCompletion((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
+        id: item.id,
+        sessionId: item.sessionId,
+        category: item.category as any,
+        itemKey: item.itemKey,
+        itemLabel: item.itemLabel,
+        status: item.status as any,
+        notes: item.notes,
+        photoUrl: item.photoUrl,
+      })))
+      if (!completion.isComplete) return null
 
-    const score = await prisma.riskScore.findFirst({
-      where: { vehicleId },
-      orderBy: { createdAt: 'desc' },
-    })
-    if (!score) return null
+      const score = await prisma.riskScore.findFirst({
+        where: { vehicleId },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (!score) return null
 
-    if (score.inspectionReportId) {
+      if (score.inspectionReportId) {
+        return this.mapToDto(score)
+      }
+
+      // Staleness check: if any checklist item was updated after the score was
+      // last calculated, the score no longer reflects the current answers.
+      // Return null so the caller is forced to recalculate rather than showing
+      // stale results silently.
+      const latestChecklistChange = (session?.checklistItems ?? []).reduce<Date | null>(
+        (max, item) => (!max || item.updatedAt > max ? item.updatedAt : max),
+        null
+      )
+      if (latestChecklistChange && latestChecklistChange > score.updatedAt) {
+        return null
+      }
+
       return this.mapToDto(score)
+    } catch (err) {
+      // inspectionReportId column or inspection_reports table not yet created
+      // (migration pending). Return null so the caller recalculates fresh.
+      if (isMissingTableOrColumnError(err)) return null
+      throw err
     }
-
-    // Staleness check: if any checklist item was updated after the score was
-    // last calculated, the score no longer reflects the current answers.
-    // Return null so the caller is forced to recalculate rather than showing
-    // stale results silently.
-    const latestChecklistChange = (session?.checklistItems ?? []).reduce<Date | null>(
-      (max, item) => (!max || item.updatedAt > max ? item.updatedAt : max),
-      null
-    )
-    if (latestChecklistChange && latestChecklistChange > score.updatedAt) {
-      return null
-    }
-
-    return this.mapToDto(score)
   }
 
   private mapToDto(raw: any): RiskScore {

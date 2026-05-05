@@ -623,11 +623,12 @@ export default function ReportPage() {
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
 
   const accessRequiredMessage = t('report.accessRequired.message', {
-    defaultValue: 'AI analysis and report generation require one active report credit.',
+    defaultValue: 'An active report credit is required to generate this report.',
   })
 
   const mapReportGenerationError = (err: unknown): string => {
     const code = (err as { code?: string })?.code
+    const statusCode = (err as { statusCode?: number })?.statusCode
     if (code === 'ACCESS_REQUIRED') {
       setAccessRequired(true)
       return accessRequiredMessage
@@ -637,7 +638,22 @@ export default function ReportPage() {
         defaultValue: 'Generisanje izveštaja je već u toku. Sačekajte trenutak i pokušajte ponovo.',
       })
     }
-    return (err as { message?: string })?.message ?? t('report.error.calculateFailed')
+    if (code === 'DATABASE_UNAVAILABLE') {
+      setReportUnavailable(true)
+      return t('report.unavailableTitle', { defaultValue: 'Izveštaj trenutno nije dostupan' })
+    }
+    if (code === 'INTERNAL_ERROR' || code === 'UNKNOWN_ERROR' || (statusCode && statusCode >= 500)) {
+      return t('report.error.temporaryUnavailable', {
+        defaultValue: 'The report is temporarily unavailable. Please try again in a moment.',
+      })
+    }
+    // For all server errors (INTERNAL_ERROR, UNKNOWN_ERROR, etc.) show a
+    // friendly message instead of leaking the raw axios error string.
+    const serverMsg = (err as { message?: string })?.message ?? ''
+    const isRawAxiosMsg = serverMsg.startsWith('Request failed with status code')
+    return isRawAxiosMsg
+      ? t('report.error.calculateFailed')
+      : (serverMsg || t('report.error.calculateFailed'))
   }
 
   // Guard: the inspection store is hydrated from localStorage and may still hold data
@@ -867,9 +883,17 @@ export default function ReportPage() {
       .catch((err) => {
         if (cancelled) return
         console.error('[report] failed to load persisted score', err)
-        if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
+        const code = (err as { code?: string })?.code
+        if (code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
-          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
+          setCalcError(t('report.unavailableTitle', { defaultValue: 'Izveštaj trenutno nije dostupan' }))
+        } else if (code && code !== 'NOT_FOUND' && code !== 'INSPECTION_INCOMPLETE') {
+          // Surface unexpected server errors rather than leaving the page in a
+          // silent broken state. NOT_FOUND and INSPECTION_INCOMPLETE are handled
+          // downstream (no-vehicle state and preliminary mode respectively).
+          setCalcError(t('report.error.temporaryUnavailable', {
+            defaultValue: 'The report is temporarily unavailable. Please try again in a moment.',
+          }))
         }
         setLoading(false)
       })

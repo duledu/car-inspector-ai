@@ -588,6 +588,7 @@ const en = {
   'report.premiumUnlock':            'Unlock Full Vehicle History',
   'report.error.calculateFailed':    'Your report score couldn\'t be calculated right now. Please try again.',
   'report.error.loadTimeout':        'Loading is taking too long. Please try again.',
+  'report.error.temporaryUnavailable': 'The report is temporarily unavailable. Please try again in a moment.',
   'report.severity.critical':        'Critical',
   'report.severity.warning':         'Warning',
   'report.severity.info':            'Info',

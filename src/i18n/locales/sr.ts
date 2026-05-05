@@ -514,6 +514,7 @@ const sr = {
   'report.premiumUnlock':            'Otključajte potpunu istoriju vozila',
   'report.error.calculateFailed':    'Ocena izveštaja trenutno nije mogla biti izračunata. Pokušajte ponovo.',
   'report.error.loadTimeout':        'Učitavanje predugo traje. Pokušajte ponovo.',
+  'report.error.temporaryUnavailable': 'Izveštaj trenutno nije dostupan. Pokušajte ponovo za nekoliko trenutaka.',
   'report.severity.critical':        'Kritično',
   'report.severity.warning':         'Upozorenje',
   'report.severity.info':            'Info',
