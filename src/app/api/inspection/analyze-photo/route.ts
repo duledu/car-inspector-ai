@@ -22,6 +22,8 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, parseRequestId, pipelineLog } from '@/lib/logger'
 import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
+import { env } from '@/config/env'
+import { hasActiveAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
@@ -55,6 +57,7 @@ interface StructuredPhotoAnalysis {
 }
 
 const schema = z.object({
+  vehicleId:    z.string().min(1).optional(),
   imageBase64: z.string().min(100),
   mimeType:    z.enum(['image/jpeg', 'image/png', 'image/webp']).default('image/jpeg'),
   angle:       z.string().min(1),        // e.g. "FRONT", "LEFT_SIDE"
@@ -712,8 +715,18 @@ export async function POST(req: NextRequest) {
     return requestError('Validation failed', 422, 'VALIDATION_ERROR', requestId)
   }
 
-  const { imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = validated.data
+  const { vehicleId, imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = validated.data
   const requestBytes = Math.round((imageBase64.length * 3) / 4)
+
+  if (env.features.inspectionAccessGate) {
+    if (!vehicleId) {
+      return requestError('vehicleId is required', 422, 'VALIDATION_ERROR', requestId)
+    }
+    const ownsVehicle = await verifyVehicleOwnership(auth.userId, vehicleId)
+    if (!ownsVehicle) return requestError('Vehicle not found', 404, 'NOT_FOUND', requestId)
+    const allowed = await hasActiveAccess(auth.userId, vehicleId)
+    if (!allowed) return requestError('Inspection access required', 403, 'ACCESS_REQUIRED', requestId)
+  }
 
   // Step 4: Image size check
   const sizeCheck = stepCheckImageSize(requestBytes)

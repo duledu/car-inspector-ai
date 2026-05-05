@@ -41,6 +41,7 @@ model User {
   paymentEvents           PaymentEvent[]
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
+  inspectionReports       InspectionReport[]
 
   @@index([email])
   @@map("users")
@@ -80,14 +81,15 @@ model Vehicle {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  inspections      InspectionSession[]
-  photos           Photo[]
-  riskScores       RiskScore[]
-  aiResults        AIResult[]
-  vinHistory       VINHistory?
-  purchases        PremiumPurchase[]
-  posts            Post[]            @relation("VehiclePosts")
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inspections        InspectionSession[]
+  photos             Photo[]
+  riskScores         RiskScore[]
+  aiResults          AIResult[]
+  vinHistory         VINHistory?
+  purchases          PremiumPurchase[]
+  posts              Post[]            @relation("VehiclePosts")
+  inspectionReports  InspectionReport[]
 
   @@index([userId])
   @@index([vin])
@@ -123,7 +125,7 @@ model InspectionSession {
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicle      Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   checklistItems ChecklistItem[]
-  riskScore    RiskScore?
+  riskScores   RiskScore[]
 
   @@index([userId, vehicleId])
   @@map("inspection_sessions")
@@ -243,7 +245,8 @@ enum AIAnalysisType {
 model RiskScore {
   id               String   @id @default(cuid())
   vehicleId        String
-  sessionId        String?  @unique
+  sessionId        String?
+  inspectionReportId String? @unique
   buyScore         Int      // 0-100
   riskScore        Int      // 0-100 (100 - buyScore)
   verdict          Verdict
@@ -263,6 +266,7 @@ model RiskScore {
 
   vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   session   InspectionSession? @relation(fields: [sessionId], references: [id])
+  inspectionReport InspectionReport? @relation(fields: [inspectionReportId], references: [id], onDelete: SetNull)
 
   @@index([vehicleId])
   @@map("risk_scores")
@@ -330,6 +334,7 @@ enum PremiumProduct {
   CARVERTICAL_REPORT
   AI_DEEP_SCAN
   FULL_INSPECTION_BUNDLE
+  INSPECTION_REPORT
 }
 
 enum PaymentStatus {
@@ -373,6 +378,35 @@ model PaymentEvent {
 
   @@index([purchaseId])
   @@map("payment_events")
+}
+
+enum InspectionAccessStatus {
+  DRAFT
+  ACTIVE
+  LOCKED
+}
+
+model InspectionReport {
+  id         String                 @id @default(cuid())
+  userId     String
+  vehicleId  String
+  status     InspectionAccessStatus @default(DRAFT)
+  grantedVia String?
+  promoCode  String?
+  purchaseId String?
+  startedAt  DateTime?
+  lockedAt   DateTime?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  riskScore  RiskScore?
+
+  @@index([userId])
+  @@index([vehicleId])
+  @@index([userId, vehicleId, status])
+  @@map("inspection_reports")
 }
 
 // =============================================================================

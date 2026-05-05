@@ -384,7 +384,7 @@ function classifyClientAIFailure(reason: string): string {
 // clientRequestId is generated once per photo analysis by the caller (analyzePhotoEntry)
 // and flows through every log entry and the x-request-id request header so that
 // client logs and server logs for the same photo share the same identifier.
-async function runAI(key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn, clientRequestId: string): Promise<MockAIResult> {
+async function runAI(vehicleId: string, key: string, label: string, file: File, fallbackSignal: string, fallbackDetail: string, locale: string, tFn: TFn, clientRequestId: string): Promise<MockAIResult> {
   const startedAt = Date.now()
   try {
     logPhotoFlow('ai_prepare_started', { key, label, originalSize: file.size, originalType: file.type }, true, clientRequestId)
@@ -406,6 +406,7 @@ async function runAI(key: string, label: string, file: File, fallbackSignal: str
     }, true, clientRequestId)
 
     const requestBody = {
+      vehicleId,
       imageBase64: prepared.imageBase64,
       mimeType: prepared.mimeType,
       angle: key,
@@ -1583,6 +1584,25 @@ export default function InspectionPage() {
 
   const analyzePhotoEntry = useCallback(async (entry: PhotoEntry, thumbUrl: string, force = false) => {
     const vehicleId = session?.vehicleId
+    if (!vehicleId) {
+      const fallback: MockAIResult = {
+        signal: t('inspection.analysisUnavailable'),
+        severity: 'warn',
+        detail: t('inspection.analysisError'),
+        imageQuality: 'unusable',
+        visibleAreas: [],
+        detectedIssues: [],
+        possibleIssues: [],
+        uncertainAreas: [t('inspection.aiDidNotComplete', { defaultValue: 'AI analysis did not complete' })],
+        confidenceScore: 0,
+        recommendation: t('inspection.analysisRetakeAdvice', { defaultValue: 'Retake the photo or try again with a stable network connection.' }),
+        failureReason: 'BAD_REQUEST',
+        isUsable: false,
+        usabilityReason: 'LOW_QUALITY',
+      }
+      setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: fallback } : p))
+      return fallback
+    }
     const existing = photos.find(p => p.key === entry.key)
     if (!force && existing?.aiResult && existing.previewUrl === entry.previewUrl) {
       logPhotoFlow('ai_result_reused', { key: entry.key, reason: 'existing_result_same_photo' })
@@ -1593,7 +1613,7 @@ export default function InspectionPage() {
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: true } : p))
     const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
     const clientRequestId = generateRequestId()
-    const result = await runAI(entry.key, entry.label, entry.file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn, clientRequestId)
+    const result = await runAI(vehicleId, entry.key, entry.label, entry.file, t('inspection.analysisUnavailable'), t('inspection.analysisError'), locale, t as TFn, clientRequestId)
     setPhotos(prev => prev.map(p => p.key === entry.key ? { ...p, aiPending: false, aiResult: result } : p))
     const effectiveRequestId = result.requestId ?? clientRequestId
     logPhotoFlow('ai_result_applied', { key: entry.key, severity: result.severity, failureReason: result.failureReason, isUsable: result.isUsable }, true, effectiveRequestId)

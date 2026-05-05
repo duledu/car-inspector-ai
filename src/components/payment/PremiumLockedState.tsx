@@ -40,12 +40,16 @@ const PRODUCT_FEATURES: Record<PremiumProduct, string[]> = {
     'premiumPage.locked.features.bundle.aiDeepScan',
     'premiumPage.locked.features.bundle.support',
   ],
+  INSPECTION_REPORT: [
+    'report.accessRequired.message',
+  ],
 }
 
 const PRODUCT_PRICES: Record<PremiumProduct, string> = {
   CARVERTICAL_REPORT: '€14.99',
   AI_DEEP_SCAN: '€9.99',
   FULL_INSPECTION_BUNDLE: '€24.99',
+  INSPECTION_REPORT: '€9.99',
 }
 
 export function PremiumLockedState({ vehicle, productType, comingSoon = false }: Props) {

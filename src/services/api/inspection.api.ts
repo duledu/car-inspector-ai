@@ -13,6 +13,21 @@ import type {
 } from '@/types'
 
 export const inspectionApi = {
+  getAccess: async (vehicleId: string): Promise<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }> => {
+    const { data } = await apiClient.get<ApiResponse<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }>>(
+      `/inspection/access?vehicleId=${encodeURIComponent(vehicleId)}`
+    )
+    return data.data
+  },
+
+  redeemAccessCode: async (vehicleId: string, code: string): Promise<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }> => {
+    const { data } = await apiClient.post<ApiResponse<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }>>(
+      '/inspection/access',
+      { vehicleId, code }
+    )
+    return data.data
+  },
+
   getOrCreateSession: async (vehicleId: string): Promise<InspectionSession> => {
     const { data } = await apiClient.post<ApiResponse<InspectionSession>>(
       '/inspection/session',

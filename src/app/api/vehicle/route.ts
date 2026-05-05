@@ -55,11 +55,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const vehicle = await prisma.vehicle.create({
-      data: {
-        userId: auth.userId,
-        ...parsed.data,
-      },
+    const vehicle = await prisma.$transaction(async (tx) => {
+      const v = await tx.vehicle.create({
+        data: { userId: auth.userId, ...parsed.data },
+      })
+      await tx.inspectionReport.create({
+        data: { userId: auth.userId, vehicleId: v.id },
+      })
+      return v
     })
     return NextResponse.json({ data: vehicle }, { status: 201 })
   } catch (err: unknown) {

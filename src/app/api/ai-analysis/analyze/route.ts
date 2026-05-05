@@ -21,6 +21,8 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
+import { env } from '@/config/env'
+import { hasActiveAccess } from '@/lib/inspection/access'
 
 const photoResultSchema = z.object({
   angle:          z.string().min(1),
@@ -88,6 +90,14 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logApiError('ai-analysis/analyze', 'findVehicle', err, { vehicleId })
     return apiError('Failed to verify vehicle', { status: 500, code: 'INTERNAL_ERROR' })
+  }
+
+  // Step 3b: Access gate (only enforced when FEATURE_INSPECTION_ACCESS_GATE=true)
+  if (env.features.inspectionAccessGate) {
+    const allowed = await hasActiveAccess(auth.userId, vehicleId)
+    if (!allowed) {
+      return apiError('Inspection access required', { status: 403, code: 'ACCESS_REQUIRED' })
+    }
   }
 
   // Step 4: Classify photos as usable vs. unusable

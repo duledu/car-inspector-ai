@@ -10,6 +10,7 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
+import { env } from '@/config/env'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -139,6 +140,9 @@ export async function POST(req: NextRequest) {
     const step3Start  = Date.now()
     pipelineLog({ step: 'pdf:scoring:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
     const cachedScore = await scoringService.getLatest(vehicleId)
+    if (!cachedScore && env.features.inspectionAccessGate) {
+      return apiError('Generated report required before PDF export', { status: 403, code: 'ACCESS_REQUIRED' })
+    }
     const score       = cachedScore ?? (await scoringService.computeAndPersist(vehicleId, auth.userId))
     const scoreFresh  = !cachedScore
     pipelineLog({ step: 'pdf:scoring:complete', requestId, vehicleId, durationMs: Date.now() - step3Start, success: true, meta: { scoreFresh, verdict: score.verdict, buyScore: score.buyScore } })

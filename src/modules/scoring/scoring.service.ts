@@ -33,7 +33,11 @@ export class ScoringService {
    * computeAndPersist
    * Fetches all inspection data for a vehicle, runs scoring logic, saves result.
    */
-  async computeAndPersist(vehicleId: string, userId: string): Promise<RiskScore> {
+  async computeAndPersist(
+    vehicleId: string,
+    userId: string,
+    opts: { inspectionReportId?: string } = {},
+  ): Promise<RiskScore> {
     const vehicle = await prisma.vehicle.findFirst({
       where: { id: vehicleId, userId },
       select: { id: true, askingPrice: true },
@@ -156,16 +160,30 @@ export class ScoringService {
 
     const dbPersistStart = Date.now()
     let saved
-    if (session?.id) {
-      saved = await prisma.riskScore.upsert({
-        where: { sessionId: session.id },
-        update: scoreData,
-        create: {
+    if (opts.inspectionReportId) {
+      saved = await prisma.riskScore.create({
+        data: {
           vehicle: { connect: { id: vehicleId } },
-          session: { connect: { id: session.id } },
+          ...(session?.id ? { session: { connect: { id: session.id } } } : {}),
+          inspectionReport: { connect: { id: opts.inspectionReportId } },
           ...scoreData,
         },
       })
+    } else if (session?.id) {
+      const existing = await prisma.riskScore.findFirst({
+        where: { sessionId: session.id, inspectionReportId: null },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      saved = existing
+        ? await prisma.riskScore.update({ where: { id: existing.id }, data: scoreData })
+        : await prisma.riskScore.create({
+            data: {
+              vehicle: { connect: { id: vehicleId } },
+              session: { connect: { id: session.id } },
+              ...scoreData,
+            },
+          })
     } else {
       const existing = await prisma.riskScore.findFirst({
         where: { vehicleId, sessionId: null },
@@ -224,6 +242,10 @@ export class ScoringService {
       orderBy: { createdAt: 'desc' },
     })
     if (!score) return null
+
+    if (score.inspectionReportId) {
+      return this.mapToDto(score)
+    }
 
     // Staleness check: if any checklist item was updated after the score was
     // last calculated, the score no longer reflects the current answers.

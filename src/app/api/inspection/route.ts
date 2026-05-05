@@ -9,6 +9,8 @@ import { scoringService } from '@/modules/scoring'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { isDatabaseUnavailableError } from '@/config/prisma'
+import { env } from '@/config/env'
+import { lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
 
 const schema = z.object({ vehicleId: z.string().min(1) })
 
@@ -24,8 +26,30 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const score = await scoringService.computeAndPersist(parsed.data.vehicleId, authResult.userId)
-    return NextResponse.json({ data: score })
+    const vehicleId = parsed.data.vehicleId
+    const ownsVehicle = await verifyVehicleOwnership(authResult.userId, vehicleId)
+    if (!ownsVehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
+
+    let reportId: string | undefined
+    if (env.features.inspectionAccessGate) {
+      const claim = await startReportGeneration(authResult.userId, vehicleId)
+      if (!claim.ok) {
+        return apiError('Report is locked or access required', {
+          status: 403,
+          code: claim.reason === 'GENERATION_IN_PROGRESS' ? 'GENERATION_IN_PROGRESS' : 'ACCESS_REQUIRED',
+        })
+      }
+      reportId = claim.reportId
+    }
+
+    try {
+      const score = await scoringService.computeAndPersist(vehicleId, authResult.userId, { inspectionReportId: reportId })
+      if (env.features.inspectionAccessGate && reportId) await lockReport(reportId, score.id)
+      return NextResponse.json({ data: score })
+    } catch (err) {
+      if (env.features.inspectionAccessGate && reportId) await releaseReportGeneration(reportId).catch(() => undefined)
+      throw err
+    }
   } catch (err: any) {
     if (isDatabaseUnavailableError(err)) {
       return apiError('Database unavailable', { status: 503, code: 'DATABASE_UNAVAILABLE' })
@@ -57,6 +81,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const ownsVehicle = await verifyVehicleOwnership(authResult.userId, vehicleId)
+    if (!ownsVehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
+
     const score = await scoringService.getLatest(vehicleId)
     return NextResponse.json({ data: score })
   } catch (err) {

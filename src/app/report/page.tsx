@@ -8,6 +8,7 @@ import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
 import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
+import { InspectionReportAccessGate } from '@/components/payment/InspectionReportAccessGate'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { buildInspectionReturnHref, detectPreliminaryMissingData } from '@/lib/report/preliminary'
 import { calculatePreliminaryRiskScore, AI_TOTAL_EXPECTED_PHOTOS } from '@/modules/scoring'
@@ -595,6 +596,11 @@ export default function ReportPage() {
   const [pdfError,    setPdfError]    = useState<string | null>(null)
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
+  const [accessRequired, setAccessRequired] = useState(false)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
+  const [promoSuccess, setPromoSuccess] = useState<string | null>(null)
   // Start as false on the server; the useEffect below reads the real value
   // once mounted on the client. Using persist.hasHydrated() in a useState
   // initializer throws on SSR because localStorage doesn't exist there.
@@ -613,6 +619,24 @@ export default function ReportPage() {
   const preliminaryMode = searchParams.get('mode') === 'preliminary'
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
+
+  const accessRequiredMessage = t('report.accessRequired.message', {
+    defaultValue: 'AI analysis and report generation require one active report credit.',
+  })
+
+  const mapReportGenerationError = (err: unknown): string => {
+    const code = (err as { code?: string })?.code
+    if (code === 'ACCESS_REQUIRED') {
+      setAccessRequired(true)
+      return accessRequiredMessage
+    }
+    if (code === 'GENERATION_IN_PROGRESS') {
+      return t('report.accessRequired.generationInProgress', {
+        defaultValue: 'Generisanje izveštaja je već u toku. Sačekajte trenutak i pokušajte ponovo.',
+      })
+    }
+    return (err as { message?: string })?.message ?? t('report.error.calculateFailed')
+  }
 
   // Guard: the inspection store is hydrated from localStorage and may still hold data
   // from a previously inspected vehicle (Vehicle A) while the active vehicle is Vehicle B.
@@ -802,6 +826,10 @@ export default function ReportPage() {
     setRiskScore(null)
     setIsPreliminaryScore(false)
     setCalcError(null)
+    setAccessRequired(false)
+    setPromoCode('')
+    setPromoError(null)
+    setPromoSuccess(null)
   }, [vehicleId])
 
   useEffect(() => {
@@ -890,7 +918,7 @@ export default function ReportPage() {
           setReportUnavailable(true)
           setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
         } else {
-          setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
+          setCalcError(mapReportGenerationError(err))
         }
       })
       .finally(() => {
@@ -912,20 +940,56 @@ export default function ReportPage() {
     if (!vehicleId || !sectionProgress.isComplete) return
     setCalculating(true)
     setCalcError(null)
+    setPromoSuccess(null)
     try {
       const s = await inspectionApi.calculateScore(vehicleId)
       setRiskScore(s)
       setIsPreliminaryScore(false)
       setReportUnavailable(false)
+      setAccessRequired(false)
+      setPromoError(null)
+      setPromoSuccess(null)
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
         setReportUnavailable(true)
         setCalcError(t('report.unavailableTitle', { defaultValue: 'Izvestaj trenutno nije dostupan' }))
       } else {
-        setCalcError((err as { message?: string })?.message ?? t('report.error.calculateFailed'))
+        setCalcError(mapReportGenerationError(err))
       }
     } finally {
       setCalculating(false)
+    }
+  }
+
+  const handleRedeemPromo = async () => {
+    if (!vehicleId || promoLoading) return
+    const code = promoCode.trim()
+    if (!code) {
+      setPromoError(t('report.accessRequired.promoRequired', { defaultValue: 'Unesite promo kod.' }))
+      setPromoSuccess(null)
+      return
+    }
+
+    setPromoLoading(true)
+    setPromoError(null)
+    setPromoSuccess(null)
+    try {
+      await inspectionApi.redeemAccessCode(vehicleId, code)
+      setAccessRequired(true)
+      setPromoCode('')
+      setCalcError(null)
+      setPromoSuccess(t('report.accessGate.promoSuccess', {
+        defaultValue: 'Report credit activated. You can continue with report generation.',
+      }))
+    } catch (err: unknown) {
+      const apiCode = (err as { code?: string })?.code
+      setPromoError(
+        apiCode === 'INVALID_PROMO_CODE'
+          ? t('report.accessRequired.invalidPromo', { defaultValue: 'Promo kod nije važeći.' })
+          : t('report.accessRequired.promoFailed', { defaultValue: 'Promo kod nije moguće primeniti. Pokušajte ponovo.' })
+      )
+    } finally {
+      setPromoLoading(false)
     }
   }
 
@@ -1074,6 +1138,26 @@ export default function ReportPage() {
     </Link>
   ) : null
 
+  const accessRequiredCard = (
+    <div style={{ padding: 'clamp(14px, 3vw, 22px)' }}>
+      <InspectionReportAccessGate
+        vehicle={activeVehicle}
+        promoCode={promoCode}
+        promoLoading={promoLoading}
+        promoError={promoError}
+        promoSuccess={promoSuccess}
+        calculating={calculating}
+        onContinue={handleCalculate}
+        onRedeemPromo={handleRedeemPromo}
+        onPromoCodeChange={(value) => {
+          setPromoCode(value)
+          setPromoError(null)
+          setPromoSuccess(null)
+        }}
+      />
+    </div>
+  )
+
   const dims = riskScore ? ([
     { key: 'ai'         },
     { key: 'exterior'   },
@@ -1174,6 +1258,8 @@ export default function ReportPage() {
                   {preliminaryCta}
                 </div>
               </div>
+            ) : sectionProgress.isComplete && accessRequired ? (
+              accessRequiredCard
             ) : sectionProgress.isComplete ? (
               <>
                 <EmptyReport

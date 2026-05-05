@@ -56,6 +56,7 @@ export const env = {
   features: {
     realTimeMessaging: process.env.FEATURE_REALTIME_MESSAGING === 'true',
     aiDeepScan: process.env.FEATURE_AI_DEEP_SCAN === 'true',
+    inspectionAccessGate: process.env.FEATURE_INSPECTION_ACCESS_GATE === 'true',
   },
 } as const
 

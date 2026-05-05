@@ -295,7 +295,7 @@ export interface VehicleHistoryProviderInterface {
 
 // ─── Payments & Premium Access ────────────────────────────────────────────────
 
-export type PremiumProduct = 'CARVERTICAL_REPORT' | 'AI_DEEP_SCAN' | 'FULL_INSPECTION_BUNDLE'
+export type PremiumProduct = 'CARVERTICAL_REPORT' | 'AI_DEEP_SCAN' | 'FULL_INSPECTION_BUNDLE' | 'INSPECTION_REPORT'
 export type PaymentStatus = 'NOT_PURCHASED' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'EXPIRED'
 
 export interface PremiumPurchase {
