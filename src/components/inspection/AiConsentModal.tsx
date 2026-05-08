@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface AiConsentModalProps {
@@ -12,6 +12,12 @@ export function AiConsentModal({ onAccept }: AiConsentModalProps) {
   const [checked, setChecked] = useState(false)
   const [checkboxFocused, setCheckboxFocused] = useState(false)
   const checkboxId = 'ai-consent-checkbox'
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
 
   return (
     <div

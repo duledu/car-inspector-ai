@@ -47,8 +47,9 @@ export async function POST(req: NextRequest) {
     pipelineLog({ step: 'score:complete', requestId, vehicleId, durationMs: Date.now() - reqStart, success: true, meta: { buyScore: score.buyScore, verdict: score.verdict, hasPremiumData: score.hasPremiumData } })
 
     if (env.features.inspectionAccessGate && reportId) {
-      await lockReport(reportId, score.id).catch((lockErr: unknown) => {
+      await lockReport(reportId, score.id).catch(async (lockErr: unknown) => {
         pipelineLog({ step: 'score:lock-failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: lockErr instanceof Error ? lockErr.message : String(lockErr) } })
+        await releaseReportGeneration(reportId).catch(() => undefined)
       })
     }
 

@@ -13,8 +13,8 @@ import type {
 } from '@/types'
 
 export const inspectionApi = {
-  getAccess: async (vehicleId: string): Promise<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }> => {
-    const { data } = await apiClient.get<ApiResponse<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE' }>>(
+  getAccess: async (vehicleId: string): Promise<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE'; grantedVia?: string | null }> => {
+    const { data } = await apiClient.get<ApiResponse<{ status: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE'; grantedVia?: string | null }>>(
       `/inspection/access?vehicleId=${encodeURIComponent(vehicleId)}`
     )
     return data.data

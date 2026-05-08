@@ -39,7 +39,7 @@ const photoResultSchema = z.object({
 
 const bodySchema = z.object({
   vehicleId:    z.string().min(1),
-  photoResults: z.array(photoResultSchema).min(1),
+  photoResults: z.array(photoResultSchema).min(1).max(20),
 })
 
 function mapSeverity(s: 'ok' | 'warn' | 'flag', confidence: number): 'critical' | 'warning' | 'info' {

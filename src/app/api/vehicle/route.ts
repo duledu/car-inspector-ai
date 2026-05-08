@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { env } from '@/config/env'
 
 const CreateSchema = z.object({
   make: z.string().min(1),
@@ -59,8 +60,19 @@ export async function POST(req: NextRequest) {
       const v = await tx.vehicle.create({
         data: { userId: auth.userId, ...parsed.data },
       })
+      // When the access gate is OFF (the default), start vehicles as ACTIVE so
+      // users can generate reports immediately without paying or entering a code.
+      // When the gate is ON, start as DRAFT and mark grantedVia='gate' so the
+      // runtime fallback in startReportGeneration can tell the difference between
+      // a gate-controlled DRAFT (needs credit) and a legacy DRAFT with null
+      // grantedVia (created before this system — should be auto-upgraded to ACTIVE).
       await tx.inspectionReport.create({
-        data: { userId: auth.userId, vehicleId: v.id },
+        data: {
+          userId: auth.userId,
+          vehicleId: v.id,
+          status:     env.features.inspectionAccessGate ? 'DRAFT'  : 'ACTIVE',
+          grantedVia: env.features.inspectionAccessGate ? 'gate'   : 'legacy',
+        },
       })
       return v
     })

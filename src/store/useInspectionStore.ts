@@ -72,11 +72,23 @@ export const useInspectionStore = create<InspectionStore>()(
         set((state) => { state.isLoadingChecklist = true; state.error = null })
         try {
           const previousVehicleId = get().session?.vehicleId
+          const previousSessionId  = get().session?.id
           const session = await inspectionApi.getOrCreateSession(vehicleId)
           set((state) => {
-            if (previousVehicleId && previousVehicleId !== session.vehicleId) {
+            const vehicleChanged = !!previousVehicleId && previousVehicleId !== session.vehicleId
+            // Also clear when the session ID changes even for the same vehicle —
+            // this handles the case where the user resets an inspection and starts
+            // a new one on the same vehicle. Without this guard, aiResults from
+            // the old session persist in localStorage and bleed into the new one.
+            const sessionChanged  = !!previousSessionId  && previousSessionId  !== session.id
+            if (vehicleChanged || sessionChanged) {
               if (process.env.NODE_ENV === 'development') {
-                console.warn(`[inspection-store] vehicle switch — discarding stale state. previous="${previousVehicleId}" next="${session.vehicleId}"`)
+                console.warn(
+                  `[inspection-store] session reset — discarding stale state.`,
+                  `previous="${previousVehicleId}/${previousSessionId}"`,
+                  `next="${session.vehicleId}/${session.id}"`,
+                  `(vehicleChanged=${vehicleChanged}, sessionChanged=${sessionChanged})`,
+                )
               }
               state.checklistItems = []
               state.aiResults = []

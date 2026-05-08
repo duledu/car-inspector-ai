@@ -631,7 +631,16 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
   const hasResult    = !!(photo?.aiResult && !photo?.aiPending)
   const sev          = photo?.aiResult?.severity
   const isUnusable   = hasResult && photo?.aiResult ? !deriveUsability(photo.aiResult).isUsable : false
-  const status       = photoStatusLabel(photo, t as TFn)
+  const aiStatus     = photoStatusLabel(photo, t as TFn)
+  // Non-priority angles are captured but intentionally skipped from AI — show a
+  // subtle "Saved for report only" badge so users understand AI did not run.
+  const isNonPriorityCapture = !!photo && !photo.aiPending && !photo.aiResult && !AI_PRIORITY_ANGLES.has(angle.key)
+  const status = aiStatus ?? (isNonPriorityCapture ? {
+    text:   t('inspection.savedForReportOnly', { defaultValue: 'Saved for report only' }),
+    color:  'rgba(255,255,255,0.32)',
+    bg:     'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.10)',
+  } : null)
   const borderColor  = hasResult && !isFailed
     ? isUnusable ? 'rgba(239,68,68,0.55)'
     : sev === 'flag' ? 'rgba(239,68,68,0.55)' : sev === 'warn' ? 'rgba(245,158,11,0.45)' : 'rgba(34,197,94,0.45)'
@@ -1124,12 +1133,18 @@ function RiskAnalysisPhase({
   answeredCount,
   totalCount,
   missingSections,
+  aggError,
+  aggRetrying,
+  onRetryAgg,
 }: Readonly<{
   photos: PhotoEntry[]
   inspectionComplete: boolean
   answeredCount: number
   totalCount: number
   missingSections: string[]
+  aggError: boolean
+  aggRetrying: boolean
+  onRetryAgg: () => void
 }>) {
   const { t }    = useTranslation()
   const total        = PHOTO_ANGLES.length
@@ -1147,6 +1162,28 @@ function RiskAnalysisPhase({
 
   return (
     <div>
+      {aggError && analyzed.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', marginBottom: 16, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 12 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fca5a5', marginBottom: 4 }}>
+              {t('inspection.aggFailed.title', 'AI report preparation failed')}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, marginBottom: 10 }}>
+              {t('inspection.aggFailed.message', 'We could not prepare the photo analysis summary for this report. You can retry, or continue with a limited report.')}
+            </div>
+            <button
+              onClick={onRetryAgg}
+              disabled={aggRetrying}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '0 14px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#fca5a5', cursor: aggRetrying ? 'default' : 'pointer', opacity: aggRetrying ? 0.6 : 1, WebkitTapHighlightColor: 'transparent' }}
+            >
+              {aggRetrying ? '…' : t('inspection.aggFailed.retry', 'Retry AI summary')}
+            </button>
+          </div>
+        </div>
+      )}
       {photos.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -1387,6 +1424,8 @@ export default function InspectionPage() {
   const [photos, setPhotos]             = useState<PhotoEntry[]>([])
   const [cameraTarget, setCameraTarget] = useState<{ key: string; label: string; shotNumber: number } | null>(null)
   const [findingsSaved, setFindingsSaved] = useState(false)
+  const [aggError, setAggError] = useState(false)
+  const [aggRetrying, setAggRetrying] = useState(false)
   const [aiConsentAccepted, setAiConsentAccepted] = useState<boolean>(readAiConsent)
   const [showConsentModal,  setShowConsentModal]  = useState(false)
   const pendingCameraRef = useRef<{ key: string; label: string } | null>(null)
@@ -1412,6 +1451,8 @@ export default function InspectionPage() {
     if (isDifferentVehicle) {
       setPhotos([])
       setFindingsSaved(false)
+      setAggError(false)
+      setAggRetrying(false)
       setCameraTarget(null)
       setPhase('PRE_SCREENING')
     }
@@ -1428,6 +1469,8 @@ export default function InspectionPage() {
     if (drafts.length === 0) {
       setPhotos([])
       setFindingsSaved(false)
+      setAggError(false)
+      setAggRetrying(false)
       return
     }
     const withCachedAI = drafts.filter(d => d.aiResult).length
@@ -1443,6 +1486,8 @@ export default function InspectionPage() {
       aiResult:  d.aiResult,
     })))
     setFindingsSaved(false)
+    setAggError(false)
+    setAggRetrying(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.vehicleId])
 
@@ -1507,10 +1552,56 @@ export default function InspectionPage() {
       .then(json => {
         pipelineLog({ step: 'inspection/ai-batch:aggregate-complete', requestId: batchRequestId, success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
         if (json?.data) pushAIResult(json.data)
+        setAggError(false)
       })
-      .catch(err => pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: batchRequestId, success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } }))
+      .catch(err => {
+        pipelineLog({ step: 'inspection/ai-batch:aggregate-failed', requestId: batchRequestId, success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } })
+        setAggError(true)
+      })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPhase])
+
+  const handleAggRetry = useCallback(() => {
+    const vehicleId = activeVehicle?.id
+    if (!vehicleId) return
+    const completed = photos.filter(p => p.aiResult && !p.aiPending)
+    if (completed.length === 0) return
+    const photoResults = completed.map(p => {
+      const usable = deriveUsability(p.aiResult!)
+      return {
+        angle:          p.key,
+        label:          p.label,
+        signal:         p.aiResult!.signal,
+        severity:       p.aiResult!.severity,
+        detail:         p.aiResult!.detail,
+        confidence:     usable.isUsable ? (p.aiResult!.confidenceScore ?? 80) : 0,
+        recommendation: p.aiResult!.recommendation ?? '',
+      }
+    })
+    setAggRetrying(true)
+    setAggError(false)
+    const aggStart = Date.now()
+    const batchRequestId = generateRequestId()
+    pipelineLog({ step: 'inspection/ai-batch:aggregate-retry', requestId: batchRequestId, success: true, durationMs: 0, meta: { vehicleId, photoCount: photoResults.length } })
+    fetch('/api/ai-analysis/analyze', {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify({ vehicleId, photoResults }),
+    })
+      .then(r => r.json())
+      .then(json => {
+        pipelineLog({ step: 'inspection/ai-batch:aggregate-retry-complete', requestId: batchRequestId, success: true, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, findingsCount: json?.data?.findings?.length ?? 0 } })
+        if (json?.data) pushAIResult(json.data)
+        setAggError(false)
+        setAggRetrying(false)
+      })
+      .catch(err => {
+        pipelineLog({ step: 'inspection/ai-batch:aggregate-retry-failed', requestId: batchRequestId, success: false, durationMs: Date.now() - aggStart, meta: { vehicleId, photoCount: photoResults.length, errorType: err instanceof Error ? err.name : 'unknown' } })
+        setAggError(true)
+        setAggRetrying(false)
+      })
+  }, [activeVehicle?.id, photos, pushAIResult])
 
   const phaseIdx  = PHASES.findIndex(p => p.phase === currentPhase)
   const phaseCfg  = PHASES[phaseIdx]
@@ -1920,6 +2011,9 @@ export default function InspectionPage() {
               answeredCount={inspectionCompletion.answeredCount}
               totalCount={inspectionCompletion.totalCount}
               missingSections={missingSectionLabels}
+              aggError={aggError}
+              aggRetrying={aggRetrying}
+              onRetryAgg={handleAggRetry}
             />
           )}
 

@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     const ownsVehicle = await verifyVehicleOwnership(auth.userId, vehicleId)
     if (!ownsVehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
 
-    const { status } = await getInspectionAccess(auth.userId, vehicleId)
-    return NextResponse.json({ data: { status } })
+    const { status, grantedVia } = await getInspectionAccess(auth.userId, vehicleId)
+    return NextResponse.json({ data: { status, grantedVia } })
   } catch (err) {
     logApiError('inspection/access', 'getAccess', err, { vehicleId })
     return apiError('Failed to fetch access status', { status: 500, code: 'INTERNAL_ERROR' })
