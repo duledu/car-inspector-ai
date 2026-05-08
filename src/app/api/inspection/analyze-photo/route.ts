@@ -111,6 +111,26 @@ const SUPPORTED_ANGLES = new Set(Object.keys(ANGLE_AREA_GUIDE))
 
 type UsabilityReason = 'NOT_VEHICLE' | 'LOW_QUALITY' | 'UNCERTAIN' | 'OK'
 
+/**
+ * Returns true when the signal text unambiguously describes the ABSENCE of a
+ * vehicle, rather than merely mentioning the car in another context.
+ * Uses word-boundary anchors to avoid matching phrases like "no car issues" or
+ * "no car damage" which describe a present vehicle with no defects.
+ */
+function isVehicleAbsentSignal(sig: string): boolean {
+  return (
+    sig.includes('not inspectable') ||
+    sig.includes('no vehicle') ||
+    sig.includes('not a vehicle') ||
+    // "no car visible / in / is / detected / present / found" — NOT "no car issues/damage"
+    /\bno\s+car\s+(?:visible|in\b|is\b|detected|present|found)\b/.test(sig) ||
+    // "car not / isn't visible / present / detected / found"
+    /\bcar\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found)\b/.test(sig) ||
+    // "vehicle not / isn't visible / present / detected / found / clearly visible"
+    /\bvehicle\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found|clearly)\b/.test(sig)
+  )
+}
+
 /** Classify a successfully parsed AI response into usable / not-usable, no extra API calls. */
 function classifyImageUsability(
   imageQuality: ImageQuality,
@@ -119,15 +139,12 @@ function classifyImageUsability(
 ): { isUsable: boolean; usabilityReason: UsabilityReason } {
   if (imageQuality === 'unusable') {
     const sig = signal.toLowerCase()
-    if (
-      sig.includes('not inspectable') ||
-      sig.includes('no vehicle') ||
-      sig.includes('not a vehicle') ||
-      sig.includes('no car')
-    ) {
-      return { isUsable: false, usabilityReason: 'NOT_VEHICLE' }
+    // Use structured imageQuality to determine isUsable; text matching only
+    // refines the sub-reason (NOT_VEHICLE vs LOW_QUALITY) within unusable images.
+    return {
+      isUsable: false,
+      usabilityReason: isVehicleAbsentSignal(sig) ? 'NOT_VEHICLE' : 'LOW_QUALITY',
     }
-    return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
   }
   if (confidenceScore < 40) {
     return { isUsable: false, usabilityReason: 'UNCERTAIN' }

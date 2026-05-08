@@ -103,11 +103,18 @@ function deriveUsability(result: MockAIResult): { isUsable: boolean; usabilityRe
   if (result.failureReason) return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
   if (result.imageQuality === 'unusable') {
     const sig = (result.signal ?? '').toLowerCase()
+    // Only classify as NOT_VEHICLE when the signal unambiguously describes absence
+    // of a vehicle — not merely mentions the car ("no car issues", "the car's ...").
+    const isVehicleAbsent =
+      sig.includes('not inspectable') ||
+      sig.includes('no vehicle') ||
+      sig.includes('not a vehicle') ||
+      /\bno\s+car\s+(?:visible|in\b|is\b|detected|present|found)\b/.test(sig) ||
+      /\bcar\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found)\b/.test(sig) ||
+      /\bvehicle\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found|clearly)\b/.test(sig)
     return {
       isUsable: false,
-      usabilityReason: (sig.includes('inspectable') || sig.includes('vehicle') || sig.includes('car'))
-        ? 'NOT_VEHICLE'
-        : 'LOW_QUALITY',
+      usabilityReason: isVehicleAbsent ? 'NOT_VEHICLE' : 'LOW_QUALITY',
     }
   }
   const conf = result.confidenceScore ?? 100
@@ -216,12 +223,67 @@ interface PhotoDraft {
   aiResult?: MockAIResult
 }
 
-function loadPhotoDrafts(vehicleId: string): PhotoDraft[] {
+function isQuotaError(err: unknown): boolean {
+  if (err instanceof DOMException) {
+    return err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22
+  }
+  // Duck-typed fallback for mobile/WebView environments that may throw a plain
+  // Error or a non-DOMException with the same name/code convention.
+  if (err && typeof err === 'object') {
+    const e = err as { name?: unknown; code?: unknown }
+    return e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22
+  }
+  return false
+}
+
+/** Runtime type guard — rejects null, malformed objects, and entries missing required draft fields. */
+function isValidPhotoDraft(entry: unknown): entry is PhotoDraft {
+  if (!entry || typeof entry !== 'object') return false
+  const d = entry as Record<string, unknown>
+  return (
+    typeof d.vehicleId === 'string' && d.vehicleId.length > 0 &&
+    typeof d.key      === 'string' && d.key.length > 0 &&
+    typeof d.label    === 'string' &&
+    typeof d.thumbUrl === 'string' && d.thumbUrl.length > 0
+  )
+}
+
+/**
+ * Read all photo drafts.
+ * - Returns [] and clears the key if the stored value is corrupted JSON or not an array.
+ * - Filters out individual malformed entries (null, {}, missing fields).
+ * - If some entries were invalid, rewrites the cleaned array back to storage.
+ */
+function safeReadPhotoDrafts(): PhotoDraft[] {
   try {
     const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
     if (!raw) return []
-    return (JSON.parse(raw) as PhotoDraft[]).filter(d => d.vehicleId === vehicleId)
-  } catch { return [] }
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      console.warn('[photo-drafts] stored value is not an array — clearing corrupted key')
+      try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
+      return []
+    }
+    const valid = parsed.filter(isValidPhotoDraft)
+    if (valid.length < parsed.length) {
+      const dropped = parsed.length - valid.length
+      console.warn(`[photo-drafts] dropped ${dropped} malformed entry(ies)`)
+      if (valid.length === 0) {
+        try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
+      } else {
+        try { localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(valid)) } catch { /* ignore */ }
+      }
+    }
+    return valid
+  } catch (err) {
+    console.warn('[photo-drafts] failed to parse stored drafts — clearing corrupted key', err)
+    try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
+    return []
+  }
+}
+
+function loadPhotoDrafts(vehicleId: string): PhotoDraft[] {
+  return safeReadPhotoDrafts().filter(d => d.vehicleId === vehicleId)
 }
 
 function scrollElementToTop(el: HTMLElement | null) {
@@ -234,15 +296,40 @@ function scrollElementToTop(el: HTMLElement | null) {
   })
 }
 
-function savePhotoDraft(draft: PhotoDraft) {
+/**
+ * Save a photo draft.
+ * On QuotaExceededError: prunes other-vehicle drafts, then retries once.
+ * Returns true on success, false if the write could not be completed.
+ */
+function savePhotoDraft(draft: PhotoDraft): boolean {
   try {
-    const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
-    const all: PhotoDraft[] = raw ? JSON.parse(raw) : []
+    const all = safeReadPhotoDrafts()
     // Replace existing entry for same vehicle+angle, then append
-    const filtered = all.filter(d => !(d.vehicleId === draft.vehicleId && d.key === draft.key))
-    filtered.push(draft)
-    localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(filtered))
-  } catch { /* localStorage quota exceeded — skip */ }
+    const merged = all.filter(d => !(d.vehicleId === draft.vehicleId && d.key === draft.key))
+    merged.push(draft)
+    try {
+      localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(merged))
+      return true
+    } catch (err) {
+      if (!isQuotaError(err)) {
+        console.warn('[photo-drafts] unexpected write error', err)
+        return false
+      }
+      // Quota exceeded — keep only the active vehicle's drafts and retry once
+      console.warn('[photo-drafts] quota exceeded — pruning other-vehicle drafts and retrying')
+      const pruned = merged.filter(d => d.vehicleId === draft.vehicleId)
+      try {
+        localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(pruned))
+        return true
+      } catch (retryErr) {
+        console.warn('[photo-drafts] write failed even after pruning', retryErr)
+        return false
+      }
+    }
+  } catch (err) {
+    console.warn('[photo-drafts] savePhotoDraft unexpected error', err)
+    return false
+  }
 }
 
 /** Downsample a File to a ≤360px-wide JPEG data URL (~30–60 KB). */
@@ -1426,6 +1513,7 @@ export default function InspectionPage() {
   const [findingsSaved, setFindingsSaved] = useState(false)
   const [aggError, setAggError] = useState(false)
   const [aggRetrying, setAggRetrying] = useState(false)
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false)
   const [aiConsentAccepted, setAiConsentAccepted] = useState<boolean>(readAiConsent)
   const [showConsentModal,  setShowConsentModal]  = useState(false)
   const pendingCameraRef = useRef<{ key: string; label: string } | null>(null)
@@ -1453,6 +1541,7 @@ export default function InspectionPage() {
       setFindingsSaved(false)
       setAggError(false)
       setAggRetrying(false)
+      setDraftSaveFailed(false)
       setCameraTarget(null)
       setPhase('PRE_SCREENING')
     }
@@ -1471,6 +1560,7 @@ export default function InspectionPage() {
       setFindingsSaved(false)
       setAggError(false)
       setAggRetrying(false)
+      setDraftSaveFailed(false)
       return
     }
     const withCachedAI = drafts.filter(d => d.aiResult).length
@@ -1488,6 +1578,7 @@ export default function InspectionPage() {
     setFindingsSaved(false)
     setAggError(false)
     setAggRetrying(false)
+    setDraftSaveFailed(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.vehicleId])
 
@@ -1638,15 +1729,15 @@ export default function InspectionPage() {
   }, [])
 
   const handleStatus = (itemId: string, status: ItemStatus) => {
-    updateChecklistItem(itemId, status).then(markSaved).catch(() => {})
+    updateChecklistItem(itemId, status, undefined, session?.vehicleId).then(markSaved).catch(() => {})
   }
 
   const handleNotes = useCallback(
     (itemId: string, notes: string) => {
       const item = checklistItems.find(i => i.id === itemId)
-      if (item) updateChecklistItem(itemId, item.status, notes).then(markSaved).catch(() => {})
+      if (item) updateChecklistItem(itemId, item.status, notes, session?.vehicleId).then(markSaved).catch(() => {})
     },
-    [checklistItems, updateChecklistItem, markSaved]
+    [checklistItems, session, updateChecklistItem, markSaved]
   )
 
   const handleConsentAccept = useCallback(() => {
@@ -1711,7 +1802,9 @@ export default function InspectionPage() {
 
     if (vehicleId && thumbUrl) {
       logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
-      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })
+      if (!savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl, aiResult: result })) {
+        setDraftSaveFailed(true)
+      }
       logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft_with_ai' })
     }
     return result
@@ -1743,7 +1836,9 @@ export default function InspectionPage() {
     const vehicleId    = session?.vehicleId
     if (vehicleId && thumbUrl) {
       logPhotoFlow('upload_started', { key: entry.key, vehicleId, target: 'local_draft' })
-      savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl })
+      if (!savePhotoDraft({ vehicleId, key: entry.key, label: entry.label, thumbUrl })) {
+        setDraftSaveFailed(true)
+      }
       logPhotoFlow('upload_finished', { key: entry.key, vehicleId, target: 'local_draft' })
     }
 
@@ -1799,6 +1894,33 @@ export default function InspectionPage() {
           onCapture={handleCapture}
           onClose={() => setCameraTarget(null)}
         />
+      )}
+
+      {draftSaveFailed && (
+        <div style={{
+          position: 'fixed',
+          bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          left: 16, right: 16,
+          zIndex: 9000,
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          padding: '12px 14px',
+          background: 'rgba(245,158,11,0.12)',
+          border: '1px solid rgba(245,158,11,0.32)',
+          borderRadius: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55 }}>
+            {t('inspection.draftSaveFailed', 'Your photo was captured, but we could not save it for later. Please continue without closing the app.')}
+          </span>
+          <button
+            onClick={() => setDraftSaveFailed(false)}
+            aria-label="Dismiss"
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 0 0 4px', flexShrink: 0 }}
+          >×</button>
+        </div>
       )}
 
       <div className="inspection-page-layout">

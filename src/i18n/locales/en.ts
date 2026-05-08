@@ -318,6 +318,7 @@ const en = {
   'inspection.aggFailed.message':     'We could not prepare the photo analysis summary for this report. You can retry, or continue with a limited report.',
   'inspection.aggFailed.retry':       'Retry AI summary',
   'inspection.savedForReportOnly':    'Saved for report only',
+  'inspection.draftSaveFailed':       'Your photo was captured, but we could not save it for later. Please continue without closing the app.',
   'inspection.unusableRetake':        'Vehicle not clearly visible — please retake this shot',
   'inspection.retryAnalysis':         'Retry analysis',
   'inspection.retakePhoto':           'Retake photo',

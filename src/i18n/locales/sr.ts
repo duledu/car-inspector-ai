@@ -776,6 +776,7 @@ const sr = {
   'inspection.aggFailed.message':     'Nismo uspeli da pripremimo sažetak foto-analize za ovaj izveštaj. Možete pokušati ponovo ili nastaviti sa ograničenim izveštajem.',
   'inspection.aggFailed.retry':       'Pokušaj ponovo',
   'inspection.savedForReportOnly':    'Sačuvano samo za izveštaj',
+  'inspection.draftSaveFailed':       'Fotografija je snimljena, ali nismo uspeli da je sačuvamo za kasnije. Nastavite bez zatvaranja aplikacije.',
   'inspection.unusableRetake':        'Vozilo nije jasno vidljivo — molimo ponovo snimite ovaj ugao.',
   'inspection.retryAnalysis':         'Ponovi analizu',
   'inspection.retakePhoto':           'Ponovo snimi',

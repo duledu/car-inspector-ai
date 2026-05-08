@@ -41,10 +41,10 @@ interface InspectionActions {
   initSession: (vehicleId: string) => Promise<void>
   setPhase: (phase: InspectionPhase) => void
   setChecklistTab: (tab: ChecklistCategory) => void
-  updateChecklistItem: (itemId: string, status: ItemStatus, notes?: string) => Promise<void>
+  updateChecklistItem: (itemId: string, status: ItemStatus, notes?: string, callerVehicleId?: string) => Promise<void>
   runAIAnalysis: (vehicleId: string, photoIds: string[]) => Promise<void>
   pushAIResult: (result: AIAnalysisResult) => void
-  setTestDriveRating: (key: string, category: string, rating: 0 | 1 | 2 | 3) => void
+  setTestDriveRating: (key: string, category: string, rating: 0 | 1 | 2 | 3, callerVehicleId?: string) => void
   getItemsByCategory: (category: ChecklistCategory) => ChecklistItem[]
   getAllFindings: () => AIFinding[]
   resetSession: () => void
@@ -119,7 +119,20 @@ export const useInspectionStore = create<InspectionStore>()(
         set((state) => { state.activeChecklistTab = tab })
       },
 
-      updateChecklistItem: async (itemId, status, notes) => {
+      updateChecklistItem: async (itemId, status, notes, callerVehicleId) => {
+        const sessionVehicleId = get().session?.vehicleId
+        // Guard 1: caller-supplied vehicleId must match the active session.
+        if (callerVehicleId && sessionVehicleId && callerVehicleId !== sessionVehicleId) {
+          console.warn(`[inspection-store] updateChecklistItem: vehicleId mismatch (caller="${callerVehicleId}", session="${sessionVehicleId}") — write skipped`)
+          return
+        }
+        // Guard 2: item must exist in the current checklist — protects against
+        // a race where the session switched between the UI event and this call.
+        const itemExists = get().checklistItems.some(i => i.id === itemId)
+        if (!itemExists) {
+          console.warn(`[inspection-store] updateChecklistItem: item "${itemId}" not in current checklist — write skipped`)
+          return
+        }
         // Optimistic update
         set((state) => {
           const item = state.checklistItems.find((i) => i.id === itemId)
@@ -143,6 +156,11 @@ export const useInspectionStore = create<InspectionStore>()(
       },
 
       runAIAnalysis: async (vehicleId, photoIds) => {
+        const sessionVehicleId = get().session?.vehicleId
+        if (sessionVehicleId && vehicleId !== sessionVehicleId) {
+          console.warn(`[inspection-store] runAIAnalysis: vehicleId mismatch (call="${vehicleId}", session="${sessionVehicleId}") — skipping`)
+          return
+        }
         set((state) => { state.isRunningAI = true; state.error = null })
         try {
           const result = await aiApi.runAnalysis(vehicleId, photoIds)
@@ -172,7 +190,12 @@ export const useInspectionStore = create<InspectionStore>()(
         })
       },
 
-      setTestDriveRating: (key, category, rating) => {
+      setTestDriveRating: (key, category, rating, callerVehicleId) => {
+        const sessionVehicleId = get().session?.vehicleId
+        if (callerVehicleId && sessionVehicleId && callerVehicleId !== sessionVehicleId) {
+          console.warn(`[inspection-store] setTestDriveRating: vehicleId mismatch (caller="${callerVehicleId}", session="${sessionVehicleId}") — write skipped`)
+          return
+        }
         set((state) => {
           state.testDriveRatings[key] = { category, itemKey: key, rating }
         })

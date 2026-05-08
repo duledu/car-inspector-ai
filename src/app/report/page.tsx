@@ -46,12 +46,35 @@ function loadReportPhotoDrafts(vehicleId: string): ReportPhotoDraft[] {
   try {
     const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
     if (!raw) return []
-    return (JSON.parse(raw) as Array<ReportPhotoDraft & { vehicleId: string }>)
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      console.warn('[photo-drafts] stored value is not an array — clearing corrupted key')
+      try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
+      return []
+    }
+    // Reject null / non-object entries before property access. Without this guard
+    // a mixed array like [validDraft, null] would throw on null.vehicleId and the
+    // outer catch would clear the entire key, losing the valid draft.
+    const objects = parsed.filter((d): d is Record<string, unknown> =>
+      d !== null && typeof d === 'object'
+    )
+    if (objects.length < parsed.length) {
+      const dropped = parsed.length - objects.length
+      console.warn(`[photo-drafts] report: dropped ${dropped} malformed entry(ies)`)
+      if (objects.length === 0) {
+        try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
+      } else {
+        try { localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(objects)) } catch { /* ignore */ }
+      }
+    }
+    return (objects as unknown as Array<ReportPhotoDraft & { vehicleId: string }>)
       .filter(d => d.vehicleId === vehicleId)
       .filter(d => /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(d.thumbUrl))
       .slice(0, 8)
       .map(({ key, label, thumbUrl }) => ({ key, label, thumbUrl }))
-  } catch {
+  } catch (err) {
+    console.warn('[photo-drafts] failed to read photo drafts — clearing corrupted key', err)
+    try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
     return []
   }
 }
@@ -704,6 +727,10 @@ export default function ReportPage() {
   // invocations that the stale-closure check on `autoRecalculating` state alone
   // cannot reliably catch when the effect fires due to a different dependency.
   const autoRecalcGuardRef = useRef(false)
+  // Sequence counter — incremented on every new calculation start and on vehicle
+  // change. In-flight responses that carry a stale sequence are discarded so a
+  // slower vehicleA response cannot overwrite vehicleB state.
+  const calcSeqRef = useRef(0)
   // Tracks mount status so setState is never called after unmount/navigation.
   const isMountedRef = useRef(true)
 
@@ -920,6 +947,11 @@ export default function ReportPage() {
   useEffect(() => {
     if (!vehicleId || prevVehicleIdRef.current === vehicleId) return
     prevVehicleIdRef.current = vehicleId
+    // Invalidate any in-flight score calculation for the previous vehicle.
+    // In-flight requests that captured an older seq value will no-op on resolve.
+    calcSeqRef.current++
+    autoRecalcGuardRef.current = false
+    setCalculating(false)
     setRiskScore(null)
     setIsPreliminaryScore(false)
     setCalcError(null)
@@ -1019,12 +1051,13 @@ export default function ReportPage() {
     if (preliminaryMode) return               // preliminary has its own flow
     if (!sectionProgress.isComplete) return   // checklist not yet done
 
+    const mySeq = ++calcSeqRef.current
     autoRecalcGuardRef.current = true
     setAutoRecalculating(true)
     setCalcError(null)
     inspectionApi.calculateScore(vehicleId)
       .then(s => {
-        if (!isMountedRef.current) return
+        if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
@@ -1032,7 +1065,7 @@ export default function ReportPage() {
         if (vehicleId) inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
       })
       .catch((err: unknown) => {
-        if (!isMountedRef.current) return
+        if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
         if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
           setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
@@ -1041,6 +1074,8 @@ export default function ReportPage() {
         }
       })
       .finally(() => {
+        // Skip if a newer request has already taken ownership of the loading state.
+        if (calcSeqRef.current !== mySeq) return
         autoRecalcGuardRef.current = false
         if (isMountedRef.current) setAutoRecalculating(false)
       })
@@ -1057,11 +1092,13 @@ export default function ReportPage() {
 
   const handleCalculate = async () => {
     if (!vehicleId || !sectionProgress.isComplete) return
+    const mySeq = ++calcSeqRef.current
     setCalculating(true)
     setCalcError(null)
     setPromoSuccess(null)
     try {
       const s = await inspectionApi.calculateScore(vehicleId)
+      if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
       setRiskScore(s)
       setIsPreliminaryScore(false)
       setReportUnavailable(false)
@@ -1071,6 +1108,7 @@ export default function ReportPage() {
       // Refresh access badge after generation (ACTIVE → LOCKED transition)
       inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
     } catch (err: unknown) {
+      if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
         setReportUnavailable(true)
         setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
@@ -1078,7 +1116,7 @@ export default function ReportPage() {
         setCalcError(mapReportGenerationError(err))
       }
     } finally {
-      setCalculating(false)
+      if (isMountedRef.current && calcSeqRef.current === mySeq) setCalculating(false)
     }
   }
 
