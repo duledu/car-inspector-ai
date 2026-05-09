@@ -326,6 +326,7 @@ export interface AccessGrant {
 export interface CreateCheckoutPayload {
   vehicleId: string
   productType: PremiumProduct
+  locale?: string
 }
 
 export interface CheckoutSession {

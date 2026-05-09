@@ -889,6 +889,7 @@ const bg: Record<string, string> = {
 
   // â”€â”€ Premium page (title only; full copy falls back to English) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   'premiumPage.title': 'ÐŸÑ€ÐµÐ¼Ð¸ÑƒÐ¼ Ð´Ð¾ÐºÐ»Ð°Ð´Ð¸',
+  'report.accessGate.purchaseReport': '\u041a\u0443\u043f\u0438 \u043a\u0440\u0435\u0434\u0438\u0442 \u0437\u0430 \u0434\u043e\u043a\u043b\u0430\u0434 - {{price}}',
 
   // â”€â”€ Messages & community â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   'messages.emptyTitle': 'Ð’ÑÐµ Ð¾Ñ‰Ðµ Ð½ÑÐ¼Ð° ÑÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ñ',

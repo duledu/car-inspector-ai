@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     // ── Step 3: scoring ───────────────────────────────────────────────────────
     const step3Start  = Date.now()
     pipelineLog({ step: 'pdf:scoring:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
-    const cachedScore = await scoringService.getLatest(vehicleId)
+    const cachedScore = await scoringService.getLatest(vehicleId, auth.userId)
     if (!cachedScore) {
       return apiError('Generated report required before PDF export', { status: 403, code: 'ACCESS_REQUIRED' })
     }

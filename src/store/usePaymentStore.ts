@@ -30,7 +30,7 @@ interface PaymentState {
 interface PaymentActions {
   getStatus: (vehicleId: string, productType: PremiumProduct) => PaymentStatus
   hasAccess: (vehicleId: string, productType: PremiumProduct) => boolean
-  startCheckout: (vehicleId: string, productType: PremiumProduct) => Promise<CheckoutSession>
+  startCheckout: (vehicleId: string, productType: PremiumProduct, locale?: string) => Promise<CheckoutSession>
   pollPurchaseStatus: (purchaseId: string, vehicleId: string, productType: PremiumProduct) => Promise<void>
   fetchPurchaseHistory: () => Promise<void>
   clearCheckout: () => void
@@ -63,10 +63,10 @@ export const usePaymentStore = create<PaymentStore>()(
         return get().getStatus(vehicleId, productType) === 'PAID'
       },
 
-      startCheckout: async (vehicleId, productType) => {
+      startCheckout: async (vehicleId, productType, locale) => {
         set((state) => { state.isCreatingCheckout = true; state.error = null })
         try {
-          const checkout = await paymentApi.createCheckout({ vehicleId, productType })
+          const checkout = await paymentApi.createCheckout({ vehicleId, productType, locale })
           set((state) => {
             state.activeCheckout = checkout
             state.isCreatingCheckout = false

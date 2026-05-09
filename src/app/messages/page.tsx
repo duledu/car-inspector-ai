@@ -7,12 +7,23 @@
 import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useChatStore } from '@/store'
+import { featureFlags } from '@/config/features'
 import { ConversationList } from '@/components/messaging/ConversationList'
 import { MessageThread } from '@/components/messaging/MessageThread'
 import { EmptyConversation } from '@/components/messaging/EmptyConversation'
+import { FeatureUnavailable } from '@/components/layout/FeatureUnavailable'
 import AppShell from '../AppShell'
 
 export default function MessagesPage() {
+  if (!featureFlags.messages) {
+    return (
+      <FeatureUnavailable
+        title="Messages are not available yet"
+        description="Private messaging is temporarily unavailable while user safety and abuse handling tools are prepared for launch."
+      />
+    )
+  }
+
   return (
     <Suspense>
       <MessagesPageContent />

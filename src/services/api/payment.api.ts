@@ -12,11 +12,28 @@ import type {
   ApiResponse,
 } from '@/types'
 
+export type ProductPriceDto = {
+  amountCents: number
+  currency: string
+  label: string
+  formatted: string
+  locale: string
+}
+
 export const paymentApi = {
   createCheckout: async (payload: CreateCheckoutPayload): Promise<CheckoutSession> => {
     const { data } = await apiClient.post<ApiResponse<CheckoutSession>>(
       '/payment/checkout',
       payload
+    )
+    return data.data
+  },
+
+  getPrice: async (productType: PremiumProduct, locale?: string): Promise<ProductPriceDto> => {
+    const params = new URLSearchParams({ productType })
+    if (locale) params.set('locale', locale)
+    const { data } = await apiClient.get<ApiResponse<ProductPriceDto>>(
+      `/payment/price?${params.toString()}`
     )
     return data.data
   },

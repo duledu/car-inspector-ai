@@ -126,11 +126,12 @@ interface FailedProps {
 export function PaymentFailedState({ vehicleId, productType }: FailedProps) {
   const { startCheckout, isCreatingCheckout } = usePaymentStore()
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const handleRetry = async () => {
     try {
-      const checkout = await startCheckout(vehicleId, productType)
+      const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
+      const checkout = await startCheckout(vehicleId, productType, locale)
       window.location.href = checkout.checkoutUrl
     } catch {
       // Error shown via store

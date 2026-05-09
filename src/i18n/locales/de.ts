@@ -962,6 +962,7 @@ const de = {
   'premiumPage.locked.features.bundle.support': 'Priorisierter Support',
   'premiumPage.locked.preparingCheckout': 'Checkout wird vorbereitet...',
   'premiumPage.locked.purchaseReport': 'Bericht kaufen - {{price}}',
+  'report.accessGate.purchaseReport': 'Berichtsguthaben kaufen - {{price}}',
   'premiumPage.locked.currentlyUnavailable': 'Premium-Käufe sind in dieser Version nicht verfügbar. Sie können die kostenlose Prüfung weiterhin abschließen und den Standardbericht erstellen.',
   'premiumPage.locked.securityNote': 'Sichere Zahlung wird von Stripe verarbeitet, sobald Käufe aktiviert sind · Kein Abo',
   'premiumPage.payment.pendingTitle': 'Zahlung wird bestätigt',

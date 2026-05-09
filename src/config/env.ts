@@ -55,6 +55,8 @@ export const env = {
   // Feature flags
   features: {
     realTimeMessaging: process.env.FEATURE_REALTIME_MESSAGING === 'true',
+    community: process.env.FEATURE_COMMUNITY === 'true',
+    messages: process.env.FEATURE_MESSAGES === 'true',
     aiDeepScan: process.env.FEATURE_AI_DEEP_SCAN === 'true',
     inspectionAccessGate: process.env.FEATURE_INSPECTION_ACCESS_GATE === 'true',
   },

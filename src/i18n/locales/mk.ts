@@ -962,6 +962,7 @@ const mk = {
   'premiumPage.locked.features.bundle.support': 'Приоритетна поддршка',
   'premiumPage.locked.preparingCheckout': 'Се подготвува плаќање...',
   'premiumPage.locked.purchaseReport': 'Купи извештај - {{price}}',
+  'report.accessGate.purchaseReport': 'Купи кредит за извештај - {{price}}',
   'premiumPage.locked.currentlyUnavailable': 'Premium купување не е достапно во оваа верзија. Сè уште можете да го завршите бесплатниот преглед и да го генерирате стандардниот извештај.',
   'premiumPage.locked.securityNote': 'Сигурното плаќање го обработува Stripe кога купувањето е овозможено · Без претплата',
   'premiumPage.payment.pendingTitle': 'Потврда на плаќање',

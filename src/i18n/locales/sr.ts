@@ -431,7 +431,7 @@ const sr = {
   'report.accessGate.trust.inspectionLogic': 'Zasnovan je na stvarnoj logici pregleda, ne na generičkoj listi.',
   'report.accessGate.trust.lockedSnapshot': 'Završeni izveštaji su zaključani snimci kojima se možete vratiti.',
   'report.accessGate.continue':       'Nastavi',
-  'report.accessGate.purchaseReport': 'Kupi izvestaj - €9.99',
+  'report.accessGate.purchaseReport': 'Kupi izvestaj - {{price}}',
   'report.accessGate.preparingCheckout': 'Priprema placanja...',
   'report.accessGate.generateNow':    'Generiši izveštaj',
   'report.accessGate.continuing':     'Generisanje izveštaja...',
@@ -1211,6 +1211,13 @@ const sr = {
   'report.aiSummary.repeatConfirmed': '{{title}} se ponavlja na {{count}} analizirane fotografije.',
   'report.aiSummary.visibleArea':  'prikazane vidljive oblasti',
   'report.aiSummary.issueFallback': 'vizuelna nepravilnost',
+  'report.accessGate.vinUnavailable': 'VIN nije dodat',
+  'report.accessGate.statusLocked': 'Izvestaj je zakljucan',
+  'report.accessGate.statusReady': 'Kredit je spreman',
+  'report.accessGate.creditsAvailableZero': 'Dostupni krediti: 0',
+  'report.accessGate.creditsAvailableOne': 'Dostupni krediti: 1',
+  'report.accessGate.statusLockedLine': 'Potreban je 1 kredit',
+  'report.accessGate.statusReadyLine': 'Spremno za generisanje',
 } as const
 
 export default sr

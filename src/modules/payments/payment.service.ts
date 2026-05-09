@@ -6,6 +6,7 @@
 import { prisma } from '@/config/prisma'
 import { grantAccess } from '@/lib/inspection/access'
 import { StripeAdapter } from './providers/stripe/stripe.adapter'
+import { getProductPrice } from './pricing'
 import type {
   PaymentProviderInterface,
   CreateCheckoutPayload,
@@ -14,30 +15,6 @@ import type {
   PaymentStatus,
   AccessGrant,
 } from '@/types'
-
-// Product pricing catalogue
-const PRODUCT_PRICES: Record<string, { amountCents: number; currency: string; label: string }> = {
-  CARVERTICAL_REPORT: {
-    amountCents: 1499,
-    currency: 'EUR',
-    label: 'CarVertical Full Vehicle History Report',
-  },
-  AI_DEEP_SCAN: {
-    amountCents: 999,
-    currency: 'EUR',
-    label: 'AI Deep Photo Analysis, Full Scan',
-  },
-  FULL_INSPECTION_BUNDLE: {
-    amountCents: 2499,
-    currency: 'EUR',
-    label: 'Full Inspection Bundle (History + AI)',
-  },
-  INSPECTION_REPORT: {
-    amountCents: 999,
-    currency: 'EUR',
-    label: 'Professional AI Inspection Report',
-  },
-}
 
 export class PaymentService {
   private provider: PaymentProviderInterface
@@ -57,9 +34,6 @@ export class PaymentService {
     payload: CreateCheckoutPayload,
     baseUrl: string
   ): Promise<CheckoutSession> {
-    const product = PRODUCT_PRICES[payload.productType]
-    if (!product) throw new Error(`Unknown product type: ${payload.productType}`)
-
     const vehicle = await prisma.vehicle.findFirst({
       where: { id: payload.vehicleId, userId },
       select: { id: true },
@@ -67,6 +41,12 @@ export class PaymentService {
     if (!vehicle) {
       throw new Error('VEHICLE_NOT_FOUND')
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredLanguage: true },
+    })
+    const product = getProductPrice(payload.productType, payload.locale ?? user?.preferredLanguage ?? 'en')
 
     // Idempotency: if already paid, return early
     const existing = await prisma.premiumPurchase.findFirst({

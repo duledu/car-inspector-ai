@@ -6,9 +6,10 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
+import { paymentApi, type ProductPriceDto } from '@/services/api/payment.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import type { Vehicle, PremiumProduct } from '@/types'
 
@@ -45,23 +46,33 @@ const PRODUCT_FEATURES: Record<PremiumProduct, string[]> = {
   ],
 }
 
-const PRODUCT_PRICES: Record<PremiumProduct, string> = {
-  CARVERTICAL_REPORT: '€14.99',
-  AI_DEEP_SCAN: '€9.99',
-  FULL_INSPECTION_BUNDLE: '€24.99',
-  INSPECTION_REPORT: '€9.99',
-}
-
 export function PremiumLockedState({ vehicle, productType, comingSoon = false }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { startCheckout, isCreatingCheckout, error } = usePaymentStore()
   const [clicked, setClicked] = useState(false)
+  const [price, setPrice] = useState<ProductPriceDto | null>(null)
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
+
+  useEffect(() => {
+    let cancelled = false
+    setPrice(null)
+    paymentApi.getPrice(productType, locale)
+      .then((nextPrice) => {
+        if (!cancelled) setPrice(nextPrice)
+      })
+      .catch(() => {
+        if (!cancelled) setPrice(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [productType, locale])
 
   const handlePurchase = async () => {
     if (!vehicle) return
     setClicked(true)
     try {
-      const checkout = await startCheckout(vehicle.id, productType)
+      const checkout = await startCheckout(vehicle.id, productType, locale)
       // Redirect to Stripe-hosted checkout page
       window.location.href = checkout.checkoutUrl
     } catch (err) {
@@ -70,7 +81,7 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
   }
 
   const features = PRODUCT_FEATURES[productType]
-  const price = PRODUCT_PRICES[productType]
+  const priceLabel = price?.formatted ?? t('common.loading')
 
   return (
     <div>
@@ -185,7 +196,7 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
               WebkitTextFillColor: 'transparent',
             }}
           >
-            {price}
+            {priceLabel}
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
             {t('premiumPage.locked.purchaseTerms')}
@@ -255,7 +266,7 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
           >
             {isCreatingCheckout
               ? t('premiumPage.locked.preparingCheckout')
-              : t('premiumPage.locked.purchaseReport', { price })}
+              : t('premiumPage.locked.purchaseReport', { price: priceLabel })}
           </button>
         )}
 

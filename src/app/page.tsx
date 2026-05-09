@@ -7,6 +7,13 @@ import '@/i18n/config'
 import { useUserStore } from '@/store/useUserStore'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { balanceHeadlineText } from '@/lib/typography'
+import { isFeatureEnabled, type FeatureFlagName } from '@/config/features'
+
+type LandingLink = {
+  label: string
+  href: string
+  feature?: FeatureFlagName
+}
 
 // ══════════════════════════════════════════════════════════════
 // HOOKS
@@ -128,11 +135,11 @@ function LandingNav() {
         </Link>
 
         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} className="desktop-only">
-          {[
+          {([
             { label: t('nav.inspect'), href: '/inspection' },
             { label: t('nav.premium'), href: '/premium' },
-            { label: t('nav.community'), href: '/community' },
-          ].map(item => (
+            { label: t('nav.community'), href: '/community', feature: 'community' },
+          ] satisfies LandingLink[]).filter(item => isFeatureEnabled(item.feature)).map(item => (
             <Link key={item.href} href={item.href} style={{
               padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
               color: 'rgba(255,255,255,0.5)', textDecoration: 'none', transition: 'all 0.15s',
@@ -1305,10 +1312,10 @@ function Footer() {
               { label: t('landing.footer.premiumHistory'), href: '/premium' },
             ]},
             { title: t('landing.footer.platform'), links: [
-              { label: t('nav.dashboard'), href: '/dashboard' },
-              { label: t('nav.community'), href: '/community' },
-              { label: t('nav.messages'),  href: '/messages' },
-              { label: t('nav.profile'),   href: '/profile' },
+              { label: t('nav.dashboard'), href: '/dashboard' } satisfies LandingLink,
+              { label: t('nav.community'), href: '/community', feature: 'community' } satisfies LandingLink,
+              { label: t('nav.messages'),  href: '/messages', feature: 'messages' } satisfies LandingLink,
+              { label: t('nav.profile'),   href: '/profile' } satisfies LandingLink,
             ]},
           ].map(col => (
             <div key={col.title}>
@@ -1321,7 +1328,7 @@ function Footer() {
                 {col.title}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-                {col.links.map(l => (
+                {col.links.filter(l => isFeatureEnabled(l.feature)).map(l => (
                   <FooterLink key={l.href} href={l.href}>{l.label}</FooterLink>
                 ))}
               </div>

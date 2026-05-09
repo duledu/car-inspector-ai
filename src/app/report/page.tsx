@@ -761,6 +761,8 @@ export default function ReportPage() {
   // invocations that the stale-closure check on `autoRecalculating` state alone
   // cannot reliably catch when the effect fires due to a different dependency.
   const autoRecalcGuardRef = useRef(false)
+  const reportAccessRef = useRef<ReportAccessInfo | null>(null)
+  const accessSeqRef = useRef(0)
   // Sequence counter — incremented on every new calculation start and on vehicle
   // change. In-flight responses that carry a stale sequence are discarded so a
   // slower vehicleA response cannot overwrite vehicleB state.
@@ -778,11 +780,25 @@ export default function ReportPage() {
 
   const accessRequiredMessage = safeReportT(t, 'report.accessRequired.message', 'An active credit is required to generate the report.')
 
+  const revokePremiumAccess = () => {
+    calcSeqRef.current++
+    autoRecalcGuardRef.current = false
+    setRiskScore(null)
+    setIsPreliminaryScore(false)
+    setLoading(false)
+    setAutoRecalculating(false)
+    setCalculating(false)
+    setAccessRequired(true)
+  }
+
   const mapReportGenerationError = (err: unknown): string => {
     const code = (err as { code?: string })?.code
     const statusCode = (err as { statusCode?: number })?.statusCode
     if (code === 'ACCESS_REQUIRED') {
-      setAccessRequired(true)
+      reportAccessRef.current = { status: 'NONE', grantedVia: null }
+      setReportAccessInfo(reportAccessRef.current)
+      setReportAccessChecked(true)
+      revokePremiumAccess()
       return accessRequiredMessage
     }
     if (code === 'GENERATION_IN_PROGRESS') {
@@ -993,6 +1009,8 @@ export default function ReportPage() {
     setIsPreliminaryScore(false)
     setCalcError(null)
     setAccessRequired(false)
+    reportAccessRef.current = null
+    accessSeqRef.current++
     setReportAccessInfo(null)
     setReportAccessChecked(false)
     setPromoCode('')
@@ -1024,17 +1042,18 @@ export default function ReportPage() {
     if (!vehicleId) return
     if (!reportAccessChecked) return
     if (!hasReportViewAccess) {
-      setLoading(false)
-      setRiskScore(null)
+      revokePremiumAccess()
       return
     }
     // `cancelled` prevents setState on a stale invocation when vehicleId changes
     // or the component unmounts before the API call resolves.
     let cancelled = false
+    const accessSeq = accessSeqRef.current
     setLoading(true)
     inspectionApi.getScore(vehicleId)
       .then(s  => {
         if (cancelled) return
+        if (accessSeq !== accessSeqRef.current || !canViewPremiumReport(reportAccessRef.current?.status)) return
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
@@ -1044,7 +1063,11 @@ export default function ReportPage() {
         if (cancelled) return
         console.error('[report] failed to load persisted score', err)
         const code = (err as { code?: string })?.code
-        if (code === 'DATABASE_UNAVAILABLE') {
+        if (code === 'ACCESS_REQUIRED') {
+          reportAccessRef.current = { status: 'NONE', grantedVia: null }
+          setReportAccessInfo(reportAccessRef.current)
+          revokePremiumAccess()
+        } else if (code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
           setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
         } else if (code && code !== 'NOT_FOUND' && code !== 'INSPECTION_INCOMPLETE') {
@@ -1063,21 +1086,30 @@ export default function ReportPage() {
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
     let cancelled = false
+    const myAccessSeq = ++accessSeqRef.current
     setReportAccessChecked(false)
+    reportAccessRef.current = null
     setReportAccessInfo(null)
+    setRiskScore(null)
     inspectionApi.getAccess(vehicleId)
       .then(info => {
-        if (cancelled) return
+        if (cancelled || accessSeqRef.current !== myAccessSeq) return
+        reportAccessRef.current = info
         setReportAccessInfo(info)
-        setAccessRequired(!canViewPremiumReport(info.status))
+        if (!canViewPremiumReport(info.status)) {
+          revokePremiumAccess()
+        } else {
+          setAccessRequired(false)
+        }
       })
       .catch(() => {
-        if (cancelled) return
-        setReportAccessInfo({ status: 'NONE', grantedVia: null })
-        setAccessRequired(true)
+        if (cancelled || accessSeqRef.current !== myAccessSeq) return
+        reportAccessRef.current = { status: 'NONE', grantedVia: null }
+        setReportAccessInfo(reportAccessRef.current)
+        revokePremiumAccess()
       })
       .finally(() => {
-        if (!cancelled) setReportAccessChecked(true)
+        if (!cancelled && accessSeqRef.current === myAccessSeq) setReportAccessChecked(true)
       })
     return () => { cancelled = true }
   }, [storesHydrated, vehicleId])
@@ -1089,8 +1121,14 @@ export default function ReportPage() {
       .then(() => inspectionApi.getAccess(vehicleId))
       .then(info => {
         if (cancelled) return
+        reportAccessRef.current = info
+        accessSeqRef.current++
         setReportAccessInfo(info)
-        setAccessRequired(!canViewPremiumReport(info.status))
+        if (canViewPremiumReport(info.status)) {
+          setAccessRequired(false)
+        } else {
+          revokePremiumAccess()
+        }
         setReportAccessChecked(true)
       })
       .catch(() => undefined)
@@ -1133,11 +1171,20 @@ export default function ReportPage() {
     inspectionApi.calculateScore(vehicleId)
       .then(s => {
         if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
+        if (!canViewPremiumReport(reportAccessRef.current?.status)) {
+          revokePremiumAccess()
+          return
+        }
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
         // Refresh access badge — status may have transitioned ACTIVE → LOCKED
-        if (vehicleId) inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
+        if (vehicleId) inspectionApi.getAccess(vehicleId).then(info => {
+          reportAccessRef.current = info
+          accessSeqRef.current++
+          setReportAccessInfo(info)
+          if (!canViewPremiumReport(info.status)) revokePremiumAccess()
+        }).catch(() => {})
       })
       .catch((err: unknown) => {
         if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
@@ -1175,6 +1222,10 @@ export default function ReportPage() {
     try {
       const s = await inspectionApi.calculateScore(vehicleId)
       if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
+      if (!canViewPremiumReport(reportAccessRef.current?.status)) {
+        revokePremiumAccess()
+        return
+      }
       setRiskScore(s)
       setIsPreliminaryScore(false)
       setReportUnavailable(false)
@@ -1182,7 +1233,12 @@ export default function ReportPage() {
       setPromoError(null)
       setPromoSuccess(null)
       // Refresh access badge after generation (ACTIVE → LOCKED transition)
-      inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
+      inspectionApi.getAccess(vehicleId).then(info => {
+        reportAccessRef.current = info
+        accessSeqRef.current++
+        setReportAccessInfo(info)
+        if (!canViewPremiumReport(info.status)) revokePremiumAccess()
+      }).catch(() => {})
     } catch (err: unknown) {
       if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
@@ -1210,14 +1266,21 @@ export default function ReportPage() {
     setPromoSuccess(null)
     try {
       const info = await inspectionApi.redeemAccessCode(vehicleId, code)
+      reportAccessRef.current = info
+      accessSeqRef.current++
       setReportAccessInfo(info)
       setReportAccessChecked(true)
-      setAccessRequired(true)
+      setAccessRequired(!canViewPremiumReport(info.status))
       setPromoCode('')
       setCalcError(null)
       setPromoSuccess(safeReportT(t, 'report.accessGate.promoSuccess', 'Report credit activated. You can proceed to generate.'))
       // Refresh access badge to show promo-active state
-      inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
+      inspectionApi.getAccess(vehicleId).then(freshInfo => {
+        reportAccessRef.current = freshInfo
+        accessSeqRef.current++
+        setReportAccessInfo(freshInfo)
+        if (!canViewPremiumReport(freshInfo.status)) revokePremiumAccess()
+      }).catch(() => {})
     } catch (err: unknown) {
       const apiCode = (err as { code?: string })?.code
       setPromoError(
@@ -1233,7 +1296,8 @@ export default function ReportPage() {
   const handlePurchaseInspectionReport = async () => {
     if (!vehicleId || isCreatingCheckout) return
     try {
-      const checkout = await startCheckout(vehicleId, 'INSPECTION_REPORT')
+      const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
+      const checkout = await startCheckout(vehicleId, 'INSPECTION_REPORT', locale)
       window.location.href = checkout.checkoutUrl
     } catch {
       // Error is surfaced by the payment store and rendered in the access gate.

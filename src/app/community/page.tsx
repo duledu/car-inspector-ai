@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { communityApi } from '@/services/api/community.api'
+import { featureFlags } from '@/config/features'
+import { FeatureUnavailable } from '@/components/layout/FeatureUnavailable'
 import type { Post } from '@/types'
 import AppShell from '../AppShell'
 
@@ -54,6 +56,19 @@ function Avatar({ name, size = 26 }: Readonly<{ name: string; size?: number }>) 
 }
 
 export default function CommunityPage() {
+  if (!featureFlags.community) {
+    return (
+      <FeatureUnavailable
+        title="Community is not available yet"
+        description="Community discussions are temporarily unavailable while moderation and user safety tools are prepared for launch."
+      />
+    )
+  }
+
+  return <CommunityPageContent />
+}
+
+function CommunityPageContent() {
   const { t } = useTranslation()
   const [posts,      setPosts]      = useState<Post[]>([])
   const [loading,    setLoading]    = useState(true)

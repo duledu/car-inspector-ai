@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { vehicleId: s
       return apiError('Report access required', { status: 403, code: 'ACCESS_REQUIRED' })
     }
 
-    const score = await scoringService.getLatest(params.vehicleId)
+    const score = await scoringService.getLatest(params.vehicleId, auth.userId)
     return NextResponse.json({ data: score })
   } catch (err) {
     if (isDatabaseUnavailableError(err)) {

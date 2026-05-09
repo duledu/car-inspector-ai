@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       return apiError('Report access required', { status: 403, code: 'ACCESS_REQUIRED' })
     }
 
-    const score = await scoringService.getLatest(vehicleId)
+    const score = await scoringService.getLatest(vehicleId, authResult.userId)
     return NextResponse.json({ data: score })
   } catch (err) {
     if (isDatabaseUnavailableError(err)) {

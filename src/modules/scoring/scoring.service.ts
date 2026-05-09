@@ -239,49 +239,32 @@ export class ScoringService {
   /**
    * getLatest
    * Fetch the most recent persisted risk score for a vehicle.
-   * Returns null when the checklist was modified after the score was calculated
-   * (i.e., the score is stale), forcing the caller to recalculate.
+   * Returns null unless the requesting user owns the vehicle and has an
+   * ACTIVE or LOCKED inspection report for the score snapshot.
    */
-  async getLatest(vehicleId: string): Promise<RiskScore | null> {
+  async getLatest(vehicleId: string, userId: string): Promise<RiskScore | null> {
     try {
-      const session = await prisma.inspectionSession.findFirst({
-        where: { vehicleId },
-        include: { checklistItems: true },
+      const vehicle = await prisma.vehicle.findFirst({
+        where: { id: vehicleId, userId },
+        select: { id: true },
+      })
+      if (!vehicle) return null
+
+      const activeAccess = await prisma.inspectionReport.findFirst({
+        where: { vehicleId, userId, status: 'ACTIVE' },
         orderBy: { createdAt: 'desc' },
       })
-      const completion = getInspectionCompletion((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
-        id: item.id,
-        sessionId: item.sessionId,
-        category: item.category as any,
-        itemKey: item.itemKey,
-        itemLabel: item.itemLabel,
-        status: item.status as any,
-        notes: item.notes,
-        photoUrl: item.photoUrl,
-      })))
-      if (!completion.isComplete) return null
+      const access = activeAccess ?? await prisma.inspectionReport.findFirst({
+        where: { vehicleId, userId, status: 'LOCKED' },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (!access) return null
 
       const score = await prisma.riskScore.findFirst({
-        where: { vehicleId },
+        where: { vehicleId, inspectionReportId: access.id },
         orderBy: { createdAt: 'desc' },
       })
       if (!score) return null
-
-      if (score.inspectionReportId) {
-        return this.mapToDto(score)
-      }
-
-      // Staleness check: if any checklist item was updated after the score was
-      // last calculated, the score no longer reflects the current answers.
-      // Return null so the caller is forced to recalculate rather than showing
-      // stale results silently.
-      const latestChecklistChange = (session?.checklistItems ?? []).reduce<Date | null>(
-        (max, item) => (!max || item.updatedAt > max ? item.updatedAt : max),
-        null
-      )
-      if (latestChecklistChange && latestChecklistChange > score.updatedAt) {
-        return null
-      }
 
       return this.mapToDto(score)
     } catch (err) {

@@ -962,6 +962,7 @@ const sq = {
   'premiumPage.locked.features.bundle.support': 'Mbështetje prioritare',
   'premiumPage.locked.preparingCheckout': 'Po përgatitet pagesa...',
   'premiumPage.locked.purchaseReport': 'Bli raportin - {{price}}',
+  'report.accessGate.purchaseReport': 'Bli kredit raporti - {{price}}',
   'premiumPage.locked.currentlyUnavailable': 'Blerja premium nuk është e disponueshme në këtë version. Mund të përfundoni ende inspektimin falas dhe të gjeneroni raportin standard.',
   'premiumPage.locked.securityNote': 'Pagesa e sigurt përpunohet nga Stripe kur blerjet aktivizohen · Pa abonim',
   'premiumPage.payment.pendingTitle': 'Po konfirmohet pagesa',

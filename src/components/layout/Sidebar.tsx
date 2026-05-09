@@ -4,10 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useUserStore } from '@/store'
+import { isFeatureEnabled, type FeatureFlagName } from '@/config/features'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { DeleteAccountTrigger } from '@/components/account/DeleteAccountTrigger'
 
-const NAV = [
+type NavItem = {
+  labelKey: string
+  href: string
+  feature?: FeatureFlagName
+  icon: React.ReactNode
+}
+
+const NAV: NavItem[] = [
   {
     labelKey: 'nav.dashboard',
     href: '/dashboard',
@@ -59,6 +67,7 @@ const NAV = [
   {
     labelKey: 'nav.community',
     href: '/community',
+    feature: 'community',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -69,6 +78,7 @@ const NAV = [
   {
     labelKey: 'nav.messages',
     href: '/messages',
+    feature: 'messages',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -118,7 +128,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav style={{ padding: '10px 10px 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {NAV.map((item) => {
+        {NAV.filter(item => isFeatureEnabled(item.feature)).map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
