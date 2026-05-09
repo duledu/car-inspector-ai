@@ -452,14 +452,16 @@ export default function VehiclePage() {
                       <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' }}>
                         {vehicle.year} {vehicle.make} {vehicle.model}
                       </span>
-                      {/* Status pill */}
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                        color: statusColor, background: `${statusColor}18`, border: `1px solid ${statusColor}30`,
-                        borderRadius: 5, padding: '2px 7px',
-                      }}>
-                        {statusLabel}
-                      </span>
+                      {/* Status pill — only for terminal states; ACTIVE is redundant with the isActive indicator */}
+                      {vehicle.status !== 'ACTIVE' && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                          color: statusColor, background: `${statusColor}18`, border: `1px solid ${statusColor}30`,
+                          borderRadius: 5, padding: '2px 7px',
+                        }}>
+                          {statusLabel}
+                        </span>
+                      )}
                       {isActive && (
                         <span style={{
                           fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',

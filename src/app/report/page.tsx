@@ -93,6 +93,34 @@ function formatNegotiationAmountForLocale(amount: string, locale: string): strin
   return new Intl.NumberFormat(locale).format(numeric)
 }
 
+type NegotiationLeverage = {
+  amount: string
+  kind: 'range' | 'minimum'
+}
+
+function extractNegotiationLeverage(hints: string[], locale: string): NegotiationLeverage | null {
+  for (const hint of hints) {
+    const normalizedText = normalizeReportTextV2(hint)
+    const amounts = Array.from(normalizedText.matchAll(/€\s*([\d,]+)/g)).map(match => match[1])
+
+    if (amounts.length >= 2 && normalizedText.toLowerCase().includes('price reduction')) {
+      return {
+        amount: `€${formatNegotiationAmountForLocale(amounts[0], locale)}-€${formatNegotiationAmountForLocale(amounts[1], locale)}`,
+        kind: 'range',
+      }
+    }
+
+    if (amounts.length >= 1 && normalizedText.toLowerCase().includes('off asking price')) {
+      return {
+        amount: `€${formatNegotiationAmountForLocale(amounts[0], locale)}+`,
+        kind: 'minimum',
+      }
+    }
+  }
+
+  return null
+}
+
 function translateNegotiationHint(text: string, t: Translate, locale: string): string {
   return translateNegotiationHintV2(text, t, locale)
 }
@@ -103,12 +131,14 @@ function recommendationKey(verdict: string): string {
 
 function normalizeReportTextV2(text: string): string {
   return text
-    .replace(/[•·]/g, '·')
-    .replace(/[—–]/g, (match) => match)
     .replace(/\u00C2\u00B7/g, '·')
-    .replace(/\u00E2\u201A\u00AC\u201D/g, '—')
+    .replace(/\u00E2\u20AC\u201D/g, '—')
     .replace(/\u00E2\u20AC\u201C/g, '–')
     .replace(/\u00E2\u201A\u00AC/g, '€')
+    .replace(/â€”/g, '—')
+    .replace(/â€“/g, '–')
+    .replace(/â‚¬/g, '€')
+    .replace(/[•·]/g, '·')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -298,10 +328,10 @@ function translateReasonV2(text: string, t: Translate): string {
     'Vehicle not reported stolen': 'report.reason.notStolen',
     'Mileage progression is consistent': 'report.reason.mileageConsistent',
     'No critical AI anomalies detected in photos': 'report.reason.noCriticalAi',
-    'No verified service history â€” major risk factor': 'report.reason.noServiceHistory',
+    'No verified service history — major risk factor': 'report.reason.noServiceHistory',
     'Service records appear suspicious or inconsistent': 'report.reason.suspiciousServiceRecords',
     'High recorded repair costs in vehicle history': 'report.reason.highRepairCosts',
-    'Outstanding finance found â€” legal risk': 'report.reason.outstandingFinance',
+    'Outstanding finance found — legal risk': 'report.reason.outstandingFinance',
     'Mileage inconsistency detected': 'report.reason.mileageInconsistent',
   }
   if (exact[normalizedText]) return t(exact[normalizedText])
@@ -341,13 +371,13 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     'Request an independent pre-purchase inspection as a condition of sale.': 'report.hint.independentInspection',
     'Budget for an immediate full service if you proceed.': 'report.hint.immediateService',
     'Walk away unless the seller can provide verifiable original receipts.': 'report.hint.requireReceipts',
-    'Suspicious or inconsistent service records â€” treat as no history.': 'report.hint.suspiciousRecords',
+    'Suspicious or inconsistent service records — treat as no history.': 'report.hint.suspiciousRecords',
     'No verified service history. Negotiate based on the missing maintenance risk.': 'report.hint.noServiceHistoryGeneric',
     'Negotiate a meaningful reduction to offset the history risk.': 'report.hint.suspiciousRecordsGeneric',
   }
   if (exact[normalizedText]) return t(exact[normalizedText])
 
-  const noServiceMatch = normalizedText.match(/^No verified service history [â€”-] negotiate a price reduction of â‚¬([\d,]+)[â€“-]â‚¬([\d,]+)\.$/)
+  const noServiceMatch = normalizedText.match(/^No verified service history — negotiate a price reduction of €([\d,]+)[–-]€([\d,]+)\.$/)
   if (noServiceMatch) {
     return t('report.hint.noServiceHistoryDiscount', {
       min: formatNegotiationAmountForLocale(noServiceMatch[1], locale),
@@ -355,7 +385,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const suspiciousDiscountMatch = normalizedText.match(/^Negotiate a price reduction of â‚¬([\d,]+)[â€“-]â‚¬([\d,]+)\.$/)
+  const suspiciousDiscountMatch = normalizedText.match(/^Negotiate a price reduction of €([\d,]+)[–-]€([\d,]+)\.$/)
   if (suspiciousDiscountMatch) {
     return t('report.hint.suspiciousRecordsDiscount', {
       min: formatNegotiationAmountForLocale(suspiciousDiscountMatch[1], locale),
@@ -363,7 +393,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const accidentsMatch = normalizedText.match(/^(\d+) recorded accidents [â€”-] negotiate at least â‚¬([\d,]+) off asking price\.$/)
+  const accidentsMatch = normalizedText.match(/^(\d+) recorded accidents — negotiate at least €([\d,]+) off asking price\.$/)
   if (accidentsMatch) {
     return t('report.hint.accidentDiscount', {
       count: Number(accidentsMatch[1]),
@@ -371,7 +401,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const repairMatch = normalizedText.match(/^High recorded repair costs \(> ?(.+) EUR\) [â€”-] budget for potential recurring issues\.$/)
+  const repairMatch = normalizedText.match(/^High recorded repair costs \(> ?(.+) EUR\) — budget for potential recurring issues\.$/)
   if (repairMatch) return t('report.hint.highRepairCosts', { amount: repairMatch[1] })
 
   return safeReportT(t, 'report.hint.genericNegotiation', 'Use this finding as a basis for further checks and negotiation.')
@@ -575,9 +605,9 @@ function ChecklistDimBar({
 // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Section label ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 function SectionLabel({ children, style }: Readonly<{ children: React.ReactNode; style?: React.CSSProperties }>) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, ...style }}>
-      <div style={{ width: 3, height: 13, borderRadius: 2, background: 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
-      <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.42)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>{children}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...style }}>
+      <div style={{ width: 3, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.50)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>{children}</span>
     </div>
   )
 }
@@ -1255,6 +1285,10 @@ export default function ReportPage() {
   const svcLabel = riskScore ? (SVC_HISTORY_CFG[riskScore.serviceHistoryStatus] ?? SVC_HISTORY_CFG.PARTIAL) : null
   const safeBuyScore = riskScore && Number.isFinite(riskScore.buyScore) ? riskScore.buyScore : null
   const showPreliminaryMode = isPreliminaryScore || (preliminaryMode && !riskScore)
+  const reportLocale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
+  const negotiationLeverage = riskScore
+    ? extractNegotiationLeverage(riskScore.negotiationHints, reportLocale)
+    : null
   const preliminaryMissingDataCard = preliminaryMissingData.items.length > 0 ? (
     <div style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 12 }}>
@@ -1339,7 +1373,7 @@ export default function ReportPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: 820, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ maxWidth: 820, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Header ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
         <div style={{ marginBottom: 2 }}>
@@ -1564,18 +1598,23 @@ export default function ReportPage() {
                 1. SUMMARY ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â score ring, verdict, service history badge
                ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
             {activeVehicle && (
-              <div style={{ paddingBottom: 6, paddingLeft: 1 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.2px' }}>
+              <div style={{ paddingBottom: 10, paddingLeft: 1 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.15, marginBottom: 5 }}>
                   {activeVehicle.make} {activeVehicle.model}
-                </span>
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginLeft: 10 }}>
-                  {activeVehicle.year}
-                </span>
-                {activeVehicle.mileage != null && (
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginLeft: 8 }}>
-                    {new Intl.NumberFormat().format(activeVehicle.mileage)} km
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>
+                    {activeVehicle.year}
                   </span>
-                )}
+                  {activeVehicle.mileage != null && (
+                    <>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', flexShrink: 0, display: 'inline-block' }} />
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', fontWeight: 500 }}>
+                        {new Intl.NumberFormat().format(activeVehicle.mileage)} km
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             )}
             <div style={{
@@ -1589,20 +1628,20 @@ export default function ReportPage() {
                 <ScoreRing score={safeBuyScore ?? 0} color={verdict.color} />
 
                 <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 10 }}>
                     {isPreliminaryScore
                       ? safeReportT(t, 'report.preliminaryBadge', 'Preliminary score')
                       : t('report.aiConfidenceScore')}
                   </div>
                   {/* Verdict pill */}
-                  <div style={{ display: 'inline-flex', padding: '6px 16px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 20, fontSize: 16, fontWeight: 800, color: verdict.color, marginBottom: 10 }}>
+                  <div style={{ display: 'inline-flex', padding: '8px 20px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 24, fontSize: 17, fontWeight: 800, color: verdict.color, marginBottom: 12, letterSpacing: '-0.2px' }}>
                     {t(verdict.labelKey)}
                   </div>
                   {/* Recommendation text — the most important sentence */}
                   {(() => {
                     const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
                     return rec && !rec.startsWith('report.') ? (
-                      <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: 10 }}>
+                      <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.65, marginBottom: 12 }}>
                         {rec}
                       </div>
                     ) : null
@@ -1756,7 +1795,7 @@ export default function ReportPage() {
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.for')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {displayReasonsFor.map((r) => (
-                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.45 }}>
+                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="20 6 9 17 4 12"/></svg>
                             {translateReasonV2(r, t)}
                           </div>
@@ -1769,7 +1808,7 @@ export default function ReportPage() {
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.against')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {displayReasonsAgainst.map((r) => (
-                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.45 }}>
+                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                             {translateReasonV2(r, t)}
                           </div>
@@ -1827,34 +1866,46 @@ export default function ReportPage() {
             {riskScore.negotiationHints.length > 0 && (
               <div>
                 <SectionLabel>{t('report.negotiation')}</SectionLabel>
-                <div style={{ padding: '18px 20px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 14 }}>
-                  {activeVehicle?.askingPrice != null ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>
-                          {t('report.negotiationSub')}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)' }}>
-                          {t('report.negotiation')}
-                        </div>
+                <div style={{ padding: '20px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid rgba(245,158,11,0.14)' }}>
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(245,158,11,0.9)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                        {safeReportT(t, 'report.negotiationLeverageLabel', 'Estimated negotiation leverage')}
                       </div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#f59e0b', letterSpacing: '-0.5px' }}>
-                        {new Intl.NumberFormat().format(activeVehicle.askingPrice)} {activeVehicle.currency ?? 'EUR'}
+                      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55 }}>
+                        {safeReportT(t, 'report.negotiationLeverageIntro', 'Use these findings to discuss a fair reduction with the seller. The estimate is based on inspection risk signals, not a guaranteed market valuation.')}
+                      </div>
+                      {activeVehicle?.askingPrice != null && (
+                        <div style={{ marginTop: 7, fontSize: 11.5, color: 'rgba(255,255,255,0.42)' }}>
+                          {safeReportT(t, 'report.negotiationAskingPrice', 'Asking price')}: {new Intl.NumberFormat(reportLocale).format(activeVehicle.askingPrice)} {activeVehicle.currency ?? 'EUR'}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 150 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.34)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>
+                        {negotiationLeverage
+                          ? safeReportT(t, negotiationLeverage.kind === 'minimum' ? 'report.negotiationMinimumReduction' : 'report.negotiationSuggestedReduction', 'Suggested price reduction')
+                          : safeReportT(t, 'report.negotiationUseFindings', 'Use findings to negotiate')}
+                      </div>
+                      <div style={{ fontSize: negotiationLeverage ? 24 : 15, fontWeight: 850, color: '#f59e0b', letterSpacing: negotiationLeverage ? '-0.6px' : '-0.2px', lineHeight: 1.1 }}>
+                        {negotiationLeverage?.amount ?? safeReportT(t, 'report.negotiationAdvisoryOnly', 'Advisory only')}
                       </div>
                     </div>
-                  ) : (
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)' }}>{t('report.negotiationSub')}</div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  </div>
+                  <div style={{ marginBottom: 12, fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {safeReportT(t, 'report.negotiationSupportedBy', 'Supported by these findings')}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
                     {riskScore.negotiationHints.map((hint, i) => (
                       // eslint-disable-next-line react/no-array-index-key
-                      <div key={i} style={{ display: 'flex', gap: 12, fontSize: 13.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55, paddingLeft: 4, borderLeft: '2px solid rgba(245,158,11,0.3)' }}>
+                      <div key={i} style={{ display: 'flex', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, paddingLeft: 6, borderLeft: '2px solid rgba(245,158,11,0.35)' }}>
                         <div style={{ flexShrink: 0, color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>→</div>
-                        {translateNegotiationHintV2(hint, t, i18n.resolvedLanguage ?? i18n.language ?? 'en')}
+                        {translateNegotiationHintV2(hint, t, reportLocale)}
                       </div>
                     ))}
+                  </div>
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(245,158,11,0.16)', fontSize: 12.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>
+                    {safeReportT(t, 'report.negotiationDisclaimer', 'This is advisory negotiation guidance. It is not guaranteed savings, a formal appraisal, or proof of repair cost. Use it as a structured talking point and verify issues before purchase.')}
                   </div>
                   {/* Overall recommendation */}
                   {(() => {
@@ -1876,7 +1927,7 @@ export default function ReportPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
                   <SectionLabel style={{ marginBottom: 0 }}>{t('report.aiFindings')} {latestAI && latestAI.findings.length > 0 ? `(${latestAI.findings.length})` : ''}</SectionLabel>
-                  <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.22)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('report.aiAssisted')}</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('report.aiAssisted')}</span>
                 </div>
                 <div style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.035) 0%, rgba(255,255,255,0.018) 100%)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
                   {aiVehicleSummary && (
@@ -1916,18 +1967,18 @@ export default function ReportPage() {
                   )}
                   {latestAI && latestAI.findings.length > 0 ? latestAI.findings.map((f, i) => (
                     // eslint-disable-next-line react/no-array-index-key
-                    <div key={i} className="report-ai-finding-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: i < latestAI.findings.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: SEV_COLOR[f.severity] ?? '#fff', marginTop: 5, flexShrink: 0, boxShadow: `0 0 10px ${SEV_COLOR[f.severity] ?? '#fff'}55` }} />
+                    <div key={i} className="report-ai-finding-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '15px 16px', borderBottom: i < latestAI.findings.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: f.severity === 'critical' ? 'rgba(239,68,68,0.025)' : 'transparent' }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: SEV_COLOR[f.severity] ?? '#fff', marginTop: 6, flexShrink: 0, boxShadow: `0 0 10px ${SEV_COLOR[f.severity] ?? '#fff'}55` }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 650, color: 'rgba(255,255,255,0.86)', lineHeight: 1.35 }}>{translateAiFindingTitle(f.title, t)}</div>
-                        {f.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.44)', marginTop: 4, lineHeight: 1.55 }}>{translateAiFindingDescription(f.description, t)}</div>}
+                        <div style={{ fontSize: 14, fontWeight: 700, color: f.severity === 'critical' ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.88)', lineHeight: 1.35 }}>{translateAiFindingTitle(f.title, t)}</div>
+                        {f.description && <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', marginTop: 4, lineHeight: 1.6 }}>{translateAiFindingDescription(f.description, t)}</div>}
                         {(f as any).recommendation && (f as any).recommendation.length > 5 && (
-                          <div style={{ marginTop: 5, fontSize: 11, color: 'rgba(34,211,238,0.6)', lineHeight: 1.45 }}>
+                          <div style={{ marginTop: 5, fontSize: 11.5, color: 'rgba(34,211,238,0.65)', lineHeight: 1.5 }}>
                             {t('report.aiNextStep')} {translateAiRecommendation((f as any).recommendation, t)}
                           </div>
                         )}
                       </div>
-                      <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 1, padding: '3px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: SEV_COLOR[f.severity] ?? '#fff', flexShrink: 0, marginTop: 1, padding: '3px 7px', borderRadius: 6, background: `${SEV_COLOR[f.severity] ?? '#fff'}12`, border: `1px solid ${SEV_COLOR[f.severity] ?? '#fff'}30` }}>
                         {t(`report.severity.${f.severity}`)}
                       </span>
                     </div>

@@ -713,7 +713,7 @@ body.camera-capture-active .bottom-nav-container {
 .report-lower-stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
   padding-bottom: 4px;
 }
 .report-premium-card {

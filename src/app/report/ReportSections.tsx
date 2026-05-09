@@ -2,13 +2,13 @@
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
-function safeT(t: Translate, key: string, fallbackSr: string, options?: Record<string, unknown>): string {
+function safeT(t: Translate, key: string, fallback: string, options?: Record<string, unknown>): string {
   const resolved = t(key, options)
   if (resolved && resolved !== key) return resolved
-  if (!options) return fallbackSr
+  if (!options) return fallback
   return Object.entries(options).reduce(
     (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
-    fallbackSr,
+    fallback,
   )
 }
 
@@ -32,25 +32,25 @@ function buildDecisionContent(
   switch (verdict) {
     case 'STRONG_BUY':
       return {
-        headline: safeT(t, 'report.decision.headline.strongBuy', 'Može se nastaviti'),
-        body: safeT(t, 'report.decision.body.strongBuy', 'Nisu uočeni značajni problemi. Vozilo deluje pogodno za kupovinu uz standardnu proveru.'),
+        headline: safeT(t, 'report.decision.headline.strongBuy', 'Proceed with confidence'),
+        body: safeT(t, 'report.decision.body.strongBuy', 'No significant issues detected. The vehicle appears suitable for purchase with a standard inspection.'),
       }
     case 'BUY_WITH_CAUTION':
       return {
-        headline: safeT(t, 'report.decision.headline.caution', 'Nastavite oprezno'),
+        headline: safeT(t, 'report.decision.headline.caution', 'Proceed with caution'),
         body: total > 0
-          ? safeT(t, 'report.decision.body.cautionIssues', '{{count}} nalaza zahteva pažnju. Razjasnite ih sa prodavcem pre konačne odluke.', { count: total })
-          : safeT(t, 'report.decision.body.caution', 'Postoje manji rizici. Proverite označene stavke sa prodavcem pre dogovora.'),
+          ? safeT(t, 'report.decision.body.cautionIssues', '{{count}} finding(s) need attention. Clarify these with the seller before finalising.', { count: total })
+          : safeT(t, 'report.decision.body.caution', 'Some minor risks detected. Review the flagged items with the seller before agreeing on a price.'),
       }
     case 'HIGH_RISK':
       return {
-        headline: safeT(t, 'report.decision.headline.highRisk', 'Visok rizik - ne kupovati bez pregleda'),
-        body: safeT(t, 'report.decision.body.highRisk', 'Uočeni su ozbiljni problemi. Zatražite profesionalni pregled pre bilo kakve odluke.'),
+        headline: safeT(t, 'report.decision.headline.highRisk', 'High risk — do not buy without inspection'),
+        body: safeT(t, 'report.decision.body.highRisk', 'Serious issues detected. Request a professional inspection before making any decision.'),
       }
     case 'WALK_AWAY':
       return {
-        headline: safeT(t, 'report.decision.headline.walkAway', 'Ne preporučuje se kupovina'),
-        body: safeT(t, 'report.decision.body.walkAway', 'Pronađeno je više kritičnih problema. Rizik je veći od vrednosti vozila po traženoj ceni.'),
+        headline: safeT(t, 'report.decision.headline.walkAway', 'Purchase not recommended'),
+        body: safeT(t, 'report.decision.body.walkAway', 'Multiple critical issues found. The risk outweighs the value at the asking price.'),
       }
     default:
       return null
@@ -60,20 +60,20 @@ function buildDecisionContent(
 function DecisionIcon({ verdict, color }: Readonly<{ verdict: string; color: string }>) {
   if (verdict === 'STRONG_BUY') {
     return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
     )
   }
   if (verdict === 'WALK_AWAY') {
     return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
     )
   }
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
@@ -94,31 +94,41 @@ export function DecisionBlock({
 
   return (
     <div style={{
-      padding: '16px 18px',
+      padding: '22px 24px',
       background: verdictBg,
       border: `1px solid ${verdictBorder}`,
-      borderLeft: `3px solid ${verdictColor}`,
-      borderRadius: 14,
+      borderRadius: 16,
     }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      {/* Label row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+      }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 9,
-          background: `${verdictColor}18`, border: `1px solid ${verdictColor}35`,
+          width: 26, height: 26, borderRadius: 7,
+          background: `${verdictColor}18`, border: `1px solid ${verdictColor}30`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
           <DecisionIcon verdict={verdict} color={verdictColor} />
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 5 }}>
-            {safeT(t, 'report.finalRecommendation', 'Konačna preporuka')}
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: verdictColor, marginBottom: 6, letterSpacing: '-0.1px', lineHeight: 1.3 }}>
-            {content.headline}
-          </div>
-          <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-            {content.body}
-          </div>
-        </div>
+        <span style={{
+          fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)',
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+        }}>
+          {safeT(t, 'report.finalRecommendation', 'Final recommendation')}
+        </span>
+      </div>
+
+      {/* Headline */}
+      <div style={{
+        fontSize: 18, fontWeight: 800, color: verdictColor,
+        marginBottom: 10, letterSpacing: '-0.4px', lineHeight: 1.2,
+      }}>
+        {content.headline}
+      </div>
+
+      {/* Body */}
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.72)', lineHeight: 1.65 }}>
+        {content.body}
       </div>
     </div>
   )
@@ -144,9 +154,12 @@ function computeConfidence(
   const checkScore = checklistComplete ? 1 : hasAnyChecklist ? 0.5 : 0
   const aiScore = hasAI ? 1 : 0
   const total = photoScore * 0.40 + checkScore * 0.35 + aiScore * 0.25
-  if (total >= 0.70) return 'high'
-  if (total >= 0.38) return 'medium'
-  return 'low'
+  const raw: ConfLevel = total >= 0.70 ? 'high' : total >= 0.38 ? 'medium' : 'low'
+  // AI photo analysis is the report's core signal. Without it, confidence
+  // cannot be 'high' regardless of how much checklist data is present —
+  // that would overclaim the report's reliability and mislead users.
+  if (!hasAI && raw === 'high') return 'medium'
+  return raw
 }
 
 const CONF_STYLE: Record<ConfLevel, { color: string; bg: string; border: string; bars: number }> = {
@@ -161,10 +174,10 @@ const CONF_TEXT_KEY: Record<ConfLevel, string> = {
   low:    'report.confidence.low',
 }
 
-const CONF_TEXT_FALLBACK_SR: Record<ConfLevel, string> = {
-  high:   'Visoka - dovoljno podataka za pouzdanu analizu',
-  medium: 'Srednja - podaci su delimični, rezultat je indikativan',
-  low:    'Niska - podaci su ograničeni, rezultat tumačite oprezno',
+const CONF_TEXT_FALLBACK: Record<ConfLevel, string> = {
+  high:   'High — sufficient data for a reliable assessment',
+  medium: 'Medium — partial data, result is indicative',
+  low:    'Low — limited data, interpret results carefully',
 }
 
 export function ConfidenceIndicator({
@@ -179,20 +192,26 @@ export function ConfidenceIndicator({
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '9px 14px',
-      background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10,
+      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      padding: '11px 16px',
+      background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12,
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-        {safeT(t, 'report.confidenceLabel', 'Pouzdanost')}
+      <span style={{
+        fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.32)',
+        textTransform: 'uppercase', letterSpacing: '0.09em', flexShrink: 0,
+      }}>
+        {safeT(t, 'report.confidenceLabel', 'Report confidence')}
       </span>
       <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
         {([1, 2, 3] as const).map(i => (
-          <div key={i} style={{ width: 16, height: 5, borderRadius: 3, background: i <= s.bars ? s.color : 'rgba(255,255,255,0.07)' }} />
+          <div key={i} style={{
+            width: 18, height: 5, borderRadius: 3,
+            background: i <= s.bars ? s.color : 'rgba(255,255,255,0.07)',
+          }} />
         ))}
       </div>
-      <span style={{ fontSize: 11.5, color: s.color, fontWeight: 600, lineHeight: 1.3 }}>
-        {safeT(t, CONF_TEXT_KEY[level], CONF_TEXT_FALLBACK_SR[level])}
+      <span style={{ fontSize: 12, color: s.color, fontWeight: 600, lineHeight: 1.3, flex: 1, minWidth: 120 }}>
+        {safeT(t, CONF_TEXT_KEY[level], CONF_TEXT_FALLBACK[level])}
       </span>
     </div>
   )

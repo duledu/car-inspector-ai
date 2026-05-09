@@ -221,6 +221,7 @@ interface PhotoDraft {
   label: string
   thumbUrl: string        // compressed data URL (~40 KB), safe for localStorage
   aiResult?: MockAIResult
+  savedAt?: number
 }
 
 function isQuotaError(err: unknown): boolean {
@@ -286,6 +287,27 @@ function loadPhotoDrafts(vehicleId: string): PhotoDraft[] {
   return safeReadPhotoDrafts().filter(d => d.vehicleId === vehicleId)
 }
 
+function draftSavedAt(draft: PhotoDraft): number {
+  return typeof draft.savedAt === 'number' && Number.isFinite(draft.savedAt) ? draft.savedAt : 0
+}
+
+function pruneOldestNonCurrentDraft(drafts: PhotoDraft[], currentVehicleId: string): PhotoDraft[] | null {
+  let oldestIndex = -1
+  let oldestSavedAt = Number.POSITIVE_INFINITY
+
+  drafts.forEach((draft, index) => {
+    if (draft.vehicleId === currentVehicleId) return
+    const savedAt = draftSavedAt(draft)
+    if (savedAt < oldestSavedAt) {
+      oldestSavedAt = savedAt
+      oldestIndex = index
+    }
+  })
+
+  if (oldestIndex < 0) return null
+  return drafts.filter((_, index) => index !== oldestIndex)
+}
+
 function scrollElementToTop(el: HTMLElement | null) {
   if (!el) return
   const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -298,15 +320,16 @@ function scrollElementToTop(el: HTMLElement | null) {
 
 /**
  * Save a photo draft.
- * On QuotaExceededError: prunes other-vehicle drafts, then retries once.
+ * On QuotaExceededError: prunes a few oldest non-current drafts, then retries.
  * Returns true on success, false if the write could not be completed.
  */
 function savePhotoDraft(draft: PhotoDraft): boolean {
   try {
     const all = safeReadPhotoDrafts()
+    const nextDraft = { ...draft, savedAt: Date.now() }
     // Replace existing entry for same vehicle+angle, then append
-    const merged = all.filter(d => !(d.vehicleId === draft.vehicleId && d.key === draft.key))
-    merged.push(draft)
+    const merged = all.filter(d => !(d.vehicleId === nextDraft.vehicleId && d.key === nextDraft.key))
+    merged.push(nextDraft)
     try {
       localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(merged))
       return true
@@ -315,16 +338,31 @@ function savePhotoDraft(draft: PhotoDraft): boolean {
         console.warn('[photo-drafts] unexpected write error', err)
         return false
       }
-      // Quota exceeded — keep only the active vehicle's drafts and retry once
-      console.warn('[photo-drafts] quota exceeded — pruning other-vehicle drafts and retrying')
-      const pruned = merged.filter(d => d.vehicleId === draft.vehicleId)
-      try {
-        localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(pruned))
-        return true
-      } catch (retryErr) {
-        console.warn('[photo-drafts] write failed even after pruning', retryErr)
-        return false
+      // Quota exceeded: remove only a few oldest non-current drafts, then retry.
+      console.warn('[photo-drafts] quota exceeded - pruning oldest non-current draft and retrying')
+      let candidate = merged
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const pruned = pruneOldestNonCurrentDraft(candidate, nextDraft.vehicleId)
+        if (!pruned) {
+          console.warn('[photo-drafts] quota exceeded but no non-current drafts are available to prune')
+          return false
+        }
+
+        candidate = pruned
+        try {
+          localStorage.setItem(PHOTO_DRAFT_KEY, JSON.stringify(candidate))
+          return true
+        } catch (retryErr) {
+          if (!isQuotaError(retryErr)) {
+            console.warn('[photo-drafts] unexpected write error after quota pruning', retryErr)
+            return false
+          }
+        }
       }
+
+      console.warn('[photo-drafts] write failed after limited quota pruning')
+      return false
     }
   } catch (err) {
     console.warn('[photo-drafts] savePhotoDraft unexpected error', err)

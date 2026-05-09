@@ -54,17 +54,10 @@ export async function getInspectionAccess(
     })
     if (!latest) return LEGACY_NONE
 
-    // Legacy DRAFT: grantedVia IS NULL means the vehicle route created this row
-    // before the gate was intentionally enabled. Surface as ACTIVE so old users
-    // are never shown the access gate.
-    if (latest.status === 'DRAFT' && !latest.grantedVia) {
-      return { status: 'ACTIVE', id: latest.id, activeReportId: latest.id, lockedReportId: null, grantedVia: 'legacy' }
-    }
-
     return {
       status: latest.status as AccessStatus,
       id: latest.id,
-      activeReportId: null,
+      activeReportId: latest.status === 'ACTIVE' ? latest.id : null,
       lockedReportId: latest.status === 'LOCKED' ? latest.id : null,
       grantedVia: latest.grantedVia,
     }
@@ -76,12 +69,13 @@ export async function getInspectionAccess(
 }
 
 /**
- * Returns true if paid AI work may run for this vehicle.
- * NONE is retained as legacy compatibility for records created before gating.
+ * Returns true if AI inspection work (photo analysis, aggregation) may run.
+ * Report GENERATION is separately gated by startReportGeneration.
+ * LOCKED is the only status that blocks inspection work — the credit is consumed.
  */
 export async function hasActiveAccess(userId: string, vehicleId: string): Promise<boolean> {
   const { status } = await getInspectionAccess(userId, vehicleId)
-  return status === 'ACTIVE' || status === 'NONE'
+  return status === 'ACTIVE' || status === 'NONE' || status === 'DRAFT'
 }
 
 export async function canRecalculate(userId: string, vehicleId: string): Promise<boolean> {
@@ -154,37 +148,8 @@ export async function startReportGeneration(
     })
 
     if (!active) {
-      const anyReport = await prisma.inspectionReport.findFirst({
-        where: { userId, vehicleId },
-        orderBy: { createdAt: 'desc' },
-        select: { id: true, status: true, grantedVia: true },
-      })
-
-      if (!anyReport) {
-        // No record at all → pre-gate vehicle → auto-grant legacy ACTIVE
-        const legacy = await grantAccess(userId, vehicleId, { grantedVia: 'legacy' })
-        if (legacy.id === 'legacy-noop') return { ok: true, reportId: undefined }
-        active = { id: legacy.id, startedAt: null }
-      } else if (anyReport.status === 'DRAFT' && !anyReport.grantedVia) {
-        // Legacy DRAFT: auto-created by the vehicle route before the access gate
-        // was intentionally enabled (grantedVia is null = not gate-controlled).
-        // Upgrade it to ACTIVE in-place so the user is never incorrectly blocked.
-        // The backfill migration handles this in bulk; this is the runtime safety net
-        // for vehicles created in the window before the migration runs.
-        const upgraded = await prisma.inspectionReport.update({
-          where: { id: anyReport.id },
-          data: { status: 'ACTIVE', grantedVia: 'legacy' },
-          select: { id: true },
-        })
-        active = { id: upgraded.id, startedAt: null }
-      } else if (anyReport.status === 'LOCKED') {
-        // Credit was consumed for this vehicle → user needs a new credit
-        return { ok: false, reason: 'ACCESS_REQUIRED' }
-      } else {
-        // DRAFT with explicit grantedVia, or any other non-ACTIVE status:
-        // the gate intentionally requires a credit for this vehicle
-        return { ok: false, reason: 'ACCESS_REQUIRED' }
-      }
+      // No ACTIVE record — user must purchase or redeem a promo to generate.
+      return { ok: false, reason: 'ACCESS_REQUIRED' }
     }
 
     if (active.startedAt) return { ok: false, reason: 'GENERATION_IN_PROGRESS' }
@@ -228,9 +193,9 @@ export async function lockReport(reportId: string, _riskScoreId: string): Promis
     if (!report) return
 
     const promoMeta = report.promoCode ? getPromoMeta(report.promoCode) : null
-    const shouldRemainActive =
-      report.grantedVia === 'legacy' ||
-      (report.grantedVia === 'promo' && promoMeta?.unlimited === true)
+    // Only unlimited promo reports stay ACTIVE after generation.
+    // Legacy grants are no longer auto-renewed — they lock like any other report.
+    const shouldRemainActive = report.grantedVia === 'promo' && promoMeta?.unlimited === true
 
     if (shouldRemainActive) {
       await prisma.inspectionReport.update({
