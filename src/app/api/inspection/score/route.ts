@@ -5,7 +5,6 @@ import { scoringService } from '@/modules/scoring'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
-import { env } from '@/config/env'
 import { lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
 
 const BodySchema = z.object({ vehicleId: z.string().min(1) })
@@ -30,23 +29,21 @@ export async function POST(req: NextRequest) {
   }
 
   let reportId: string | undefined
-  if (env.features.inspectionAccessGate) {
-    const claim = await startReportGeneration(auth.userId, vehicleId)
-    if (!claim.ok) {
-      const code = claim.reason === 'GENERATION_IN_PROGRESS' ? 'GENERATION_IN_PROGRESS' : 'ACCESS_REQUIRED'
-      const message = claim.reason === 'GENERATION_IN_PROGRESS'
-        ? 'Report generation already in progress'
-        : 'Report is locked or access required'
-      return apiError(message, { status: 403, code })
-    }
-    reportId = claim.reportId
+  const claim = await startReportGeneration(auth.userId, vehicleId)
+  if (!claim.ok) {
+    const code = claim.reason === 'GENERATION_IN_PROGRESS' ? 'GENERATION_IN_PROGRESS' : 'ACCESS_REQUIRED'
+    const message = claim.reason === 'GENERATION_IN_PROGRESS'
+      ? 'Report generation already in progress'
+      : 'Report is locked or access required'
+    return apiError(message, { status: 403, code })
   }
+  reportId = claim.reportId
 
   try {
     const score = await scoringService.computeAndPersist(vehicleId, auth.userId, { inspectionReportId: reportId })
     pipelineLog({ step: 'score:complete', requestId, vehicleId, durationMs: Date.now() - reqStart, success: true, meta: { buyScore: score.buyScore, verdict: score.verdict, hasPremiumData: score.hasPremiumData } })
 
-    if (env.features.inspectionAccessGate && reportId) {
+    if (reportId) {
       await lockReport(reportId, score.id).catch(async (lockErr: unknown) => {
         pipelineLog({ step: 'score:lock-failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: lockErr instanceof Error ? lockErr.message : String(lockErr) } })
         await releaseReportGeneration(reportId).catch(() => undefined)
@@ -55,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data: score })
   } catch (err: any) {
-    if (env.features.inspectionAccessGate && reportId) {
+    if (reportId) {
       await releaseReportGeneration(reportId).catch(() => undefined)
     }
     pipelineLog({ step: 'score:failed', requestId, vehicleId, durationMs: Date.now() - reqStart, success: false, meta: { error: err?.message ?? 'unknown' } })

@@ -40,7 +40,13 @@ const SVC_HISTORY_CFG: Record<string, { labelKey: string; color: string }> = {
 
 const SEV_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', info: '#22d3ee' }
 type Translate = (key: string, options?: Record<string, unknown>) => string
+type ReportAccessStatus = 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE'
+type ReportAccessInfo = { status: ReportAccessStatus; grantedVia?: string | null }
 const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
+
+function canViewPremiumReport(status: string | undefined): boolean {
+  return status === 'ACTIVE' || status === 'LOCKED'
+}
 
 function loadReportPhotoDrafts(vehicleId: string): ReportPhotoDraft[] {
   try {
@@ -135,9 +141,6 @@ function normalizeReportTextV2(text: string): string {
     .replace(/\u00E2\u20AC\u201D/g, '—')
     .replace(/\u00E2\u20AC\u201C/g, '–')
     .replace(/\u00E2\u201A\u00AC/g, '€')
-    .replace(/â€”/g, '—')
-    .replace(/â€“/g, '–')
-    .replace(/â‚¬/g, '€')
     .replace(/[•·]/g, '·')
     .replace(/\s+/g, ' ')
     .trim()
@@ -525,12 +528,12 @@ function DimBar({
 
 type ChecklistStatus = 'ok' | 'warning' | 'problem' | 'mixed' | 'incomplete'
 
-const CHECKLIST_STATUS_FALLBACK_SR: Record<ChecklistStatus, string> = {
-  ok:         'Sve u redu',
-  warning:    'Potrebna pažnja',
-  problem:    'Uočeni problemi',
-  mixed:      'Mešoviti rezultati',
-  incomplete: 'Nije završeno',
+const CHECKLIST_STATUS_FALLBACK_EN: Record<ChecklistStatus, string> = {
+  ok:         'All clear',
+  warning:    'Needs attention',
+  problem:    'Issues found',
+  mixed:      'Mixed results',
+  incomplete: 'Not completed',
 }
 
 function getChecklistStatus(rawExplanation: string | undefined, score: number): ChecklistStatus {
@@ -582,7 +585,7 @@ function ChecklistDimBar({
 
   const barColor = status === 'incomplete' ? 'rgba(255,255,255,0.1)' : severity.color
   const rawKey = `report.checklistStatus.${status}`
-  const resolvedLabel = (statusLabel && statusLabel !== rawKey) ? statusLabel : CHECKLIST_STATUS_FALLBACK_SR[status]
+  const resolvedLabel = (statusLabel && statusLabel !== rawKey) ? statusLabel : CHECKLIST_STATUS_FALLBACK_EN[status]
 
   return (
     <div style={{ padding: '11px 13px', background: `linear-gradient(180deg, ${severity.background}, rgba(255,255,255,0.015))`, border: `1px solid ${severity.border}`, borderRadius: 11 }}>
@@ -727,7 +730,7 @@ export default function ReportPage() {
   const searchParams                   = useSearchParams()
   const { activeVehicle }              = useVehicleStore()
   const { session, aiResults, checklistItems, testDriveRatings } = useInspectionStore()
-  const { hasAccess }                  = usePaymentStore()
+  const { hasAccess, startCheckout, pollPurchaseStatus, isCreatingCheckout, error: paymentError } = usePaymentStore()
 
   const [riskScore,        setRiskScore]        = useState<(Omit<RiskScore, 'id' | 'createdAt'> | RiskScore) | null>(null)
   const [loading,          setLoading]          = useState(false)
@@ -741,7 +744,8 @@ export default function ReportPage() {
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
   const [accessRequired, setAccessRequired] = useState(false)
-  const [reportAccessInfo, setReportAccessInfo] = useState<{ status: string; grantedVia?: string | null } | null>(null)
+  const [reportAccessInfo, setReportAccessInfo] = useState<ReportAccessInfo | null>(null)
+  const [reportAccessChecked, setReportAccessChecked] = useState(false)
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -765,9 +769,12 @@ export default function ReportPage() {
   const isMountedRef = useRef(true)
 
   const vehicleId  = activeVehicle?.id ?? ''
+  const urlStatus = searchParams.get('status')
+  const purchaseId = searchParams.get('purchaseId')
   const preliminaryMode = searchParams.get('mode') === 'preliminary'
   const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
+  const hasReportViewAccess = canViewPremiumReport(reportAccessInfo?.status)
 
   const accessRequiredMessage = safeReportT(t, 'report.accessRequired.message', 'An active credit is required to generate the report.')
 
@@ -986,6 +993,8 @@ export default function ReportPage() {
     setIsPreliminaryScore(false)
     setCalcError(null)
     setAccessRequired(false)
+    setReportAccessInfo(null)
+    setReportAccessChecked(false)
     setPromoCode('')
     setPromoError(null)
     setPromoSuccess(null)
@@ -1013,6 +1022,12 @@ export default function ReportPage() {
   useEffect(() => {
     if (!storesHydrated) return
     if (!vehicleId) return
+    if (!reportAccessChecked) return
+    if (!hasReportViewAccess) {
+      setLoading(false)
+      setRiskScore(null)
+      return
+    }
     // `cancelled` prevents setState on a stale invocation when vehicleId changes
     // or the component unmounts before the API call resolves.
     let cancelled = false
@@ -1041,17 +1056,46 @@ export default function ReportPage() {
         setLoading(false)
       })
     return () => { cancelled = true }
-  }, [storesHydrated, t, vehicleId])
+  }, [hasReportViewAccess, reportAccessChecked, storesHydrated, t, vehicleId])
 
-  // Proactively fetch access info so the credit badge shows correctly on load
-  // and after vehicle switches. Errors are silently ignored — the badge is
-  // display-only and never blocks functionality.
+  // Fetch access info before loading or rendering premium report data. This
+  // prevents cached scores from appearing before a valid report access state is known.
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
+    let cancelled = false
+    setReportAccessChecked(false)
+    setReportAccessInfo(null)
     inspectionApi.getAccess(vehicleId)
-      .then(info => setReportAccessInfo(info))
-      .catch(() => {})
+      .then(info => {
+        if (cancelled) return
+        setReportAccessInfo(info)
+        setAccessRequired(!canViewPremiumReport(info.status))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setReportAccessInfo({ status: 'NONE', grantedVia: null })
+        setAccessRequired(true)
+      })
+      .finally(() => {
+        if (!cancelled) setReportAccessChecked(true)
+      })
+    return () => { cancelled = true }
   }, [storesHydrated, vehicleId])
+
+  useEffect(() => {
+    if (urlStatus !== 'success' || !purchaseId || !vehicleId) return
+    let cancelled = false
+    pollPurchaseStatus(purchaseId, vehicleId, 'INSPECTION_REPORT')
+      .then(() => inspectionApi.getAccess(vehicleId))
+      .then(info => {
+        if (cancelled) return
+        setReportAccessInfo(info)
+        setAccessRequired(!canViewPremiumReport(info.status))
+        setReportAccessChecked(true)
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [pollPurchaseStatus, purchaseId, urlStatus, vehicleId])
 
   useEffect(() => {
     if (!storesHydrated) return
@@ -1076,6 +1120,7 @@ export default function ReportPage() {
   // already in-flight. The ref is always current and immune to that race.
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
+    if (!reportAccessChecked || !hasReportViewAccess) return
     if (loading || riskScore) return
     if (autoRecalcGuardRef.current) return    // ref-based guard (stale-closure safe)
     if (preliminaryMode) return               // preliminary has its own flow
@@ -1109,16 +1154,17 @@ export default function ReportPage() {
         autoRecalcGuardRef.current = false
         if (isMountedRef.current) setAutoRecalculating(false)
       })
-  }, [loading, preliminaryMode, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId, t])
+  }, [hasReportViewAccess, loading, preliminaryMode, reportAccessChecked, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId, t])
 
   useEffect(() => {
     if (!storesHydrated) return
+    if (!reportAccessChecked || !hasReportViewAccess) return
     if (loading || riskScore) return
     if (!preliminaryMode) return
     if (!sectionProgress.hasAnyData) return
     handleCalculatePreliminary()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, preliminaryMode, riskScore, sectionProgress.hasAnyData, storesHydrated, vehicleId])
+  }, [hasReportViewAccess, loading, preliminaryMode, reportAccessChecked, riskScore, sectionProgress.hasAnyData, storesHydrated, vehicleId])
 
   const handleCalculate = async () => {
     if (!vehicleId || !sectionProgress.isComplete) return
@@ -1163,7 +1209,9 @@ export default function ReportPage() {
     setPromoError(null)
     setPromoSuccess(null)
     try {
-      await inspectionApi.redeemAccessCode(vehicleId, code)
+      const info = await inspectionApi.redeemAccessCode(vehicleId, code)
+      setReportAccessInfo(info)
+      setReportAccessChecked(true)
       setAccessRequired(true)
       setPromoCode('')
       setCalcError(null)
@@ -1179,6 +1227,16 @@ export default function ReportPage() {
       )
     } finally {
       setPromoLoading(false)
+    }
+  }
+
+  const handlePurchaseInspectionReport = async () => {
+    if (!vehicleId || isCreatingCheckout) return
+    try {
+      const checkout = await startCheckout(vehicleId, 'INSPECTION_REPORT')
+      window.location.href = checkout.checkoutUrl
+    } catch {
+      // Error is surfaced by the payment store and rendered in the access gate.
     }
   }
 
@@ -1207,7 +1265,7 @@ export default function ReportPage() {
   }
 
   const handleDownloadPdf = async () => {
-    if (!vehicleId || pdfLoading) return
+    if (!vehicleId || pdfLoading || !hasReportViewAccess) return
     setPdfLoading(true)
     setPdfError(null)
     try {
@@ -1346,12 +1404,16 @@ export default function ReportPage() {
     <div style={{ padding: 'clamp(14px, 3vw, 22px)' }}>
       <InspectionReportAccessGate
         vehicle={activeVehicle}
+        hasActiveAccess={hasReportViewAccess}
         promoCode={promoCode}
         promoLoading={promoLoading}
         promoError={promoError}
         promoSuccess={promoSuccess}
         calculating={calculating}
+        purchaseLoading={isCreatingCheckout}
+        purchaseError={paymentError}
         onContinue={handleCalculate}
+        onPurchase={handlePurchaseInspectionReport}
         onRedeemPromo={handleRedeemPromo}
         onPromoCodeChange={(value) => {
           setPromoCode(value)
@@ -1361,6 +1423,34 @@ export default function ReportPage() {
       />
     </div>
   )
+
+  if (!reportAccessChecked) {
+    return (
+      <AppShell>
+        <div style={{ maxWidth: 820, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('report.title')}</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+              {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
+            </p>
+          </div>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
+            {t('report.loading')}
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (!hasReportViewAccess) {
+    return (
+      <AppShell>
+        <div style={{ maxWidth: 920, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {accessRequiredCard}
+        </div>
+      </AppShell>
+    )
+  }
 
   const dims = riskScore ? ([
     { key: 'ai'         },
@@ -1850,7 +1940,7 @@ export default function ReportPage() {
                         label={t(`dim.${d.key}`)}
                         score={dim.score}
                         status={status}
-                        statusLabel={safeReportT(t, `report.checklistStatus.${status}`, CHECKLIST_STATUS_FALLBACK_SR[status])}
+                        statusLabel={safeReportT(t, `report.checklistStatus.${status}`, CHECKLIST_STATUS_FALLBACK_EN[status])}
                         explanation={translated}
                         visualMaxScore={vms}
                       />

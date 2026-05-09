@@ -10,7 +10,7 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
-import { env } from '@/config/env'
+import { canViewInspectionReport, getInspectionAccess } from '@/lib/inspection/access'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -119,6 +119,11 @@ export async function POST(req: NextRequest) {
     })
     if (!vehicleRecord) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
 
+    const access = await getInspectionAccess(auth.userId, vehicleId)
+    if (!canViewInspectionReport(access)) {
+      return apiError('Report access required', { status: 403, code: 'ACCESS_REQUIRED' })
+    }
+
     // ── Step 2: session + AI results ─────────────────────────────────────────
     const step2Start = Date.now()
     pipelineLog({ step: 'pdf:db:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
@@ -140,11 +145,11 @@ export async function POST(req: NextRequest) {
     const step3Start  = Date.now()
     pipelineLog({ step: 'pdf:scoring:start', requestId, vehicleId, success: true, durationMs: Date.now() - reqStart, meta: {} })
     const cachedScore = await scoringService.getLatest(vehicleId)
-    if (!cachedScore && env.features.inspectionAccessGate) {
+    if (!cachedScore) {
       return apiError('Generated report required before PDF export', { status: 403, code: 'ACCESS_REQUIRED' })
     }
-    const score       = cachedScore ?? (await scoringService.computeAndPersist(vehicleId, auth.userId))
-    const scoreFresh  = !cachedScore
+    const score       = cachedScore
+    const scoreFresh  = false
     pipelineLog({ step: 'pdf:scoring:complete', requestId, vehicleId, durationMs: Date.now() - step3Start, success: true, meta: { scoreFresh, verdict: score.verdict, buyScore: score.buyScore } })
 
     // ── Step 4: research ─────────────────────────────────────────────────────

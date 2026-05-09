@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/config/prisma'
+import { grantAccess } from '@/lib/inspection/access'
 import { StripeAdapter } from './providers/stripe/stripe.adapter'
 import type {
   PaymentProviderInterface,
@@ -30,6 +31,11 @@ const PRODUCT_PRICES: Record<string, { amountCents: number; currency: string; la
     amountCents: 2499,
     currency: 'EUR',
     label: 'Full Inspection Bundle (History + AI)',
+  },
+  INSPECTION_REPORT: {
+    amountCents: 999,
+    currency: 'EUR',
+    label: 'Professional AI Inspection Report',
   },
 }
 
@@ -101,8 +107,12 @@ export class PaymentService {
       amountCents: product.amountCents,
       currency: product.currency,
       description: product.label,
-      successUrl: `${baseUrl}/premium?status=success&purchaseId=${purchase.id}`,
-      cancelUrl: `${baseUrl}/premium?status=cancelled`,
+      successUrl: payload.productType === 'INSPECTION_REPORT'
+        ? `${baseUrl}/report?status=success&purchaseId=${purchase.id}`
+        : `${baseUrl}/premium?status=success&purchaseId=${purchase.id}`,
+      cancelUrl: payload.productType === 'INSPECTION_REPORT'
+        ? `${baseUrl}/report?status=cancelled`
+        : `${baseUrl}/premium?status=cancelled`,
       metadata: { purchaseId: purchase.id, userId, vehicleId: payload.vehicleId },
     })
 
@@ -172,7 +182,24 @@ export class PaymentService {
     const purchase = await prisma.premiumPurchase.findFirst({
       where: { userId, vehicleId, productType: productType as any },
     })
-    return (purchase?.status as PaymentStatus) ?? 'NOT_PURCHASED'
+    if (!purchase) return 'NOT_PURCHASED'
+
+    if (purchase.status === 'PENDING' && purchase.providerTxId) {
+      const providerStatus = await this.provider.retrievePaymentStatus(purchase.providerTxId)
+      if (providerStatus === 'PAID') {
+        await this.onPaymentSucceeded({ metadata: { purchaseId: purchase.id } })
+        return 'PAID'
+      }
+      if (providerStatus !== 'PENDING') {
+        await prisma.premiumPurchase.update({
+          where: { id: purchase.id },
+          data: { status: providerStatus as any },
+        })
+        return providerStatus
+      }
+    }
+
+    return purchase.status as PaymentStatus
   }
 
   // ─── Private event handlers ─────────────────────────────────────────────────
@@ -222,6 +249,13 @@ export class PaymentService {
         grantedAt: new Date(),
       },
     })
+
+    if (purchase.productType === 'INSPECTION_REPORT') {
+      await grantAccess(purchase.userId, purchase.vehicleId, {
+        grantedVia: 'purchase',
+        purchaseId: purchase.id,
+      })
+    }
 
     // Log billing event
     await prisma.paymentEvent.create({

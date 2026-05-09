@@ -13,6 +13,10 @@ export interface InspectionAccessState {
   grantedVia: string | null
 }
 
+export function canViewInspectionReport(access: Pick<InspectionAccessState, 'status'>): boolean {
+  return access.status === 'ACTIVE' || access.status === 'LOCKED'
+}
+
 const LEGACY_NONE: InspectionAccessState = {
   status: 'NONE',
   id: null,
@@ -163,8 +167,8 @@ export async function startReportGeneration(
     return { ok: true, reportId: active.id }
   } catch (err) {
     if (isMissingTableOrColumnError(err)) {
-      // Migration not yet applied — treat all vehicles as legacy (no locking)
-      return { ok: true, reportId: undefined }
+      // Access table unavailable: fail closed so report generation cannot bypass payment.
+      return { ok: false, reason: 'ACCESS_REQUIRED' }
     }
     throw err
   }

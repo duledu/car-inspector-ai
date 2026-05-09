@@ -9,8 +9,7 @@ import { scoringService } from '@/modules/scoring'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { isDatabaseUnavailableError } from '@/config/prisma'
-import { env } from '@/config/env'
-import { lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
+import { canViewInspectionReport, getInspectionAccess, lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
 
 const schema = z.object({ vehicleId: z.string().min(1) })
 
@@ -31,23 +30,21 @@ export async function POST(req: NextRequest) {
     if (!ownsVehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
 
     let reportId: string | undefined
-    if (env.features.inspectionAccessGate) {
-      const claim = await startReportGeneration(authResult.userId, vehicleId)
-      if (!claim.ok) {
-        return apiError('Report is locked or access required', {
-          status: 403,
-          code: claim.reason === 'GENERATION_IN_PROGRESS' ? 'GENERATION_IN_PROGRESS' : 'ACCESS_REQUIRED',
-        })
-      }
-      reportId = claim.reportId
+    const claim = await startReportGeneration(authResult.userId, vehicleId)
+    if (!claim.ok) {
+      return apiError('Report is locked or access required', {
+        status: 403,
+        code: claim.reason === 'GENERATION_IN_PROGRESS' ? 'GENERATION_IN_PROGRESS' : 'ACCESS_REQUIRED',
+      })
     }
+    reportId = claim.reportId
 
     try {
       const score = await scoringService.computeAndPersist(vehicleId, authResult.userId, { inspectionReportId: reportId })
-      if (env.features.inspectionAccessGate && reportId) await lockReport(reportId, score.id)
+      if (reportId) await lockReport(reportId, score.id)
       return NextResponse.json({ data: score })
     } catch (err) {
-      if (env.features.inspectionAccessGate && reportId) await releaseReportGeneration(reportId).catch(() => undefined)
+      if (reportId) await releaseReportGeneration(reportId).catch(() => undefined)
       throw err
     }
   } catch (err: any) {
@@ -83,6 +80,11 @@ export async function GET(req: NextRequest) {
   try {
     const ownsVehicle = await verifyVehicleOwnership(authResult.userId, vehicleId)
     if (!ownsVehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
+
+    const access = await getInspectionAccess(authResult.userId, vehicleId)
+    if (!canViewInspectionReport(access)) {
+      return apiError('Report access required', { status: 403, code: 'ACCESS_REQUIRED' })
+    }
 
     const score = await scoringService.getLatest(vehicleId)
     return NextResponse.json({ data: score })

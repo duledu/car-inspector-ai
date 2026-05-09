@@ -4,6 +4,7 @@ import { isDatabaseUnavailableError } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { scoringService } from '@/modules/scoring'
 import { apiError, logApiError } from '@/utils/api-response'
+import { canViewInspectionReport, getInspectionAccess } from '@/lib/inspection/access'
 
 export async function GET(req: NextRequest, { params }: { params: { vehicleId: string } }) {
   const auth = await requireAuth(req)
@@ -15,6 +16,11 @@ export async function GET(req: NextRequest, { params }: { params: { vehicleId: s
       where: { id: params.vehicleId, userId: auth.userId },
     })
     if (!vehicle) return apiError('Vehicle not found', { status: 404, code: 'NOT_FOUND' })
+
+    const access = await getInspectionAccess(auth.userId, params.vehicleId)
+    if (!canViewInspectionReport(access)) {
+      return apiError('Report access required', { status: 403, code: 'ACCESS_REQUIRED' })
+    }
 
     const score = await scoringService.getLatest(params.vehicleId)
     return NextResponse.json({ data: score })

@@ -26,9 +26,13 @@ interface Props {
   promoError: string | null
   promoSuccess?: string | null
   calculating?: boolean
+  hasActiveAccess?: boolean
+  purchaseLoading?: boolean
+  purchaseError?: string | null
   onPromoCodeChange: (value: string) => void
   onRedeemPromo: () => void | Promise<void>
   onContinue: () => void | Promise<void>
+  onPurchase: () => void | Promise<void>
 }
 
 type Benefit = {
@@ -72,14 +76,18 @@ export function InspectionReportAccessGate({
   promoError,
   promoSuccess,
   calculating = false,
+  hasActiveAccess = false,
+  purchaseLoading = false,
+  purchaseError = null,
   onPromoCodeChange,
   onRedeemPromo,
   onContinue,
+  onPurchase,
 }: Props) {
   const { t } = useTranslation()
   const [showPromo, setShowPromo] = useState(false)
-  const isBusy = promoLoading || calculating
-  const hasRedeemedAccess = Boolean(promoSuccess)
+  const isBusy = promoLoading || calculating || purchaseLoading
+  const hasRedeemedAccess = hasActiveAccess || Boolean(promoSuccess)
   const title = vehicleTitle(vehicle)
 
   return (
@@ -180,23 +188,35 @@ export function InspectionReportAccessGate({
         </div>
       )}
 
+      {purchaseError && (
+        <div className="stateMessage error" role="alert">
+          <AlertCircle size={17} />
+          <span>{purchaseError}</span>
+        </div>
+      )}
+
       <div className="ctaPanel">
         <div className="primaryAction">
           <button
             type="button"
             className="primaryCta"
-            onClick={onContinue}
+            onClick={hasRedeemedAccess ? onContinue : onPurchase}
             disabled={isBusy}
-            aria-busy={calculating}
+            aria-busy={hasRedeemedAccess ? calculating : purchaseLoading}
           >
-            {calculating ? (
+            {hasRedeemedAccess && calculating ? (
               <>
                 <Loader2 className="spin" size={18} />
                 {t('report.accessGate.continuing')}
               </>
+            ) : !hasRedeemedAccess && purchaseLoading ? (
+              <>
+                <Loader2 className="spin" size={18} />
+                {t('report.accessGate.preparingCheckout')}
+              </>
             ) : (
               <>
-                {hasRedeemedAccess ? t('report.accessGate.generateNow') : t('report.accessGate.continue')}
+                {hasRedeemedAccess ? t('report.accessGate.generateNow') : t('report.accessGate.purchaseReport')}
                 <ArrowRight size={18} />
               </>
             )}

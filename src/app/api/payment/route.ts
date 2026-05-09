@@ -11,7 +11,7 @@ import { apiError, logApiError } from '@/utils/api-response'
 
 const createCheckoutSchema = z.object({
   vehicleId: z.string().min(1),
-  productType: z.enum(['CARVERTICAL_REPORT', 'AI_DEEP_SCAN', 'FULL_INSPECTION_BUNDLE']),
+  productType: z.enum(['CARVERTICAL_REPORT', 'AI_DEEP_SCAN', 'FULL_INSPECTION_BUNDLE', 'INSPECTION_REPORT']),
 })
 
 export async function POST(req: NextRequest) {
