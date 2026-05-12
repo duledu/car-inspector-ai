@@ -31,11 +31,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://usedcarsdoctor.com'),
   title: {
-    default:  'Check Before You Buy | Used Cars Doctor',
+    default:  'Used Car Inspection Reports | Used Cars Doctor',
     template: '%s | Used Cars Doctor',
   },
-  description: 'AI-powered used car inspection. Photograph the car, complete a guided checklist, and get a confidence score before you buy. Detect paint defects, panel damage, and hidden issues.',
-  keywords: 'used car inspection, AI car inspection, check car before buying, car inspection checklist, detect car damage from photos',
+  description: 'Used car inspection reports for buyers. Check visible damage, panel gaps, repaint indicators, interior wear, dashboard warnings, leaks, and risk notes before buying.',
+  keywords: 'used car inspection, used car risk analysis, check used car before buying, car inspection report, used car buying assistant',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     shortcut: '/icons/favicon_used_cars_doctor.png',
   },
   openGraph: {
-    title:       'Check Before You Buy | Used Cars Doctor',
-    description: 'AI-powered used car inspection. Photograph the car, complete a guided checklist, and get a confidence score before you buy.',
+    title:       'Used Car Inspection Reports | Used Cars Doctor',
+    description: 'Check visible used car condition signals and generate a structured inspection report before buying.',
     url:         'https://usedcarsdoctor.com',
     siteName:    'Used Cars Doctor',
     type:        'website',
@@ -57,8 +57,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card:        'summary_large_image',
-    title:       'Check Before You Buy | Used Cars Doctor',
-    description: 'AI-powered used car inspection. Detect paint defects, panel damage, and hidden issues before you buy.',
+    title:       'Used Car Inspection Reports | Used Cars Doctor',
+    description: 'Used car inspection assistant with visible damage checks, risk notes, and a structured report.',
   },
   alternates: {
     canonical: 'https://usedcarsdoctor.com',

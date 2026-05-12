@@ -54,33 +54,33 @@ const META: Record<SeoPage, Partial<Record<SeoLang, PageMeta>>> = {
   // ── Homepage ───────────────────────────────────────────────────────────────
   home: {
     en: {
-      title:       'Check Before You Buy | Used Cars Doctor',
-      description: 'AI-powered used car inspection. Photograph the car, complete a guided checklist, and get a confidence score before you buy. Detect paint defects, panel damage, and hidden issues.',
-      keywords:    'used car inspection, AI car inspection, check car before buying, car inspection checklist, detect car damage from photos, used car buyer tool, vehicle condition check',
+      title:       'Used Car Inspection Reports | Used Cars Doctor',
+      description: 'Used car inspection reports for buyers. Check visible damage, panel gaps, repaint indicators, interior wear, dashboard warnings, leaks, and risk notes before buying.',
+      keywords:    'used car inspection, car inspection report, used car risk analysis, check used car before buying, used car buying support',
     },
     sr: {
-      title:       'Proverite Pre Kupovine | Used Cars Doctor',
-      description: 'AI pregled polovnog automobila. Fotografišite, popunite kontrolnu listu i dobijte ocenu pouzdanosti pre kupovine. Otkrijte skrivene štete i rizike.',
-      keywords:    'pregled automobila, AI pregled, kontrolna lista, provera pre kupovine, detekcija oštećenja',
+      title:       'Izveštaji za pregled polovnih automobila | Used Cars Doctor',
+      description: 'Izveštaji za pregled polovnih automobila. Proverite vidljiva oštećenja, zazore panela, tragove farbanja i rizike pre kupovine.',
+      keywords:    'pregled automobila, kontrolna lista, provera pre kupovine, detekcija oštećenja, kupovina polovnog auta',
     },
     bg: {
-      title:       'Проверете Преди Покупка | Used Cars Doctor',
-      description: 'AI преглед на употребяван автомобил. Снимайте, попълнете контролен списък и получете оценка на увереността преди покупка. Открийте скрити повреди и рискове.',
+      title:       'Доклади за преглед на автомобили | Used Cars Doctor',
+      description: 'Доклади за преглед на употребявани автомобили. Проверете видими щети, фуги между панели, следи от пребоядисване и рискове преди покупка.',
       keywords:    'преглед на автомобил, AI преглед, контролен списък, проверка преди покупка, употребяван автомобил',
     },
     de: {
-      title:       'Vor dem Kauf prüfen | Used Cars Doctor',
-      description: 'KI-gestützte Gebrauchtwagenprüfung. Fotos aufnehmen, Checkliste ausfüllen und Vertrauensbewertung vor dem Kauf erhalten. Lackschäden und versteckte Mängel aufdecken.',
+      title:       'Gebrauchtwagen-Inspektionsberichte | Used Cars Doctor',
+      description: 'Gebrauchtwagen-Prüfberichte für Käufer. Sichtbare Schäden, Spaltmaße, Nachlackierung und Risikohinweise vor dem Kauf prüfen.',
       keywords:    'Fahrzeuginspektion, KI Gebrauchtwagenprüfung, Checkliste, Fahrzeug prüfen, Schadenerkennung',
     },
     mk: {
-      title:       'Проверете Пред Купување | Used Cars Doctor',
-      description: 'AI преглед на половен автомобил. Сликајте, пополнете контролна листа и добијте оценка на доверба пред купување. Откријте скриени штети и ризици.',
+      title:       'Извештаи за преглед на половни возила | Used Cars Doctor',
+      description: 'Извештаи за преглед на половни автомобили. Проверете видливи оштетувања, зазори на панели, прелакирање и ризици пред купување.',
       keywords:    'преглед на автомобил, AI проверка, контролна листа, половен автомобил',
     },
     sq: {
-      title:       'Kontrollo Para Blerjes | Used Cars Doctor',
-      description: 'Inspektim i makinave të përdorura me AI. Fotografoni, plotësoni listën e kontrollit dhe merrni një rezultat besimi para blerjes.',
+      title:       'Raporte të Inspektimit të Makinave | Used Cars Doctor',
+      description: 'Raporte inspektimi për makina të përdorura. Kontrolloni dëmtimet e dukshme, hapësirat e paneleve, rilyerjen dhe rreziqet para blerjes.',
       keywords:    'inspektim makine, AI inspektim, listë kontrolli, makinë e përdorur',
     },
   },
@@ -147,8 +147,8 @@ const META: Record<SeoPage, Partial<Record<SeoLang, PageMeta>>> = {
   premium: {
     en: {
       title:       'Premium Vehicle History Reports | Used Cars Doctor',
-      description: 'Unlock full VIN history, accident records, ownership history, and service data. Powered by carVertical. Make a fully informed used car purchase decision.',
-      keywords:    'VIN check, vehicle history report, car accident history, carVertical, used car history, ownership check',
+      description: 'Unlock full VIN history, accident records, ownership history, and service data from third-party providers. Make a fully informed used car purchase decision.',
+      keywords:    'VIN check, vehicle history report, car accident history, used car history, ownership check',
     },
     sr: {
       title:       'Premium Istorija Vozila | Used Cars Doctor',
@@ -283,6 +283,13 @@ export function buildPageMetadata(page: SeoPage, lang: SeoLang = FALLBACK_LANG):
     ...(pageMeta.keywords ? { keywords: pageMeta.keywords } : {}),
     alternates: {
       canonical: canonicalUrl,
+      languages: SUPPORTED_SEO_LANGS.reduce((acc, l) => {
+        // Map each supported language to its specific URL path
+        // This is critical for Google to index all language versions correctly
+        const langPath = l === FALLBACK_LANG ? path : `/${l}${path}`
+        acc[l] = `${DOMAIN}${langPath}`
+        return acc
+      }, {} as Record<string, string>),
     },
     openGraph: {
       title:       pageMeta.title,

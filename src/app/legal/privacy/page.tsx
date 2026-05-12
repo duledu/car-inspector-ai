@@ -208,7 +208,7 @@ export default function PrivacyPage() {
             'Neon Technologies (neon.tech) — Database hosting. Your account, vehicle, and inspection data is stored in a Neon PostgreSQL instance. Data is hosted on AWS infrastructure in the EU.',
             'OpenAI — Your vehicle photos and relevant inspection context are submitted to the OpenAI API to generate AI analysis results. OpenAI processes this data subject to their own privacy policy and API usage policies.',
             'Stripe — Payment processing. Stripe handles all card data and payment flows. We share only the minimum information required to initiate and confirm transactions.',
-            'carVertical / autoDNA — When you purchase a premium vehicle history report, your vehicle\'s VIN is submitted to carVertical or associated data partners to retrieve history records.',
+            'Vehicle history data providers — When you purchase a premium vehicle history report, your vehicle\'s VIN is submitted to third-party vehicle history data partners to retrieve history records.',
             'Cloudflare (if applicable) — CDN, DNS management, and DDoS protection. Cloudflare may process request metadata (IP address, headers) as part of its network security services.',
             'Email delivery provider — Transactional emails (account verification, password reset, notifications) may be sent via a third-party email delivery service.',
           ]} />

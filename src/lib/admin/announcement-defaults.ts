@@ -39,7 +39,7 @@ export const DEFAULT_MARKETING_CAMPAIGN: MarketingCampaignContent = {
   subject:           'Know before you buy.',
   previewText:       'Most car buyers discover the problems after signing. Here\'s how to change that.',
   headline:          'Know exactly what you\'re buying before you sign.',
-  introParagraph:    'Most used car buyers discover hidden problems days — or weeks — after they\'ve already handed over the money. Used Car Inspector AI changes that. Get VIN history, AI-powered photo analysis, and fraud detection in minutes, before you commit.',
+  introParagraph:    'Most used car buyers discover hidden problems days — or weeks — after they\'ve already handed over the money. Used Cars Doctor changes that. Get VIN history, structured photo review, and fraud detection in minutes, before you commit.',
   ctaLabel:          'Inspect a car for free →',
   ctaUrl:            'https://usedcarsdoctor.com',
   value1:            'Instant VIN history and accident record checks',

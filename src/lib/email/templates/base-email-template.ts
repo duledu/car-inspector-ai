@@ -14,7 +14,7 @@ function getBaseLabels(lang?: string) {
     case 'bg':
       return { buttonFallback: 'Бутонът не работи? Копирайте този линк:', productLine: 'AI преглед на автомобили', questions: 'Въпроси?' }
     default:
-      return { buttonFallback: 'Button not working? Copy this link:', productLine: 'AI-powered vehicle inspection', questions: 'Questions?' }
+      return { buttonFallback: 'Button not working? Copy this link:', productLine: 'Structured vehicle inspection', questions: 'Questions?' }
   }
 }
 

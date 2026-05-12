@@ -13,7 +13,7 @@ export function websiteSchema() {
     '@type':    'WebSite',
     name:        ORG_NAME,
     url:         DOMAIN,
-    description: 'AI-assisted used car inspection tool for buyers.',
+    description: 'Used car inspection assistant for visible condition checks, risk notes, and structured buyer reports.',
   } as const
 }
 
@@ -46,12 +46,12 @@ export function softwareApplicationSchema() {
     operatingSystem:       'Web',
     url:                   DOMAIN,
     description:
-      'AI-assisted used car inspection tool. Photograph the vehicle, complete a guided condition checklist, and receive an informational confidence assessment. AI outputs are advisory only and do not constitute a professional mechanical inspection.',
+      'Used car inspection assistant. Photograph the vehicle, complete a guided condition checklist, and receive an informational report covering visible damage indicators, interior wear, engine-bay visual concerns, risk notes, and advisory recommendations. Outputs are advisory only and do not constitute a professional mechanical inspection.',
     offers: {
       '@type':        'Offer',
       price:           '0',
       priceCurrency:   'EUR',
-      description:     'Free inspection with optional paid vehicle history report.',
+      description:     'Free guided used car inspection assistant.',
     },
   } as const
 }

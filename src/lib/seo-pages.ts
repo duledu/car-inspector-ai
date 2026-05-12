@@ -235,9 +235,9 @@ const PAGES: SeoPageData[] = [
   {
     slug:            'ai-car-inspection',
     metaTitle:       'AI Car Inspection: How It Works | Used Cars Doctor',
-    metaDescription: 'How AI-powered car inspection works, what it can detect from photos, its limitations, and how to use it alongside a physical inspection for the best result.',
+    metaDescription: 'How photo-based car inspection support works, what it can detect from photos, its limitations, and how to use it alongside a physical inspection for the best result.',
     keywords:        'AI car inspection, AI vehicle inspection, car damage detection AI, photo car inspection',
-    h1:              'AI-Powered Car Inspection: How Technology Helps Buyers',
+    h1:              'Photo-Based Car Inspection: How Technology Helps Buyers',
     lead:            'Artificial intelligence is changing how buyers evaluate used cars. AI tools can analyse photographs of a vehicle and identify visible signs of paint repairs, panel damage, and bodywork inconsistencies that a casual eye might miss. Understanding what AI can and cannot do helps you use it effectively.',
     sections: [
       {

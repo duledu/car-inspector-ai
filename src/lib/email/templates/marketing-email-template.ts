@@ -203,7 +203,7 @@ function getMarketingTemplateLabels(lang: string) {
     default:
       return {
         valueHeading: 'What you get',
-        productLine: 'AI-powered vehicle inspection',
+        productLine: 'Structured vehicle inspection',
         questions: 'Questions?',
       }
   }

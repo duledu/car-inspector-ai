@@ -162,7 +162,7 @@ function buildPremiumVerifyEmailHtml(opts: PremiumVerifyEmailHtmlOptions): strin
                 &copy; ${year} Used Cars Doctor
               </p>
               <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.22);">
-                AI-powered vehicle inspection
+                Structured vehicle inspection
               </p>
             </td>
           </tr>

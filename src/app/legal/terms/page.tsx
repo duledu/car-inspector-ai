@@ -201,7 +201,7 @@ export default function TermsPage() {
             'Step-by-step guided inspection checklists for evaluating used vehicles',
             'AI-assisted photo analysis to highlight visible defects, paint issues, and condition concerns from user-uploaded images',
             'AI-generated inspection summaries and risk assessments based on user-entered data',
-            'Optional premium vehicle history reports sourced from third-party data providers (carVertical / autoDNA)',
+            'Optional premium vehicle history reports sourced from third-party vehicle history data providers',
             'PDF export of completed inspection reports',
             'Account management and inspection history storage',
           ]} />
@@ -270,7 +270,7 @@ export default function TermsPage() {
           <P>
             Certain features, including vehicle history reports, require a one-time payment. Payments are processed by Stripe, a third-party payment processor. By making a purchase, you also agree to Stripe's terms of service.
           </P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Refund Policy.</strong> All purchases are final and non-refundable, except where required by applicable law. Because vehicle history reports are retrieved in real time from third-party data providers (carVertical / autoDNA) upon purchase, the service is considered delivered immediately and refunds are not available once a report has been retrieved.</P>
+          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Refund Policy.</strong> All purchases are final and non-refundable, except where required by applicable law. Because vehicle history reports are retrieved in real time from third-party vehicle history data providers upon purchase, the service is considered delivered immediately and refunds are not available once a report has been retrieved.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Report Accuracy.</strong> Vehicle history reports are sourced from third-party data partners and reflect the data available in their databases at the time of the request. We do not guarantee the accuracy, completeness, or currency of vehicle history data. We are not liable for any errors or omissions in third-party history reports.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Access Controls.</strong> Premium content is licensed for your personal use in connection with the specific vehicle and purchase shown in the Service. We may restrict, suspend, or revoke access if we detect abuse, fraud, chargeback misuse, account sharing, or attempts to bypass payment protections.</P>
           <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Pricing.</strong> Prices are displayed in EUR and are subject to change. You will always see the price before confirming any purchase.</P>
@@ -289,7 +289,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="9. Third-Party Services">
-          <P>The Service integrates with third-party providers including OpenAI (AI analysis), Stripe (payments), carVertical / autoDNA (vehicle history), Neon Technologies (database), and Google (authentication). Your use of the Service involves data being processed by these providers, subject to their respective terms and privacy policies.</P>
+          <P>The Service integrates with third-party providers including OpenAI (AI analysis), Stripe (payments), third-party vehicle history data providers, Neon Technologies (database), and Google (authentication). Your use of the Service involves data being processed by these providers, subject to their respective terms and privacy policies.</P>
           <P>We are not responsible for the availability, accuracy, or conduct of any third-party service. Links to or integrations with third-party services do not constitute our endorsement of those services.</P>
         </Section>
 

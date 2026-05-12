@@ -10,7 +10,7 @@ const BASE_PRODUCT_PRICES: Record<PremiumProduct, ProductPrice> = {
   CARVERTICAL_REPORT: {
     amountCents: 1499,
     currency: 'EUR',
-    label: 'CarVertical Full Vehicle History Report',
+    label: 'Full Vehicle History Report',
   },
   AI_DEEP_SCAN: {
     amountCents: 999,

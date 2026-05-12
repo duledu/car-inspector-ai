@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
+import { useVehicleStore, useInspectionStore } from '@/store'
 import { inspectionApi } from '@/services/api/inspection.api'
 import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
@@ -40,13 +40,7 @@ const SVC_HISTORY_CFG: Record<string, { labelKey: string; color: string }> = {
 
 const SEV_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', info: '#22d3ee' }
 type Translate = (key: string, options?: Record<string, unknown>) => string
-type ReportAccessStatus = 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE'
-type ReportAccessInfo = { status: ReportAccessStatus; grantedVia?: string | null }
 const PHOTO_DRAFT_KEY = 'uci-photo-drafts'
-
-function canViewPremiumReport(status: string | undefined): boolean {
-  return status === 'ACTIVE' || status === 'LOCKED'
-}
 
 function loadReportPhotoDrafts(vehicleId: string): ReportPhotoDraft[] {
   try {
@@ -137,11 +131,12 @@ function recommendationKey(verdict: string): string {
 
 function normalizeReportTextV2(text: string): string {
   return text
+    .replace(/[•·]/g, '·')
+    .replace(/[—–]/g, (match) => match)
     .replace(/\u00C2\u00B7/g, '·')
-    .replace(/\u00E2\u20AC\u201D/g, '—')
+    .replace(/\u00E2\u201A\u00AC\u201D/g, '—')
     .replace(/\u00E2\u20AC\u201C/g, '–')
     .replace(/\u00E2\u201A\u00AC/g, '€')
-    .replace(/[•·]/g, '·')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -267,7 +262,7 @@ function translateDimensionExplanationV2(key: string, text: string | undefined, 
   }
   if (normalizedText === 'Checklist not completed for this section.') return safeReportT(t, 'report.dimExplanation.checklist.notCompleted', 'This checklist section is not complete.')
   if (normalizedText === 'No items assessed yet.') return safeReportT(t, 'report.dimExplanation.checklist.notAssessed', 'No checklist items assessed yet.')
-  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return safeReportT(t, 'report.dimExplanation.vin.basic', 'Basic VIN decoded only. Upgrade to premium for full history scoring.')
+  if (normalizedText === 'Basic VIN decoded only. Upgrade to premium for full history scoring.') return safeReportT(t, 'report.dimExplanation.vin.basic', 'Basic VIN decoded only. Detailed history data is required for full history scoring.')
   if (normalizedText === 'Test drive not yet completed.') return safeReportT(t, 'report.dimExplanation.testDrive.notCompleted', 'Test drive not yet completed.')
 
   const aiPhotoMatch = normalizedText.match(/^Issues detected in (\d+) of (\d+) photos\. Main concern: (.+?)\. Confidence: (\d+)%\. Further manual inspection recommended\.$/)
@@ -331,10 +326,10 @@ function translateReasonV2(text: string, t: Translate): string {
     'Vehicle not reported stolen': 'report.reason.notStolen',
     'Mileage progression is consistent': 'report.reason.mileageConsistent',
     'No critical AI anomalies detected in photos': 'report.reason.noCriticalAi',
-    'No verified service history — major risk factor': 'report.reason.noServiceHistory',
+    'No verified service history · major risk factor': 'report.reason.noServiceHistory',
     'Service records appear suspicious or inconsistent': 'report.reason.suspiciousServiceRecords',
     'High recorded repair costs in vehicle history': 'report.reason.highRepairCosts',
-    'Outstanding finance found — legal risk': 'report.reason.outstandingFinance',
+    'Outstanding finance found · legal risk': 'report.reason.outstandingFinance',
     'Mileage inconsistency detected': 'report.reason.mileageInconsistent',
   }
   if (exact[normalizedText]) return t(exact[normalizedText])
@@ -374,13 +369,13 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     'Request an independent pre-purchase inspection as a condition of sale.': 'report.hint.independentInspection',
     'Budget for an immediate full service if you proceed.': 'report.hint.immediateService',
     'Walk away unless the seller can provide verifiable original receipts.': 'report.hint.requireReceipts',
-    'Suspicious or inconsistent service records — treat as no history.': 'report.hint.suspiciousRecords',
+    'Suspicious or inconsistent service records · treat as no history.': 'report.hint.suspiciousRecords',
     'No verified service history. Negotiate based on the missing maintenance risk.': 'report.hint.noServiceHistoryGeneric',
     'Negotiate a meaningful reduction to offset the history risk.': 'report.hint.suspiciousRecordsGeneric',
   }
   if (exact[normalizedText]) return t(exact[normalizedText])
 
-  const noServiceMatch = normalizedText.match(/^No verified service history — negotiate a price reduction of €([\d,]+)[–-]€([\d,]+)\.$/)
+  const noServiceMatch = normalizedText.match(/^No verified service history · negotiate a price reduction of €([\d,]+)–€([\d,]+)\.$/)
   if (noServiceMatch) {
     return t('report.hint.noServiceHistoryDiscount', {
       min: formatNegotiationAmountForLocale(noServiceMatch[1], locale),
@@ -388,7 +383,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const suspiciousDiscountMatch = normalizedText.match(/^Negotiate a price reduction of €([\d,]+)[–-]€([\d,]+)\.$/)
+  const suspiciousDiscountMatch = normalizedText.match(/^Negotiate a price reduction of â‚¬([\d,]+)[â€“-]â‚¬([\d,]+)\.$/)
   if (suspiciousDiscountMatch) {
     return t('report.hint.suspiciousRecordsDiscount', {
       min: formatNegotiationAmountForLocale(suspiciousDiscountMatch[1], locale),
@@ -396,7 +391,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const accidentsMatch = normalizedText.match(/^(\d+) recorded accidents — negotiate at least €([\d,]+) off asking price\.$/)
+  const accidentsMatch = normalizedText.match(/^(\d+) recorded accidents · negotiate at least €([\d,]+) off asking price\.$/)
   if (accidentsMatch) {
     return t('report.hint.accidentDiscount', {
       count: Number(accidentsMatch[1]),
@@ -404,7 +399,7 @@ function translateNegotiationHintV2(text: string, t: Translate, locale: string):
     })
   }
 
-  const repairMatch = normalizedText.match(/^High recorded repair costs \(> ?(.+) EUR\) — budget for potential recurring issues\.$/)
+  const repairMatch = normalizedText.match(/^High recorded repair costs \(> ?(.+) EUR\) · budget for potential recurring issues\.$/)
   if (repairMatch) return t('report.hint.highRepairCosts', { amount: repairMatch[1] })
 
   return safeReportT(t, 'report.hint.genericNegotiation', 'Use this finding as a basis for further checks and negotiation.')
@@ -730,7 +725,6 @@ export default function ReportPage() {
   const searchParams                   = useSearchParams()
   const { activeVehicle }              = useVehicleStore()
   const { session, aiResults, checklistItems, testDriveRatings } = useInspectionStore()
-  const { hasAccess, startCheckout, pollPurchaseStatus, isCreatingCheckout, error: paymentError } = usePaymentStore()
 
   const [riskScore,        setRiskScore]        = useState<(Omit<RiskScore, 'id' | 'createdAt'> | RiskScore) | null>(null)
   const [loading,          setLoading]          = useState(false)
@@ -744,8 +738,7 @@ export default function ReportPage() {
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
   const [accessRequired, setAccessRequired] = useState(false)
-  const [reportAccessInfo, setReportAccessInfo] = useState<ReportAccessInfo | null>(null)
-  const [reportAccessChecked, setReportAccessChecked] = useState(false)
+  const [reportAccessInfo, setReportAccessInfo] = useState<{ status: string; grantedVia?: string | null } | null>(null)
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -761,8 +754,6 @@ export default function ReportPage() {
   // invocations that the stale-closure check on `autoRecalculating` state alone
   // cannot reliably catch when the effect fires due to a different dependency.
   const autoRecalcGuardRef = useRef(false)
-  const reportAccessRef = useRef<ReportAccessInfo | null>(null)
-  const accessSeqRef = useRef(0)
   // Sequence counter — incremented on every new calculation start and on vehicle
   // change. In-flight responses that carry a stale sequence are discarded so a
   // slower vehicleA response cannot overwrite vehicleB state.
@@ -771,34 +762,18 @@ export default function ReportPage() {
   const isMountedRef = useRef(true)
 
   const vehicleId  = activeVehicle?.id ?? ''
-  const urlStatus = searchParams.get('status')
-  const purchaseId = searchParams.get('purchaseId')
   const preliminaryMode = searchParams.get('mode') === 'preliminary'
-  const hasPremium = hasAccess(vehicleId, 'CARVERTICAL_REPORT')
   const storesHydrated = vehicleStoreHydrated && inspectionStoreHydrated
-  const hasReportViewAccess = canViewPremiumReport(reportAccessInfo?.status)
 
   const accessRequiredMessage = safeReportT(t, 'report.accessRequired.message', 'An active credit is required to generate the report.')
-
-  const revokePremiumAccess = () => {
-    calcSeqRef.current++
-    autoRecalcGuardRef.current = false
-    setRiskScore(null)
-    setIsPreliminaryScore(false)
-    setLoading(false)
-    setAutoRecalculating(false)
-    setCalculating(false)
-    setAccessRequired(true)
-  }
+  const accessResolved = !!reportAccessInfo
+  const accessGranted  = reportAccessInfo?.status === 'ACTIVE' || reportAccessInfo?.status === 'LOCKED'
 
   const mapReportGenerationError = (err: unknown): string => {
     const code = (err as { code?: string })?.code
     const statusCode = (err as { statusCode?: number })?.statusCode
     if (code === 'ACCESS_REQUIRED') {
-      reportAccessRef.current = { status: 'NONE', grantedVia: null }
-      setReportAccessInfo(reportAccessRef.current)
-      setReportAccessChecked(true)
-      revokePremiumAccess()
+      setAccessRequired(true)
       return accessRequiredMessage
     }
     if (code === 'GENERATION_IN_PROGRESS') {
@@ -1009,10 +984,6 @@ export default function ReportPage() {
     setIsPreliminaryScore(false)
     setCalcError(null)
     setAccessRequired(false)
-    reportAccessRef.current = null
-    accessSeqRef.current++
-    setReportAccessInfo(null)
-    setReportAccessChecked(false)
     setPromoCode('')
     setPromoError(null)
     setPromoSuccess(null)
@@ -1040,20 +1011,13 @@ export default function ReportPage() {
   useEffect(() => {
     if (!storesHydrated) return
     if (!vehicleId) return
-    if (!reportAccessChecked) return
-    if (!hasReportViewAccess) {
-      revokePremiumAccess()
-      return
-    }
     // `cancelled` prevents setState on a stale invocation when vehicleId changes
     // or the component unmounts before the API call resolves.
     let cancelled = false
-    const accessSeq = accessSeqRef.current
     setLoading(true)
     inspectionApi.getScore(vehicleId)
       .then(s  => {
         if (cancelled) return
-        if (accessSeq !== accessSeqRef.current || !canViewPremiumReport(reportAccessRef.current?.status)) return
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
@@ -1063,11 +1027,7 @@ export default function ReportPage() {
         if (cancelled) return
         console.error('[report] failed to load persisted score', err)
         const code = (err as { code?: string })?.code
-        if (code === 'ACCESS_REQUIRED') {
-          reportAccessRef.current = { status: 'NONE', grantedVia: null }
-          setReportAccessInfo(reportAccessRef.current)
-          revokePremiumAccess()
-        } else if (code === 'DATABASE_UNAVAILABLE') {
+        if (code === 'DATABASE_UNAVAILABLE') {
           setReportUnavailable(true)
           setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
         } else if (code && code !== 'NOT_FOUND' && code !== 'INSPECTION_INCOMPLETE') {
@@ -1079,61 +1039,17 @@ export default function ReportPage() {
         setLoading(false)
       })
     return () => { cancelled = true }
-  }, [hasReportViewAccess, reportAccessChecked, storesHydrated, t, vehicleId])
+  }, [storesHydrated, t, vehicleId])
 
-  // Fetch access info before loading or rendering premium report data. This
-  // prevents cached scores from appearing before a valid report access state is known.
+  // Proactively fetch access info so the credit badge shows correctly on load
+  // and after vehicle switches. Errors are silently ignored — the badge is
+  // display-only and never blocks functionality.
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
-    let cancelled = false
-    const myAccessSeq = ++accessSeqRef.current
-    setReportAccessChecked(false)
-    reportAccessRef.current = null
-    setReportAccessInfo(null)
-    setRiskScore(null)
     inspectionApi.getAccess(vehicleId)
-      .then(info => {
-        if (cancelled || accessSeqRef.current !== myAccessSeq) return
-        reportAccessRef.current = info
-        setReportAccessInfo(info)
-        if (!canViewPremiumReport(info.status)) {
-          revokePremiumAccess()
-        } else {
-          setAccessRequired(false)
-        }
-      })
-      .catch(() => {
-        if (cancelled || accessSeqRef.current !== myAccessSeq) return
-        reportAccessRef.current = { status: 'NONE', grantedVia: null }
-        setReportAccessInfo(reportAccessRef.current)
-        revokePremiumAccess()
-      })
-      .finally(() => {
-        if (!cancelled && accessSeqRef.current === myAccessSeq) setReportAccessChecked(true)
-      })
-    return () => { cancelled = true }
+      .then(info => setReportAccessInfo(info))
+      .catch(() => {})
   }, [storesHydrated, vehicleId])
-
-  useEffect(() => {
-    if (urlStatus !== 'success' || !purchaseId || !vehicleId) return
-    let cancelled = false
-    pollPurchaseStatus(purchaseId, vehicleId, 'INSPECTION_REPORT')
-      .then(() => inspectionApi.getAccess(vehicleId))
-      .then(info => {
-        if (cancelled) return
-        reportAccessRef.current = info
-        accessSeqRef.current++
-        setReportAccessInfo(info)
-        if (canViewPremiumReport(info.status)) {
-          setAccessRequired(false)
-        } else {
-          revokePremiumAccess()
-        }
-        setReportAccessChecked(true)
-      })
-      .catch(() => undefined)
-    return () => { cancelled = true }
-  }, [pollPurchaseStatus, purchaseId, urlStatus, vehicleId])
 
   useEffect(() => {
     if (!storesHydrated) return
@@ -1158,7 +1074,6 @@ export default function ReportPage() {
   // already in-flight. The ref is always current and immune to that race.
   useEffect(() => {
     if (!storesHydrated || !vehicleId) return
-    if (!reportAccessChecked || !hasReportViewAccess) return
     if (loading || riskScore) return
     if (autoRecalcGuardRef.current) return    // ref-based guard (stale-closure safe)
     if (preliminaryMode) return               // preliminary has its own flow
@@ -1171,20 +1086,11 @@ export default function ReportPage() {
     inspectionApi.calculateScore(vehicleId)
       .then(s => {
         if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
-        if (!canViewPremiumReport(reportAccessRef.current?.status)) {
-          revokePremiumAccess()
-          return
-        }
         setRiskScore(s)
         setIsPreliminaryScore(false)
         setReportUnavailable(false)
         // Refresh access badge — status may have transitioned ACTIVE → LOCKED
-        if (vehicleId) inspectionApi.getAccess(vehicleId).then(info => {
-          reportAccessRef.current = info
-          accessSeqRef.current++
-          setReportAccessInfo(info)
-          if (!canViewPremiumReport(info.status)) revokePremiumAccess()
-        }).catch(() => {})
+        if (vehicleId) inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
       })
       .catch((err: unknown) => {
         if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
@@ -1192,7 +1098,9 @@ export default function ReportPage() {
           setReportUnavailable(true)
           setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
         } else {
-          setCalcError(mapReportGenerationError(err))
+        const mappedErr = mapReportGenerationError(err)
+        setCalcError(mappedErr)
+        if ((err as { code?: string })?.code === 'ACCESS_REQUIRED') setRiskScore(null)
         }
       })
       .finally(() => {
@@ -1201,17 +1109,16 @@ export default function ReportPage() {
         autoRecalcGuardRef.current = false
         if (isMountedRef.current) setAutoRecalculating(false)
       })
-  }, [hasReportViewAccess, loading, preliminaryMode, reportAccessChecked, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId, t])
+  }, [loading, preliminaryMode, riskScore, sectionProgress.isComplete, storesHydrated, vehicleId, t])
 
   useEffect(() => {
     if (!storesHydrated) return
-    if (!reportAccessChecked || !hasReportViewAccess) return
     if (loading || riskScore) return
     if (!preliminaryMode) return
     if (!sectionProgress.hasAnyData) return
     handleCalculatePreliminary()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasReportViewAccess, loading, preliminaryMode, reportAccessChecked, riskScore, sectionProgress.hasAnyData, storesHydrated, vehicleId])
+  }, [loading, preliminaryMode, riskScore, sectionProgress.hasAnyData, storesHydrated, vehicleId])
 
   const handleCalculate = async () => {
     if (!vehicleId || !sectionProgress.isComplete) return
@@ -1222,10 +1129,6 @@ export default function ReportPage() {
     try {
       const s = await inspectionApi.calculateScore(vehicleId)
       if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
-      if (!canViewPremiumReport(reportAccessRef.current?.status)) {
-        revokePremiumAccess()
-        return
-      }
       setRiskScore(s)
       setIsPreliminaryScore(false)
       setReportUnavailable(false)
@@ -1233,19 +1136,16 @@ export default function ReportPage() {
       setPromoError(null)
       setPromoSuccess(null)
       // Refresh access badge after generation (ACTIVE → LOCKED transition)
-      inspectionApi.getAccess(vehicleId).then(info => {
-        reportAccessRef.current = info
-        accessSeqRef.current++
-        setReportAccessInfo(info)
-        if (!canViewPremiumReport(info.status)) revokePremiumAccess()
-      }).catch(() => {})
+      inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
     } catch (err: unknown) {
       if (!isMountedRef.current || calcSeqRef.current !== mySeq) return
       if ((err as { code?: string })?.code === 'DATABASE_UNAVAILABLE') {
         setReportUnavailable(true)
         setCalcError(safeReportT(t, 'report.unavailableTitle', 'Report is currently unavailable'))
       } else {
-        setCalcError(mapReportGenerationError(err))
+        const mappedErr = mapReportGenerationError(err)
+        setCalcError(mappedErr)
+        if ((err as { code?: string })?.code === 'ACCESS_REQUIRED') setRiskScore(null)
       }
     } finally {
       if (isMountedRef.current && calcSeqRef.current === mySeq) setCalculating(false)
@@ -1265,22 +1165,13 @@ export default function ReportPage() {
     setPromoError(null)
     setPromoSuccess(null)
     try {
-      const info = await inspectionApi.redeemAccessCode(vehicleId, code)
-      reportAccessRef.current = info
-      accessSeqRef.current++
-      setReportAccessInfo(info)
-      setReportAccessChecked(true)
-      setAccessRequired(!canViewPremiumReport(info.status))
+      await inspectionApi.redeemAccessCode(vehicleId, code)
+      setAccessRequired(true)
       setPromoCode('')
       setCalcError(null)
       setPromoSuccess(safeReportT(t, 'report.accessGate.promoSuccess', 'Report credit activated. You can proceed to generate.'))
       // Refresh access badge to show promo-active state
-      inspectionApi.getAccess(vehicleId).then(freshInfo => {
-        reportAccessRef.current = freshInfo
-        accessSeqRef.current++
-        setReportAccessInfo(freshInfo)
-        if (!canViewPremiumReport(freshInfo.status)) revokePremiumAccess()
-      }).catch(() => {})
+      inspectionApi.getAccess(vehicleId).then(setReportAccessInfo).catch(() => {})
     } catch (err: unknown) {
       const apiCode = (err as { code?: string })?.code
       setPromoError(
@@ -1290,17 +1181,6 @@ export default function ReportPage() {
       )
     } finally {
       setPromoLoading(false)
-    }
-  }
-
-  const handlePurchaseInspectionReport = async () => {
-    if (!vehicleId || isCreatingCheckout) return
-    try {
-      const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
-      const checkout = await startCheckout(vehicleId, 'INSPECTION_REPORT', locale)
-      window.location.href = checkout.checkoutUrl
-    } catch {
-      // Error is surfaced by the payment store and rendered in the access gate.
     }
   }
 
@@ -1329,7 +1209,7 @@ export default function ReportPage() {
   }
 
   const handleDownloadPdf = async () => {
-    if (!vehicleId || pdfLoading || !hasReportViewAccess) return
+    if (!vehicleId || pdfLoading) return
     setPdfLoading(true)
     setPdfError(null)
     try {
@@ -1468,53 +1348,22 @@ export default function ReportPage() {
     <div style={{ padding: 'clamp(14px, 3vw, 22px)' }}>
       <InspectionReportAccessGate
         vehicle={activeVehicle}
-        hasActiveAccess={hasReportViewAccess}
         promoCode={promoCode}
         promoLoading={promoLoading}
         promoError={promoError}
         promoSuccess={promoSuccess}
         calculating={calculating}
-        purchaseLoading={isCreatingCheckout}
-        purchaseError={paymentError}
         onContinue={handleCalculate}
-        onPurchase={handlePurchaseInspectionReport}
         onRedeemPromo={handleRedeemPromo}
         onPromoCodeChange={(value) => {
           setPromoCode(value)
           setPromoError(null)
           setPromoSuccess(null)
         }}
+        onPurchase={() => undefined}
       />
     </div>
   )
-
-  if (!reportAccessChecked) {
-    return (
-      <AppShell>
-        <div style={{ maxWidth: 820, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{t('report.title')}</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-              {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
-            </p>
-          </div>
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.28)', fontSize: 14 }}>
-            {t('report.loading')}
-          </div>
-        </div>
-      </AppShell>
-    )
-  }
-
-  if (!hasReportViewAccess) {
-    return (
-      <AppShell>
-        <div style={{ maxWidth: 920, display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {accessRequiredCard}
-        </div>
-      </AppShell>
-    )
-  }
 
   const dims = riskScore ? ([
     { key: 'ai'         },
@@ -1616,7 +1465,7 @@ export default function ReportPage() {
                   {preliminaryCta}
                 </div>
               </div>
-            ) : sectionProgress.isComplete && accessRequired ? (
+            ) : (sectionProgress.isComplete && (accessRequired || !accessGranted)) ? (
               accessRequiredCard
             ) : sectionProgress.isComplete ? (
               <>
@@ -1736,7 +1585,7 @@ export default function ReportPage() {
           </div>
         )}
 
-        {riskScore && verdict && svcLabel && (
+        {riskScore && verdict && svcLabel && (accessGranted || isPreliminaryScore) && (
           <>
             {showPreliminaryMode && (
               <div style={{ padding: '16px 18px', background: 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(255,255,255,0.025))', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 16, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
@@ -2252,23 +2101,6 @@ export default function ReportPage() {
                 </div>
               )}
 
-            {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â
-                8. PREMIUM UPSELL / UNLOCKED
-               ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
-              <div className="report-premium-card" style={{ padding: '18px 20px', background: hasPremium ? 'linear-gradient(135deg, rgba(34,211,238,0.07), rgba(34,211,238,0.025))' : 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))', border: `1px solid ${hasPremium ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, boxShadow: hasPremium ? '0 0 28px rgba(34,211,238,0.08), inset 0 1px 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: hasPremium ? '#22d3ee' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  {t('report.premiumUnlock')}
-                </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  {hasPremium ? t('profile.carverticalReport') : t('dashboard.unlockHistorySub')}
-                </div>
-              </div>
-              <Link href="/premium" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0, padding: '10px 18px', minHeight: 42, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)', borderRadius: 9, fontSize: 12, fontWeight: 700, color: '#22d3ee', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                {hasPremium ? t('report.title') : t('report.premiumUnlock')}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </Link>
-              </div>
             </div>
 
             <PhotoAnalysisDisclaimer />
@@ -2285,4 +2117,3 @@ export default function ReportPage() {
     </AppShell>
   )
 }
-

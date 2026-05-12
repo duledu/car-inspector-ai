@@ -146,7 +146,7 @@ export function buildBaseTemplate(opts: BaseTemplateOptions): string {
                 <tr>
                   <td style="text-align:center;">
                     <p style="margin:0 0 6px;font-size:11px;color:rgba(255,255,255,0.2);">
-                      © ${year} Used Cars Doctor · AI-powered vehicle inspection
+                      © ${year} Used Cars Doctor · Structured vehicle inspection
                     </p>
                     <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">
                       Questions? <a href="mailto:${support}" style="color:rgba(34,211,238,0.5);text-decoration:none;">${support}</a>
@@ -164,4 +164,3 @@ export function buildBaseTemplate(opts: BaseTemplateOptions): string {
 </body>
 </html>`
 }
-

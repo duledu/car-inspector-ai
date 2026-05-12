@@ -36,25 +36,6 @@ function useReveal(threshold = 0.15) {
   return { ref, visible }
 }
 
-/** Animate a number from 0 → target when triggered */
-function useCountUp(target: number, duration = 1800, triggered = false) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    if (!triggered) return
-    let start: number | null = null
-    const step = (ts: number) => {
-      if (!start) start = ts
-      const p = Math.min((ts - start) / duration, 1)
-      // ease-out cubic
-      const eased = 1 - (1 - p) ** 3
-      setValue(Math.round(eased * target))
-      if (p < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-  }, [triggered, target, duration])
-  return value
-}
-
 // ══════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════
@@ -137,7 +118,6 @@ function LandingNav() {
         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} className="desktop-only">
           {([
             { label: t('nav.inspect'), href: '/inspection' },
-            { label: t('nav.premium'), href: '/premium' },
             { label: t('nav.community'), href: '/community', feature: 'community' },
           ] satisfies LandingLink[]).filter(item => isFeatureEnabled(item.feature)).map(item => (
             <Link key={item.href} href={item.href} style={{
@@ -653,7 +633,7 @@ function Hero() {
               </span>
             </h1>
 
-            <p style={{ margin: '0 0 32px', fontSize: 17, color: 'rgba(255,255,255,0.48)', lineHeight: 1.7, maxWidth: 440 }}>
+            <p style={{ margin: '0 0 32px', fontSize: 'clamp(15px, 2vw, 17px)', color: 'rgba(255,255,255,0.48)', lineHeight: 1.7, maxWidth: 460 }}>
               {t('landing.hero.subtitle')}
             </p>
 
@@ -690,19 +670,23 @@ function Hero() {
             </div>
 
             {/* Trust strip */}
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               {[
-                { v: '124K+', l: t('landing.hero.trust.inspections') },
-                { v: '96%', l: t('landing.hero.trust.accuracy') },
-                { v: '31K', l: t('landing.hero.trust.reports') },
-              ].map((trust, i) => (
-                <div key={trust.l} style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
-                  {i > 0 && <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.1)', margin: '0 10px' }} />}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 'clamp(14px, 3.8vw, 18px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>{trust.v}</span>
-                    <span style={{ fontSize: 'clamp(9px, 2.4vw, 11px)', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{trust.l}</span>
-                  </div>
-                </div>
+                t('landing.hero.trust.visual'),
+                t('landing.hero.trust.report'),
+                t('landing.hero.trust.decision'),
+              ].map(item => (
+                <span key={item} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '7px 10px', borderRadius: 999,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.54)',
+                  fontSize: 11, fontWeight: 600, lineHeight: 1.2,
+                }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 7px rgba(34,211,238,0.8)', flexShrink: 0 }} />
+                  {item}
+                </span>
               ))}
             </div>
           </div>
@@ -716,28 +700,28 @@ function Hero() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// STATS — animated counters, premium 2×2 grid
+// ANALYSIS AREAS
 // ══════════════════════════════════════════════════════════════
 
-function StatsSection() {
+function AnalysisSection() {
   const { ref, visible } = useReveal(0.2)
   const { t } = useTranslation()
 
   const stats = [
     {
-      target: 124, suffix: 'K+', label: t('landing.stats.inspections.label'), sub: t('landing.stats.inspections.sub'), color: '#22d3ee', delay: 0,
+      label: t('landing.stats.inspections.label'), sub: t('landing.stats.inspections.sub'), color: '#22d3ee', delay: 0,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>,
     },
     {
-      target: 89, suffix: 'K', label: t('landing.stats.risks.label'), sub: t('landing.stats.risks.sub'), color: '#818cf8', delay: 150,
+      label: t('landing.stats.risks.label'), sub: t('landing.stats.risks.sub'), color: '#818cf8', delay: 150,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>,
     },
     {
-      target: 31, suffix: 'K', label: t('landing.stats.reports.label'), sub: t('landing.stats.reports.sub'), color: '#a855f7', delay: 300,
+      label: t('landing.stats.reports.label'), sub: t('landing.stats.reports.sub'), color: '#a855f7', delay: 300,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
     },
     {
-      target: 96, suffix: '%', label: t('landing.stats.confidence.label'), sub: t('landing.stats.confidence.sub'), color: '#22c55e', delay: 450,
+      label: t('landing.stats.confidence.label'), sub: t('landing.stats.confidence.sub'), color: '#22c55e', delay: 450,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
     },
   ]
@@ -771,10 +755,9 @@ function StatsSection() {
           </p>
         </div>
 
-        {/* 2×2 stat grid — minmax(150px) enables 2-col on mobile */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 12 }}>
           {stats.map((s) => (
-            <AnimatedStatCard key={s.label} {...s} triggered={visible} />
+            <AnalysisCard key={s.label} {...s} triggered={visible} />
           ))}
         </div>
       </div>
@@ -782,8 +765,8 @@ function StatsSection() {
   )
 }
 
-function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered, icon }: Readonly<{
-  target: number; suffix: string; label: string; sub: string; color: string; delay: number; triggered: boolean; icon: React.ReactNode;
+function AnalysisCard({ label, sub, color, delay, triggered, icon }: Readonly<{
+  label: string; sub: string; color: string; delay: number; triggered: boolean; icon: React.ReactNode;
 }>) {
   const [active, setActive] = useState(false)
   useEffect(() => {
@@ -791,8 +774,6 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered,
     const t = setTimeout(() => setActive(true), delay)
     return () => clearTimeout(t)
   }, [triggered, delay])
-
-  const count = useCountUp(target, 1600, active)
 
   return (
     <div
@@ -833,15 +814,7 @@ function AnimatedStatCard({ target, suffix, label, sub, color, delay, triggered,
         {icon}
       </div>
 
-      {/* Number */}
-      <div style={{ marginBottom: 8, display: 'flex', alignItems: 'baseline', gap: 2, flexWrap: 'nowrap', minWidth: 0 }}>
-        <span style={{ fontSize: 'clamp(36px, 4.5vw, 52px)', fontWeight: 900, letterSpacing: '-2px', lineHeight: 1, color: '#fff', flexShrink: 1 }}>
-          {count.toLocaleString()}
-        </span>
-        <span style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 800, letterSpacing: '-0.5px', color, flexShrink: 0 }}>{suffix}</span>
-      </div>
-
-      <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 6, letterSpacing: '-0.2px' }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.88)', marginBottom: 8, letterSpacing: '-0.2px', lineHeight: 1.3 }}>{label}</div>
       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 1.55 }}>{sub}</div>
     </div>
   )
@@ -860,7 +833,7 @@ function Features() {
     { title: t('landing.features.research.title'), desc: t('landing.features.research.desc'), href: '/inspection', cta: t('landing.features.research.cta'), color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
     { title: t('landing.features.photo.title'), desc: t('landing.features.photo.desc'), href: '/inspection', cta: t('landing.features.photo.cta'), color: '#22d3ee', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> },
     { title: t('landing.features.guided.title'), desc: t('landing.features.guided.desc'), href: '/inspection', cta: t('landing.features.guided.cta'), color: '#818cf8', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
-    { title: t('landing.features.premium.title'), desc: t('landing.features.premium.desc'), href: '/premium', cta: t('landing.features.premium.cta'), color: '#a855f7', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+    { title: t('landing.features.premium.title'), desc: t('landing.features.premium.desc'), href: '/report', cta: t('landing.features.premium.cta'), color: '#a855f7', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
     { title: t('landing.features.report.title'), desc: t('landing.features.report.desc'), href: '/report', cta: t('landing.features.report.cta'), color: '#22c55e', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
   ]
 
@@ -1071,19 +1044,19 @@ function HowItWorks() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// PREMIUM SECTION
+// REPORT PREVIEW SECTION
 // ══════════════════════════════════════════════════════════════
 
-function PremiumSection() {
+function ReportPreviewSection() {
   const { ref, visible } = useReveal(0.15)
   const { t } = useTranslation()
   const included = [
-    'landing.premium.includes.ownership',
-    'landing.premium.includes.accident',
-    'landing.premium.includes.service',
-    'landing.premium.includes.odometer',
-    'landing.premium.includes.theft',
-    'landing.premium.includes.market',
+    'landing.reportPreview.includes.score',
+    'landing.reportPreview.includes.status',
+    'landing.reportPreview.includes.findings',
+    'landing.reportPreview.includes.advisory',
+    'landing.reportPreview.includes.photos',
+    'landing.reportPreview.includes.nextSteps',
   ]
 
   return (
@@ -1100,29 +1073,29 @@ function PremiumSection() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 0 }}>
           <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 100, background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', fontSize: 11, fontWeight: 700, color: '#a855f7', letterSpacing: '0.06em', marginBottom: 20 }}>
-              {t('landing.premium.badge')}
+              {t('landing.reportPreview.badge')}
             </div>
             <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(22px, 3.5vw, 34px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
-              {t('landing.premium.title')}<br />
+              {t('landing.reportPreview.title')}<br />
               <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                {t('landing.premium.titleAccent')}
+                {t('landing.reportPreview.titleAccent')}
               </span>
             </h2>
             <p style={{ margin: '0 0 28px', fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
-              {t('landing.premium.subtitle')}
+              {t('landing.reportPreview.subtitle')}
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link href="/premium" style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)', color: '#22d3ee', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                {t('landing.premium.learn')}
+              <Link href="/inspection" style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)', color: '#22d3ee', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                {t('landing.reportPreview.start')}
               </Link>
-              <Link href="/vehicle" style={{ padding: '12px 20px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                {t('landing.premium.vehicles')}
+              <Link href="/report" style={{ padding: '12px 20px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                {t('landing.reportPreview.view')}
               </Link>
             </div>
           </div>
 
           <div style={{ padding: 'clamp(28px, 5vw, 48px) clamp(20px, 4vw, 40px)', borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>{t('landing.premium.includesTitle')}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>{t('landing.reportPreview.includesTitle')}</div>
             {included.map(itemKey => (
               <div key={itemKey} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1139,27 +1112,30 @@ function PremiumSection() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// TESTIMONIALS
+// METHODOLOGY
 // ══════════════════════════════════════════════════════════════
 
-function Testimonials() {
+function MethodologySection() {
   const { ref, visible } = useReveal(0.15)
   const { t } = useTranslation()
 
   const posts = [
-    { initials: 'MK', name: 'M. Kovač', text: t('landing.testimonials.post1.text'), time: t('landing.testimonials.post1.time') },
-    { initials: 'RA', name: 'R. Andric', text: t('landing.testimonials.post2.text'), time: t('landing.testimonials.post2.time') },
-    { initials: 'JB', name: 'J. Berisha', text: t('landing.testimonials.post3.text'), time: t('landing.testimonials.post3.time') },
+    { initials: '01', name: t('landing.methodology.visible.title'), text: t('landing.methodology.visible.desc') },
+    { initials: '02', name: t('landing.methodology.alignment.title'), text: t('landing.methodology.alignment.desc') },
+    { initials: '03', name: t('landing.methodology.context.title'), text: t('landing.methodology.context.desc') },
   ]
 
   return (
     <section style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.005)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px, 4vw, 48px)' as any }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>{t('landing.testimonials.badge')}</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 16 }}>{t('landing.methodology.badge')}</div>
           <h2 style={{ margin: 0, fontSize: 'clamp(24px, 3.5vw, 38px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff' }}>
-            {t('landing.testimonials.title')}
+            {t('landing.methodology.title')}
           </h2>
+          <p style={{ margin: '14px auto 0', fontSize: 14, color: 'rgba(255,255,255,0.42)', lineHeight: 1.65, maxWidth: 560 }}>
+            {t('landing.methodology.note')}
+          </p>
         </div>
 
         <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
@@ -1170,19 +1146,12 @@ function Testimonials() {
               opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(24px)',
               transition: `opacity 0.6s ease ${i * 120}ms, transform 0.6s ease ${i * 120}ms`,
             }}>
-              <div style={{ display: 'flex', gap: 2 }}>
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <svg key={j} width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, rgba(34,211,238,0.16), rgba(129,140,248,0.12))', border: '1px solid rgba(34,211,238,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#22d3ee' }}>{p.initials}</div>
+                <div style={{ height: 1, flex: 1, background: 'linear-gradient(90deg, rgba(34,211,238,0.32), transparent)' }} />
               </div>
-              <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.58)', lineHeight: 1.7, flex: 1 }}>"{p.text}"</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(34,211,238,0.2), rgba(129,140,248,0.2))', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#22d3ee' }}>{p.initials}</div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>{p.name}</span>
-                </div>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>{p.time}</span>
-              </div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.3px', lineHeight: 1.3 }}>{p.name}</h3>
+              <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, flex: 1 }}>{p.text}</p>
             </div>
           ))}
         </div>
@@ -1236,7 +1205,7 @@ function ClosingCTA() {
             >
               {t('landing.hero.startInspection')}
             </Link>
-            <Link href="/premium" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+            <Link href="/report" style={{ padding: '15px 24px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(12px)', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.1)'; el.style.border = '1px solid rgba(255,255,255,0.24)'; el.style.color = 'rgba(255,255,255,0.92)'; el.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.05)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.65)'; el.style.transform = ''; }}
             >
@@ -1309,7 +1278,7 @@ function Footer() {
               { label: t('dashboard.startInspection'), href: '/inspection' },
               { label: t('nav.vehicles'),             href: '/vehicle' },
               { label: t('dashboard.viewReport'),     href: '/report' },
-              { label: t('landing.footer.premiumHistory'), href: '/premium' },
+              { label: t('landing.footer.premiumHistory'), href: '/report' },
             ]},
             { title: t('landing.footer.platform'), links: [
               { label: t('nav.dashboard'), href: '/dashboard' } satisfies LandingLink,
@@ -1423,11 +1392,11 @@ export default function Home() {
     <div style={{ minHeight: '100svh', background: '#080c14', color: '#fff', overflowX: 'hidden' }}>
       <LandingNav />
       <Hero />
-      <StatsSection />
+      <AnalysisSection />
       <Features />
       <HowItWorks />
-      <PremiumSection />
-      <Testimonials />
+      <ReportPreviewSection />
+      <MethodologySection />
       <ClosingCTA />
       <Footer />
     </div>
