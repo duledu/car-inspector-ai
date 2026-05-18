@@ -76,7 +76,8 @@ async function upsertAccount(account: SeedAccount) {
   if (existing) {
     const data: { role?: Role; passwordHash?: string; emailVerified?: Date } = {}
     if (existing.role !== account.role) data.role = account.role
-    if (!existing.passwordHash || process.env.SEED_RESET_PASSWORDS === 'true') {
+    const resetPasswords = process.env.SEED_RESET_PASSWORDS === 'true' || process.argv.includes('--reset')
+    if (!existing.passwordHash || resetPasswords) {
       data.passwordHash = await bcrypt.hash(account.password, 12)
     }
     if (account.verified && !existing.emailVerified) data.emailVerified = new Date()

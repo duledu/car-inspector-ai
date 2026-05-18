@@ -34,6 +34,8 @@ const mk = {
   'nav.inspect':            'Прегледај',
   'nav.report':             'Извештај',
   'nav.profile':            'Профил',
+  'nav.beforeYouBuy':       'Пред купување',
+  'nav.buyGuide':           'Водич',
   'nav.premium':            'Премиум',
   'nav.community':          'Заедница',
   'nav.messages':           'Пораки',

@@ -111,8 +111,8 @@ export function DecisionBlock({
           <DecisionIcon verdict={verdict} color={verdictColor} />
         </div>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)',
-          textTransform: 'uppercase', letterSpacing: '0.1em',
+          fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)',
+          letterSpacing: '0.06em',
         }}>
           {safeT(t, 'report.finalRecommendation', 'Final recommendation')}
         </span>
@@ -120,14 +120,14 @@ export function DecisionBlock({
 
       {/* Headline */}
       <div style={{
-        fontSize: 18, fontWeight: 800, color: verdictColor,
-        marginBottom: 10, letterSpacing: '-0.4px', lineHeight: 1.2,
+        fontSize: 19, fontWeight: 700, color: verdictColor,
+        marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.22,
       }}>
         {content.headline}
       </div>
 
       {/* Body */}
-      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.72)', lineHeight: 1.65 }}>
+      <div style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.72 }}>
         {content.body}
       </div>
     </div>
@@ -192,20 +192,20 @@ export function ConfidenceIndicator({
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-      padding: '11px 16px',
+      display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      padding: '13px 16px',
       background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12,
     }}>
       <span style={{
-        fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.32)',
-        textTransform: 'uppercase', letterSpacing: '0.09em', flexShrink: 0,
+        fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)',
+        letterSpacing: '0.04em', flexShrink: 0,
       }}>
         {safeT(t, 'report.confidenceLabel', 'Report confidence')}
       </span>
       <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
         {([1, 2, 3] as const).map(i => (
           <div key={i} style={{
-            width: 18, height: 5, borderRadius: 3,
+            width: 14, height: 3, borderRadius: 2,
             background: i <= s.bars ? s.color : 'rgba(255,255,255,0.07)',
           }} />
         ))}

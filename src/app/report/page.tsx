@@ -432,16 +432,16 @@ function RiskFlagCard({ flagKey }: Readonly<{ flagKey: string }>) {
   const cfg   = FLAG_CFG[flagKey]
   if (!cfg) return null
   return (
-    <div style={{ padding: '14px 16px', background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `3px solid ${cfg.color}`, borderRadius: 13, display: 'flex', gap: 12 }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cfg.color}18`, border: `1px solid ${cfg.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <div style={{ padding: '13px 15px', background: cfg.bg, border: `1px solid ${cfg.border}`, borderLeft: `2px solid ${cfg.color}`, borderRadius: 13, display: 'flex', gap: 11 }}>
+      <div style={{ width: 30, height: 30, borderRadius: 9, background: `${cfg.color}0e`, border: `1px solid ${cfg.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: cfg.color, marginBottom: 4, letterSpacing: '-0.1px' }}>{t(cfg.labelKey)}</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>{t(cfg.detailKey)}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,0.82)', marginBottom: 3, letterSpacing: '-0.1px' }}>{t(cfg.labelKey)}</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.52)', lineHeight: 1.55 }}>{t(cfg.detailKey)}</div>
       </div>
     </div>
   )
@@ -459,40 +459,40 @@ function getDimensionSeverity(score: number, visualMaxScore?: number): {
   if (effectiveScore >= 90) {
     return {
       color: '#22c55e',
-      border: 'rgba(34,197,94,0.24)',
+      border: 'rgba(34,197,94,0.15)',
       background: 'rgba(34,197,94,0.05)',
-      explanation: 'rgba(187,247,208,0.82)',
+      explanation: 'rgba(187,247,208,0.72)',
     }
   }
   if (effectiveScore >= 75) {
     return {
       color: '#84cc16',
-      border: 'rgba(132,204,22,0.24)',
+      border: 'rgba(132,204,22,0.15)',
       background: 'rgba(132,204,22,0.05)',
-      explanation: 'rgba(236,252,203,0.82)',
+      explanation: 'rgba(236,252,203,0.72)',
     }
   }
   if (effectiveScore >= 60) {
     return {
       color: '#f59e0b',
-      border: 'rgba(245,158,11,0.24)',
+      border: 'rgba(245,158,11,0.15)',
       background: 'rgba(245,158,11,0.05)',
-      explanation: 'rgba(253,230,138,0.84)',
+      explanation: 'rgba(253,230,138,0.74)',
     }
   }
   if (effectiveScore >= 40) {
     return {
       color: '#f97316',
-      border: 'rgba(249,115,22,0.24)',
+      border: 'rgba(249,115,22,0.15)',
       background: 'rgba(249,115,22,0.05)',
-      explanation: 'rgba(254,215,170,0.84)',
+      explanation: 'rgba(254,215,170,0.74)',
     }
   }
   return {
     color: '#ef4444',
-    border: 'rgba(239,68,68,0.24)',
+    border: 'rgba(239,68,68,0.15)',
     background: 'rgba(239,68,68,0.05)',
-    explanation: 'rgba(254,202,202,0.84)',
+    explanation: 'rgba(254,202,202,0.74)',
   }
 }
 
@@ -504,13 +504,13 @@ function DimBar({
 }: Readonly<{ label: string; score: number; explanation?: string; visualMaxScore?: number }>) {
   const severity = getDimensionSeverity(score, visualMaxScore)
   return (
-    <div style={{ padding: '14px 16px', background: `linear-gradient(180deg, ${severity.background}, rgba(255,255,255,0.02))`, border: `1px solid ${severity.border}`, borderRadius: 12 }}>
+    <div style={{ padding: '13px 15px', background: severity.background, border: `1px solid ${severity.border}`, borderRadius: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
-        <span style={{ fontSize: 18, fontWeight: 800, color: severity.color, letterSpacing: '-0.5px' }}>{score}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.62)', letterSpacing: '-0.2px' }}>{score}</span>
       </div>
-      <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${score}%`, background: severity.color, borderRadius: 4, transition: 'width 0.8s ease' }} />
+      <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${score}%`, background: severity.color, borderRadius: 3, transition: 'width 0.8s ease' }} />
       </div>
       {explanation && (
         <div style={{ fontSize: 11, color: severity.explanation, marginTop: 7, lineHeight: 1.5 }}>{explanation}</div>
@@ -603,7 +603,7 @@ function ChecklistDimBar({
 // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Section label ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 function SectionLabel({ children, style }: Readonly<{ children: React.ReactNode; style?: React.CSSProperties }>) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, ...style }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, ...style }}>
       <div style={{ width: 3, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
       <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.50)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>{children}</span>
     </div>
@@ -1631,7 +1631,7 @@ export default function ReportPage() {
                 <ScoreRing score={safeBuyScore ?? 0} color={verdict.color} />
 
                 <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.42)', letterSpacing: '0.03em', marginBottom: 12 }}>
                     {isPreliminaryScore
                       ? safeReportT(t, 'report.preliminaryBadge', 'Preliminary score')
                       : t('report.aiConfidenceScore')}
@@ -1644,7 +1644,7 @@ export default function ReportPage() {
                   {(() => {
                     const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
                     return rec && !rec.startsWith('report.') ? (
-                      <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.65, marginBottom: 12 }}>
+                      <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.72, marginBottom: 14 }}>
                         {rec}
                       </div>
                     ) : null
@@ -1795,10 +1795,10 @@ export default function ReportPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
                   {displayReasonsFor.length > 0 && (
                     <div style={{ padding: '16px 18px', background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.for')}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{t('report.reasons.for')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {displayReasonsFor.map((r) => (
-                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.65 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="20 6 9 17 4 12"/></svg>
                             {translateReasonV2(r, t)}
                           </div>
@@ -1808,10 +1808,10 @@ export default function ReportPage() {
                   )}
                   {displayReasonsAgainst.length > 0 && (
                     <div style={{ padding: '16px 18px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>{t('report.reasons.against')}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{t('report.reasons.against')}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {displayReasonsAgainst.map((r) => (
-                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+                          <div key={r} style={{ display: 'flex', gap: 9, fontSize: 14.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.65 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                             {translateReasonV2(r, t)}
                           </div>
@@ -1872,7 +1872,7 @@ export default function ReportPage() {
                 <div style={{ padding: '20px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid rgba(245,158,11,0.14)' }}>
                     <div style={{ flex: 1, minWidth: 220 }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(245,158,11,0.9)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(245,158,11,0.9)', letterSpacing: '0.03em', marginBottom: 8 }}>
                         {safeReportT(t, 'report.negotiationLeverageLabel', 'Estimated negotiation leverage')}
                       </div>
                       <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55 }}>
@@ -1890,24 +1890,24 @@ export default function ReportPage() {
                           ? safeReportT(t, negotiationLeverage.kind === 'minimum' ? 'report.negotiationMinimumReduction' : 'report.negotiationSuggestedReduction', 'Suggested price reduction')
                           : safeReportT(t, 'report.negotiationUseFindings', 'Use findings to negotiate')}
                       </div>
-                      <div style={{ fontSize: negotiationLeverage ? 24 : 15, fontWeight: 850, color: '#f59e0b', letterSpacing: negotiationLeverage ? '-0.6px' : '-0.2px', lineHeight: 1.1 }}>
+                      <div style={{ fontSize: negotiationLeverage ? 26 : 15, fontWeight: 800, color: '#f59e0b', letterSpacing: negotiationLeverage ? '-0.8px' : '-0.2px', lineHeight: 1.1 }}>
                         {negotiationLeverage?.amount ?? safeReportT(t, 'report.negotiationAdvisoryOnly', 'Advisory only')}
                       </div>
                     </div>
                   </div>
-                  <div style={{ marginBottom: 12, fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <div style={{ marginBottom: 12, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.42)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                     {safeReportT(t, 'report.negotiationSupportedBy', 'Supported by these findings')}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
                     {riskScore.negotiationHints.map((hint, i) => (
                       // eslint-disable-next-line react/no-array-index-key
-                      <div key={i} style={{ display: 'flex', gap: 12, fontSize: 14, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, paddingLeft: 6, borderLeft: '2px solid rgba(245,158,11,0.35)' }}>
-                        <div style={{ flexShrink: 0, color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>→</div>
+                      <div key={i} style={{ display: 'flex', gap: 12, fontSize: 14.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.68, paddingLeft: 6, borderLeft: '2px solid rgba(245,158,11,0.3)' }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(245,158,11,0.8)', flexShrink: 0, marginTop: 7 }} />
                         {translateNegotiationHintV2(hint, t, reportLocale)}
                       </div>
                     ))}
                   </div>
-                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(245,158,11,0.16)', fontSize: 12.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55 }}>
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(245,158,11,0.16)', fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
                     {safeReportT(t, 'report.negotiationDisclaimer', 'This is advisory negotiation guidance. It is not guaranteed savings, a formal appraisal, or proof of repair cost. Use it as a structured talking point and verify issues before purchase.')}
                   </div>
                   {/* Overall recommendation */}
@@ -1930,18 +1930,18 @@ export default function ReportPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
                   <SectionLabel style={{ marginBottom: 0 }}>{t('report.aiFindings')} {latestAI && latestAI.findings.length > 0 ? `(${latestAI.findings.length})` : ''}</SectionLabel>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('report.aiAssisted')}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', fontWeight: 500, letterSpacing: '0.02em' }}>{t('report.aiAssisted')}</span>
                 </div>
                 <div style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.035) 0%, rgba(255,255,255,0.018) 100%)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
                   {aiVehicleSummary && (
                     <div style={{ padding: '15px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(180deg, rgba(245,158,11,0.07), rgba(245,158,11,0.015))' }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 750, color: '#fbbf24', marginBottom: 5, lineHeight: 1.45 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', marginBottom: 6, lineHeight: 1.45 }}>
                         {aiVehicleSummary.status}
                       </div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6 }}>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.65 }}>
                         {aiVehicleSummary.context}
                       </div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.76)', lineHeight: 1.6, marginTop: 5 }}>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.76)', lineHeight: 1.65, marginTop: 6 }}>
                         {aiVehicleSummary.detail}
                       </div>
                       {aiVehicleSummary.repeat && (
@@ -2083,9 +2083,9 @@ export default function ReportPage() {
                         // eslint-disable-next-line react/no-array-index-key
                         <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 11 }}>
                           <div style={{ width: 22, height: 22, borderRadius: 7, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee' }}>{i + 1}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#22d3ee' }}>{i + 1}</span>
                           </div>
-                          <div style={{ flex: 1, fontSize: 13.5, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55 }}>{step}</div>
+                          <div style={{ flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.65 }}>{step}</div>
                         </div>
                       ))}
                     </div>

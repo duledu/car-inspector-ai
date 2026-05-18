@@ -34,6 +34,8 @@ const sq = {
   'nav.inspect':            'Inspekto',
   'nav.report':             'Raporti',
   'nav.profile':            'Profili',
+  'nav.beforeYouBuy':       'Para blerjes',
+  'nav.buyGuide':           'Udhëzues',
   'nav.premium':            'Premium',
   'nav.community':          'Komuniteti',
   'nav.messages':           'Mesazhe',

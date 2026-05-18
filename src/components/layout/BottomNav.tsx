@@ -71,6 +71,18 @@ const NAV_ITEM_DEFS = [
       </svg>
     ),
   },
+  {
+    href: '/before-you-buy',
+    labelKey: 'nav.buyGuide',
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+        stroke={active ? '#22d3ee' : 'rgba(255,255,255,0.38)'}
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    ),
+  },
 ]
 
 export function BottomNav() {
@@ -197,6 +209,10 @@ export function BottomNav() {
                 letterSpacing: '0.02em',
                 lineHeight: 1,
                 transition: 'color 0.15s ease',
+                maxWidth: 56,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}>
                 {label}
               </span>

@@ -40,6 +40,8 @@ const bg: Record<string, string> = {
   'nav.inspect': 'ÐŸÑ€ÐµÐ³Ð»ÐµÐ´',
   'nav.report': 'Ð”Ð¾ÐºÐ»Ð°Ð´',
   'nav.profile': 'ÐŸÑ€Ð¾Ñ„Ð¸Ð»',
+  'nav.beforeYouBuy':       '\u041f\u0440\u0435\u0434\u0438 \u043f\u043e\u043a\u0443\u043f\u043a\u0430',
+  'nav.buyGuide':           '\u0412\u043e\u0434\u0430\u0447',
   'nav.premium': 'ÐŸÑ€ÐµÐ¼Ð¸ÑƒÐ¼',
   'nav.community': 'ÐžÐ±Ñ‰Ð½Ð¾ÑÑ‚',
   'nav.messages': 'Ð¡ÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ñ',

@@ -265,10 +265,10 @@ export default function DashboardPage() {
               value: progress > 0 ? `${progress}%` : '0%', labelKey: 'dashboard.progress', href: '/inspection', color: '#818cf8',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
             },
-            {
+            ...(isFeatureEnabled('premium') ? [{
               value: paidCount, labelKey: 'dashboard.reports', href: '/premium', color: '#a855f7',
               icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-            },
+            }] : []),
           ].map(s => (
             <Link key={s.href} href={s.href} style={{ textDecoration: 'none' }} className="card-hover">
               <div style={{
@@ -361,6 +361,7 @@ export default function DashboardPage() {
               { labelKey: 'dashboard.addVehicle',  subKey: 'dashboard.addVehicleSub',  href: '/vehicle',   color: '#818cf8',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> },
               { labelKey: 'dashboard.premium',     subKey: 'dashboard.premiumSub',     href: '/premium',   color: '#a855f7',
+                feature: 'premium',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
               { labelKey: 'dashboard.community',   subKey: 'dashboard.communitySub',   href: '/community', color: '#22c55e',
                 feature: 'community',
@@ -430,7 +431,7 @@ export default function DashboardPage() {
         )}
 
         {/* ══ Premium upsell ═════════════════════════════════════ */}
-        {paidCount === 0 && activeVehicle && (
+        {isFeatureEnabled('premium') && paidCount === 0 && activeVehicle && (
           <div style={{
             padding: '18px', borderRadius: 18,
             background: 'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(34,211,238,0.04))',

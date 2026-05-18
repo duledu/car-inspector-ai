@@ -17,6 +17,7 @@ import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { AmbientBackground } from '@/components/layout/AmbientBackground'
+import { isFeatureEnabled } from '@/config/features'
 
 // Applies the authenticated user's saved language preference to i18n + cookie.
 // Runs whenever preferredLanguage changes in the store (login, register, profile update).
@@ -166,20 +167,22 @@ export default function AppShell({ children }: AppShellProps) {
           {/* Right: language switcher + premium badge + avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <LanguageSwitcher />
-            <Link href="/premium" style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px',
-              background: 'rgba(168,85,247,0.08)',
-              border: '1px solid rgba(168,85,247,0.18)',
-              borderRadius: 8,
-              fontSize: 11, fontWeight: 700, color: '#a855f7',
-              textDecoration: 'none', letterSpacing: '0.02em',
-            }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="#a855f7" stroke="none">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-              Pro
-            </Link>
+            {isFeatureEnabled('premium') && (
+              <Link href="/premium" style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 10px',
+                background: 'rgba(168,85,247,0.08)',
+                border: '1px solid rgba(168,85,247,0.18)',
+                borderRadius: 8,
+                fontSize: 11, fontWeight: 700, color: '#a855f7',
+                textDecoration: 'none', letterSpacing: '0.02em',
+              }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#a855f7" stroke="none">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                Pro
+              </Link>
+            )}
 
             {/* Avatar → profile */}
             <Link

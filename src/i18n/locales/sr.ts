@@ -34,6 +34,8 @@ const sr = {
   'nav.inspect':            'Pregled',
   'nav.report':             'Izveštaj',
   'nav.profile':            'Profil',
+  'nav.beforeYouBuy':       'Pre kupovine',
+  'nav.buyGuide':           'Vodič',
   'nav.premium':            'Premium',
   'nav.community':          'Zajednica',
   'nav.messages':           'Poruke',

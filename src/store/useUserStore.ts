@@ -72,6 +72,16 @@ export const useUserStore = create<UserStore>()(
             state.isLoading = false
           })
         } catch (err: any) {
+          // In development: log the raw API error so the real cause is visible in the
+          // browser console (DevTools → Console) rather than only a generic UI message.
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('[auth/login] failed', {
+              statusCode: err?.statusCode ?? 0,
+              code:       err?.code       ?? 'UNKNOWN',
+              message:    err?.message    ?? String(err),
+              detail:     err?.details?.detail ?? err?.details ?? null,
+            })
+          }
           set((state) => {
             state.user = null
             state.session = null

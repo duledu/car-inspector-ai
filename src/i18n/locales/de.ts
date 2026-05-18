@@ -34,6 +34,8 @@ const de = {
   'nav.inspect':            'Prüfen',
   'nav.report':             'Bericht',
   'nav.profile':            'Profil',
+  'nav.beforeYouBuy':       'Vor dem Kauf',
+  'nav.buyGuide':           'Ratgeber',
   'nav.premium':            'Premium',
   'nav.community':          'Community',
   'nav.messages':           'Nachrichten',
