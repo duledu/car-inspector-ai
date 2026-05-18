@@ -2,19 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  AlertCircle,
-  ArrowRight,
-  Camera,
-  CheckCircle2,
-  FileText,
-  Gauge,
-  KeyRound,
-  Loader2,
-  LockKeyhole,
-  TrendingDown,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { paymentApi, type ProductPriceDto } from '@/services/api/payment.api'
 import type { Vehicle } from '@/types'
 
@@ -34,34 +22,47 @@ interface Props {
   onPurchase: () => void | Promise<void>
 }
 
-type Benefit = {
-  icon: LucideIcon
-  titleKey: string
-}
-
-const BENEFITS: Benefit[] = [
-  {
-    icon: Camera,
-    titleKey: 'report.accessGate.benefit.aiPhotoAnalysis',
-  },
-  {
-    icon: Gauge,
-    titleKey: 'report.accessGate.benefit.riskScore',
-  },
-  {
-    icon: TrendingDown,
-    titleKey: 'report.accessGate.benefit.negotiation',
-  },
-  {
-    icon: FileText,
-    titleKey: 'report.accessGate.benefit.pdfExport',
-  },
-]
-
 function vehicleTitle(vehicle?: Vehicle): string {
   if (!vehicle) return ''
   return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ')
 }
+
+const BENEFITS = [
+  {
+    titleKey: 'report.accessGate.benefit.aiPhotoAnalysis',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    ),
+  },
+  {
+    titleKey: 'report.accessGate.benefit.riskScore',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+  },
+  {
+    titleKey: 'report.accessGate.benefit.negotiation',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    ),
+  },
+  {
+    titleKey: 'report.accessGate.benefit.pdfExport',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    ),
+  },
+] as const
 
 export function InspectionReportAccessGate({
   vehicle,
@@ -84,567 +85,359 @@ export function InspectionReportAccessGate({
   const isBusy = promoLoading || calculating || purchaseLoading
   const hasRedeemedAccess = hasActiveAccess || Boolean(promoSuccess)
   const title = vehicleTitle(vehicle)
-  const vin = vehicle?.vin ? vehicle.vin : t('report.accessGate.vinUnavailable')
+  const vin = vehicle?.vin ?? null
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
-  const priceLabel = price?.formatted ?? t('common.loading')
+  const priceLabel = price?.formatted ?? '…'
 
   useEffect(() => {
     let cancelled = false
     setPrice(null)
     paymentApi.getPrice('INSPECTION_REPORT', locale)
-      .then((nextPrice) => {
-        if (!cancelled) setPrice(nextPrice)
-      })
-      .catch(() => {
-        if (!cancelled) setPrice(null)
-      })
-    return () => {
-      cancelled = true
-    }
+      .then(nextPrice => { if (!cancelled) setPrice(nextPrice) })
+      .catch(() => { if (!cancelled) setPrice(null) })
+    return () => { cancelled = true }
   }, [locale])
 
   return (
-    <section className="accessGate" aria-labelledby="inspection-report-access-title">
-      <div className="vehicleAnchor" aria-label={t('report.accessGate.summaryTitle')}>
-        <div className="vehicleText">
-          <span className="vehicleLabel">{t('report.accessGate.summaryTitle')}</span>
-          <strong>{title || t('report.accessGate.vehicleFallback')}</strong>
+    <section aria-labelledby="access-gate-title">
+
+      {/* ── Vehicle identity ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.32)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+          {t('report.accessGate.summaryTitle')}
         </div>
-        <span className="vin">{vin}</span>
+        <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: vin ? 4 : 0 }}>
+          {title || t('report.accessGate.vehicleFallback')}
+        </div>
+        {vin && (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', marginTop: 2 }}>
+            {vin}
+          </div>
+        )}
       </div>
 
-      <div className="headerBlock">
-        <h2 id="inspection-report-access-title">{t('report.accessGate.headline')}</h2>
-        <p>{hasRedeemedAccess ? t('report.accessGate.readyBody') : t('report.accessGate.body')}</p>
+      {/* ── Headline + body ── */}
+      <div style={{ marginBottom: 22 }}>
+        <h2 id="access-gate-title" style={{ margin: '0 0 10px', fontSize: 'clamp(20px, 3.5vw, 24px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.18 }}>
+          {hasRedeemedAccess ? t('report.accessGate.readyTitle') : t('report.accessGate.headline')}
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.52)', lineHeight: 1.68 }}>
+          {hasRedeemedAccess ? t('report.accessGate.readyBody') : t('report.accessGate.body')}
+        </p>
       </div>
 
-      <div className={hasRedeemedAccess ? 'statusBlock ready' : 'statusBlock'}>
-        <div className="statusIcon" aria-hidden="true">
-          {hasRedeemedAccess ? <CheckCircle2 size={22} /> : <LockKeyhole size={22} />}
-        </div>
-        <div className="statusCopy">
-          <div className="statusLabel">
+      {/* ── Status pill ── */}
+      <div style={{ marginBottom: 22 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '7px 13px', borderRadius: 999,
+          background: hasRedeemedAccess ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.05)',
+          border: `1px solid ${hasRedeemedAccess ? 'rgba(34,197,94,0.22)' : 'rgba(255,255,255,0.1)'}`,
+        }}>
+          {hasRedeemedAccess ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          )}
+          <span style={{ fontSize: 12, fontWeight: 600, color: hasRedeemedAccess ? '#86efac' : 'rgba(255,255,255,0.6)' }}>
             {hasRedeemedAccess ? t('report.accessGate.statusReady') : t('report.accessGate.statusLocked')}
-          </div>
-          <div className="statusLine">
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>·</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)' }}>
             {hasRedeemedAccess ? t('report.accessGate.creditsAvailableOne') : t('report.accessGate.creditsAvailableZero')}
-          </div>
-        </div>
-        <div className="statusRequirement">
-          {hasRedeemedAccess ? t('report.accessGate.statusReadyLine') : t('report.accessGate.statusLockedLine')}
+          </span>
         </div>
       </div>
 
+      {/* ── Success message ── */}
       {promoSuccess && (
-        <div className="stateMessage success" role="status">
-          <CheckCircle2 size={17} />
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 9,
+          padding: '12px 14px', marginBottom: 16,
+          background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 12,
+          fontSize: 13, color: '#86efac', lineHeight: 1.55,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
           <span>{promoSuccess}</span>
         </div>
       )}
 
+      {/* ── Error message ── */}
       {purchaseError && (
-        <div className="stateMessage error" role="alert">
-          <AlertCircle size={17} />
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 9,
+          padding: '11px 14px', marginBottom: 16,
+          background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 12,
+          fontSize: 12.5, color: 'rgba(255,255,255,0.62)', lineHeight: 1.55,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(245,158,11,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
           <span>{purchaseError}</span>
         </div>
       )}
 
-      <div className="ctaPanel">
-        <div className="primaryAction">
-          <button
-            type="button"
-            className="primaryCta"
-            onClick={hasRedeemedAccess ? onContinue : onPurchase}
-            disabled={isBusy}
-            aria-busy={hasRedeemedAccess ? calculating : purchaseLoading}
-          >
-            {hasRedeemedAccess && calculating ? (
-              <>
-                <Loader2 className="spin" size={18} />
-                {t('report.accessGate.continuing')}
-              </>
-            ) : !hasRedeemedAccess && purchaseLoading ? (
-              <>
-                <Loader2 className="spin" size={18} />
-                {t('report.accessGate.preparingCheckout')}
-              </>
-            ) : (
-              <>
-                {hasRedeemedAccess ? t('report.accessGate.generateNow') : t('report.accessGate.purchaseReport', { price: priceLabel })}
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-          <div className="ctaSubtext">
-            {hasRedeemedAccess ? t('report.accessGate.readyCtaSubtext') : t('report.accessGate.ctaSubtext')}
-          </div>
-        </div>
-
+      {/* ── Primary CTA ── */}
+      <div style={{ marginBottom: 8 }}>
         <button
           type="button"
-          className="promoToggle"
-          onClick={() => setShowPromo((value) => !value)}
+          className="gate-primary-cta"
+          onClick={hasRedeemedAccess ? onContinue : onPurchase}
+          disabled={isBusy}
+          aria-busy={hasRedeemedAccess ? calculating : purchaseLoading}
+        >
+          {hasRedeemedAccess && calculating ? (
+            <>
+              <Loader2 className="gate-spin" size={17} />
+              {t('report.accessGate.continuing')}
+            </>
+          ) : !hasRedeemedAccess && purchaseLoading ? (
+            <>
+              <Loader2 className="gate-spin" size={17} />
+              {t('report.accessGate.preparingCheckout')}
+            </>
+          ) : (
+            <>
+              {hasRedeemedAccess
+                ? t('report.accessGate.generateNow')
+                : t('report.accessGate.purchaseReport', { price: priceLabel })}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </>
+          )}
+        </button>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 9, lineHeight: 1.5 }}>
+          {hasRedeemedAccess ? t('report.accessGate.readyCtaSubtext') : t('report.accessGate.ctaSubtext')}
+        </div>
+      </div>
+
+      {/* ── Promo toggle ── */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <button
+          type="button"
+          className="gate-promo-toggle"
+          onClick={() => setShowPromo(v => !v)}
           disabled={isBusy}
           aria-expanded={showPromo || Boolean(promoError)}
-          aria-controls="inspection-promo-panel"
+          aria-controls="gate-promo-panel"
         >
-          <KeyRound size={17} />
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
           {showPromo ? t('report.accessGate.hidePromo') : t('report.accessGate.havePromo')}
         </button>
       </div>
 
-      <div className="includesSection" aria-label={t('report.accessGate.includedTitle')}>
-        <div className="sectionTitle">{t('report.accessGate.includedTitle')}</div>
-        <div className="benefitList">
-          {BENEFITS.map(({ icon: Icon, titleKey }) => (
-            <div className="benefitItem" key={titleKey}>
-              <Icon size={16} />
-              <span>{t(titleKey)}</span>
+      {/* ── What's included ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
+          {t('report.accessGate.includedTitle')}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 16px' }}>
+          {BENEFITS.map(({ titleKey, icon }) => (
+            <div key={titleKey} style={{ display: 'flex', alignItems: 'center', gap: 9, minHeight: 28 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#67e8f9' }}>
+                {icon}
+              </div>
+              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.62)', lineHeight: 1.3 }}>
+                {t(titleKey)}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
+      {/* ── Promo panel ── */}
       {(showPromo || promoError) && (
         <form
-          id="inspection-promo-panel"
-          className="promoPanel"
-          onSubmit={(event) => {
-            event.preventDefault()
-            if (!isBusy) void onRedeemPromo()
-          }}
+          id="gate-promo-panel"
+          onSubmit={e => { e.preventDefault(); if (!isBusy) void onRedeemPromo() }}
+          style={{ marginBottom: 16, padding: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, display: 'grid', gap: 12 }}
         >
-          <div className="promoHeader">
-            <div className="promoIcon"><KeyRound size={18} /></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+              </svg>
+            </div>
             <div>
-              <div className="promoTitle">{t('report.accessGate.promoTitle')}</div>
-              <div className="promoHint">{t('report.accessGate.promoHint')}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{t('report.accessGate.promoTitle')}</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.38)', marginTop: 2, lineHeight: 1.4 }}>{t('report.accessGate.promoHint')}</div>
             </div>
           </div>
 
-          <div className="promoControls">
-            <label className="srOnly" htmlFor="inspection-promo-code">
-              {t('report.accessRequired.promoLabel')}
-            </label>
+          <div className="gate-promo-controls">
+            <label className="gate-sr-only" htmlFor="gate-promo-code">{t('report.accessRequired.promoLabel')}</label>
             <input
-              id="inspection-promo-code"
+              id="gate-promo-code"
+              className="gate-promo-input"
               value={promoCode}
-              onChange={(event) => onPromoCodeChange(event.target.value)}
+              onChange={e => onPromoCodeChange(e.target.value)}
               disabled={isBusy}
               autoComplete="off"
               placeholder={t('report.accessRequired.promoPlaceholder')}
             />
-            <button type="submit" disabled={isBusy}>
+            <button type="submit" className="gate-promo-submit" disabled={isBusy}>
               {promoLoading ? (
-                <>
-                  <Loader2 className="spin" size={16} />
-                  {t('report.accessRequired.validatingPromo')}
-                </>
-              ) : (
-                t('report.accessRequired.applyPromo')
-              )}
+                <><Loader2 className="gate-spin" size={14} />{t('report.accessRequired.validatingPromo')}</>
+              ) : t('report.accessRequired.applyPromo')}
             </button>
           </div>
 
           {promoError && (
-            <div className="stateMessage error" role="alert">
-              <AlertCircle size={17} />
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+              padding: '10px 12px',
+              background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.16)', borderRadius: 10,
+              fontSize: 12.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.55,
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(245,158,11,0.65)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
               <span>{promoError}</span>
             </div>
           )}
         </form>
       )}
 
-      <div className="accessNote">
-        <CheckCircle2 size={16} />
+      {/* ── Footer note ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11, color: 'rgba(255,255,255,0.28)', lineHeight: 1.6 }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(134,239,172,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
         <span>{hasRedeemedAccess ? t('report.accessGate.readyCtaSubtext') : t('report.accessGate.existingReports')}</span>
       </div>
 
       <style jsx>{`
-        .accessGate {
-          position: relative;
-          display: grid;
-          gap: 16px;
-          padding: 24px;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          border-radius: 20px;
-          background: rgba(8, 17, 22, 0.78);
-          box-shadow: 0 18px 54px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.045);
-        }
-
-        .vehicleAnchor {
+        /* Primary CTA */
+        .gate-primary-cta {
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          min-height: 56px;
-          padding: 12px 16px;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 12px;
-          background: rgba(255,255,255,0.035);
-        }
-
-        .vehicleText {
-          display: grid;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .vehicleLabel {
-          color: rgba(255,255,255,0.42);
-          font-size: 11px;
-          font-weight: 700;
-          line-height: 1.2;
-        }
-
-        .vehicleText strong {
-          color: rgba(255,255,255,0.92);
-          font-size: 14px;
-          font-weight: 760;
-          line-height: 1.25;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .vin {
-          flex-shrink: 0;
-          max-width: 48%;
-          color: rgba(255,255,255,0.48);
-          font-family: var(--font-mono);
-          font-size: 11px;
-          line-height: 1.35;
-          overflow-wrap: anywhere;
-          text-align: right;
-        }
-
-        .headerBlock {
-          display: grid;
-          gap: 8px;
-          padding: 0 2px;
-        }
-
-        h2 {
-          margin: 0;
-          color: #fff;
-          font-size: 24px;
-          font-weight: 720;
-          line-height: 1.18;
-          letter-spacing: 0;
-        }
-
-        p {
-          margin: 0;
-          color: rgba(255,255,255,0.62);
-          font-size: 18px;
-          line-height: 1.55;
-        }
-
-        .statusBlock {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px;
-          border: 1px solid rgba(255,255,255,0.09);
-          border-radius: 16px;
-          background: rgba(255,255,255,0.035);
-        }
-
-        .statusBlock.ready {
-          border-color: rgba(134,239,172,0.18);
-          background: rgba(34,197,94,0.055);
-        }
-
-        .statusIcon,
-        .promoIcon {
-          width: 40px;
-          height: 40px;
-          flex-shrink: 0;
-          display: grid;
-          place-items: center;
-          border-radius: 12px;
-        }
-
-        .statusIcon {
-          color: #cbd5e1;
-          background: rgba(255,255,255,0.07);
-        }
-
-        .ready .statusIcon {
-          color: #86efac;
-          background: rgba(34,197,94,0.11);
-        }
-
-        .statusCopy {
-          min-width: 0;
-          flex: 1;
-        }
-
-        .statusLabel {
-          color: #fff;
-          font-size: 15px;
-          font-weight: 760;
-          line-height: 1.35;
-        }
-
-        .statusLine {
-          margin-top: 2px;
-          color: rgba(255,255,255,0.52);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .statusRequirement {
-          flex-shrink: 0;
-          padding: 7px 10px;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 999px;
-          color: rgba(255,255,255,0.72);
-          font-size: 12px;
-          font-weight: 720;
-          line-height: 1.2;
-          white-space: nowrap;
-        }
-
-        .ready .statusRequirement {
-          color: #bbf7d0;
-          border-color: rgba(134,239,172,0.18);
-        }
-
-        .includesSection {
-          display: grid;
-          gap: 12px;
-          padding: 16px;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          background: rgba(255,255,255,0.025);
-        }
-
-        .sectionTitle {
-          color: rgba(255,255,255,0.9);
-          font-size: 13px;
-          font-weight: 760;
-          line-height: 1.25;
-        }
-
-        .benefitList {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 8px 16px;
-        }
-
-        .benefitItem {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          min-width: 0;
-          min-height: 24px;
-          color: rgba(255,255,255,0.64);
-          font-size: 12px;
-          line-height: 1.35;
-        }
-
-        .benefitItem svg {
-          flex-shrink: 0;
-          color: #67e8f9;
-        }
-
-        .ctaPanel {
-          display: grid;
-          gap: 8px;
-        }
-
-        .primaryAction {
-          display: grid;
-          gap: 7px;
-        }
-
-        button {
-          min-height: 48px;
-          display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          border-radius: 12px;
+          gap: 10px;
+          width: 100%;
+          min-height: 56px;
+          padding: 0 24px;
+          border: none;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+          color: #041014;
+          font-size: 15px;
+          font-weight: 800;
           font-family: var(--font-sans);
+          letter-spacing: -0.2px;
           cursor: pointer;
+          box-shadow: 0 8px 28px rgba(34,211,238,0.32), inset 0 1px 0 rgba(255,255,255,0.2);
+          transition: box-shadow 0.18s ease, transform 0.12s ease, background 0.18s ease;
+          -webkit-tap-highlight-color: transparent;
         }
-
-        button:disabled {
+        .gate-primary-cta:hover:not(:disabled) {
+          box-shadow: 0 12px 36px rgba(34,211,238,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+          transform: translateY(-1px);
+        }
+        .gate-primary-cta:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        .gate-primary-cta:disabled {
+          background: rgba(34,211,238,0.22);
+          color: rgba(4,16,20,0.5);
+          box-shadow: none;
           cursor: not-allowed;
         }
 
-        button:focus-visible,
-        input:focus-visible {
-          outline: 2px solid rgba(103,232,249,0.8);
-          outline-offset: 2px;
-        }
-
-        .primaryCta {
-          padding: 0 20px;
-          border: 1px solid rgba(103,232,249,0.42);
-          background: #67e8f9;
-          color: #061014;
-          font-size: 14px;
-          font-weight: 820;
-          box-shadow: 0 12px 28px rgba(34,211,238,0.16);
-          transition: background 160ms ease, box-shadow 160ms ease;
-        }
-
-        .primaryCta:hover:not(:disabled) {
-          background: #8be9f5;
-          box-shadow: 0 16px 34px rgba(34,211,238,0.2);
-        }
-
-        .primaryCta:disabled {
-          background: rgba(103,232,249,0.28);
-          color: rgba(6,16,20,0.74);
-          box-shadow: none;
-        }
-
-        .promoToggle {
-          width: fit-content;
-          min-height: 40px;
-          justify-self: center;
-          padding: 0 12px;
-          border: 0;
+        /* Promo toggle */
+        .gate-promo-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 36px;
+          padding: 0 10px;
+          border: none;
+          border-radius: 8px;
           background: transparent;
-          color: rgba(255,255,255,0.62);
+          color: rgba(255,255,255,0.42);
           font-size: 12px;
-          font-weight: 720;
-          transition: color 160ms ease, background 160ms ease;
+          font-weight: 500;
+          font-family: var(--font-sans);
+          cursor: pointer;
+          transition: color 0.15s, background 0.15s;
+          -webkit-tap-highlight-color: transparent;
         }
-
-        .promoToggle:hover:not(:disabled) {
-          color: rgba(255,255,255,0.86);
+        .gate-promo-toggle:hover:not(:disabled) {
+          color: rgba(255,255,255,0.72);
           background: rgba(255,255,255,0.04);
         }
-
-        .promoToggle:disabled {
-          color: rgba(255,255,255,0.34);
+        .gate-promo-toggle:disabled {
+          color: rgba(255,255,255,0.22);
+          cursor: not-allowed;
         }
 
-        .ctaSubtext {
-          color: rgba(255,255,255,0.48);
-          font-size: 11px;
-          line-height: 1.5;
-          text-align: center;
-        }
-
-        .promoPanel {
+        /* Promo controls layout */
+        .gate-promo-controls {
           display: grid;
-          gap: 13px;
-          padding: 15px;
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 16px;
-          background: rgba(4,16,20,0.58);
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
         }
 
-        .promoHeader {
-          display: flex;
-          align-items: center;
-          gap: 11px;
-        }
-
-        .promoIcon {
-          color: #fbbf24;
-          background: rgba(251,191,36,0.1);
-        }
-
-        .promoTitle {
-          color: #fff;
-          font-size: 13px;
-          font-weight: 760;
-          line-height: 1.3;
-        }
-
-        .promoHint {
-          margin-top: 3px;
-          color: rgba(255,255,255,0.5);
-          font-size: 12px;
-          line-height: 1.5;
-        }
-
-        .promoControls {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(132px, auto);
-          gap: 9px;
-        }
-
-        input {
-          min-height: 48px;
+        /* Promo input */
+        .gate-promo-input {
+          min-height: 44px;
           min-width: 0;
           padding: 0 14px;
-          border: 1px solid rgba(255,255,255,0.14);
-          border-radius: 12px;
-          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 10px;
+          background: rgba(255,255,255,0.05);
           color: #fff;
           font-family: var(--font-sans);
-          font-size: 16px;
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.15s;
+        }
+        .gate-promo-input::placeholder {
+          color: rgba(255,255,255,0.28);
+        }
+        .gate-promo-input:focus {
+          border-color: rgba(34,211,238,0.4);
         }
 
-        input::placeholder {
-          color: rgba(255,255,255,0.34);
-        }
-
-        .promoControls button {
+        /* Promo submit */
+        .gate-promo-submit {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 44px;
           padding: 0 16px;
           border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(255,255,255,0.92);
+          border-radius: 10px;
+          background: rgba(255,255,255,0.9);
           color: #071114;
           font-size: 13px;
-          font-weight: 820;
+          font-weight: 700;
+          font-family: var(--font-sans);
+          cursor: pointer;
+          white-space: nowrap;
+          transition: background 0.15s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .gate-promo-submit:hover:not(:disabled) {
+          background: #fff;
+        }
+        .gate-promo-submit:disabled {
+          background: rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.4);
+          cursor: not-allowed;
         }
 
-        .promoControls button:disabled {
-          background: rgba(255,255,255,0.16);
-          color: rgba(255,255,255,0.5);
-        }
-
-        .stateMessage {
-          display: flex;
-          align-items: flex-start;
-          gap: 9px;
-          padding: 12px 13px;
-          border-radius: 14px;
-          font-size: 13px;
-          line-height: 1.55;
-        }
-
-        .stateMessage svg {
-          flex-shrink: 0;
-          margin-top: 1px;
-        }
-
-        .stateMessage.success {
-          border: 1px solid rgba(134,239,172,0.24);
-          background: rgba(34,197,94,0.08);
-          color: #bbf7d0;
-        }
-
-        .stateMessage.error {
-          border: 1px solid rgba(252,165,165,0.24);
-          background: rgba(239,68,68,0.08);
-          color: #fecaca;
-        }
-
-        .accessNote {
-          display: flex;
-          align-items: flex-start;
-          gap: 9px;
-          color: rgba(255,255,255,0.56);
-          font-size: 11px;
-          line-height: 1.6;
-        }
-
-        .accessNote svg {
-          flex-shrink: 0;
-          margin-top: 1px;
-          color: #86efac;
-        }
-
-        .srOnly {
+        /* Screen reader only */
+        .gate-sr-only {
           position: absolute;
           width: 1px;
           height: 1px;
@@ -656,67 +449,23 @@ export function InspectionReportAccessGate({
           border: 0;
         }
 
-        .spin {
-          animation: spin 900ms linear infinite;
+        /* Spinner */
+        .gate-spin {
+          animation: gate-spin 900ms linear infinite;
+          flex-shrink: 0;
         }
-
-        @keyframes spin {
+        @keyframes gate-spin {
           to { transform: rotate(360deg); }
         }
 
-        @media (max-width: 560px) {
-          .accessGate {
-            gap: 16px;
-            padding: 16px;
-            border-radius: 18px;
+        /* Mobile */
+        @media (max-width: 480px) {
+          .gate-primary-cta {
+            min-height: 58px;
+            font-size: 14px;
           }
-
-          .vehicleAnchor {
-            align-items: flex-start;
-            gap: 8px;
-            padding: 12px;
-          }
-
-          h2 {
-            font-size: 22px;
-            line-height: 1.22;
-          }
-
-          p {
-            font-size: 13px;
-            line-height: 1.65;
-          }
-
-          .vin {
-            max-width: 42%;
-          }
-
-          .statusBlock {
-            align-items: flex-start;
-            gap: 12px;
-            padding: 16px;
-          }
-
-          .statusRequirement {
-            display: none;
-          }
-
-          .benefitList {
+          .gate-promo-controls {
             grid-template-columns: 1fr;
-          }
-
-          .promoControls {
-            grid-template-columns: 1fr;
-          }
-
-          .primaryCta,
-          .promoControls button {
-            width: 100%;
-            min-height: 52px;
-          }
-
-          .promoToggle {
-            width: fit-content;
           }
         }
       `}</style>

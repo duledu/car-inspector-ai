@@ -977,6 +977,87 @@ function MethodologySection() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// SOCIAL PROOF
+// ══════════════════════════════════════════════════════════════
+
+const TESTIMONIALS = [
+  {
+    quote: 'Noticed a repaint on the passenger door before even talking to the seller. Used the findings to negotiate the price down.',
+    name:  'M.T.',
+    location: 'Dallas, TX',
+  },
+  {
+    quote: "The checklist caught something the seller's photos hid completely. I passed on that car — found a much better one the following weekend.",
+    name:  'K.R.',
+    location: 'Columbus, OH',
+  },
+  {
+    quote: "I have zero mechanical background. The app walks you through every step, and my mechanic said the report was actually useful to review.",
+    name:  'D.H.',
+    location: 'Tampa, FL',
+  },
+] as const
+
+function SocialProofSection() {
+  const { ref, visible } = useReveal(0.1)
+
+  return (
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(40px, 6vw, 72px) 20px' }}>
+
+      {/* Rule-with-label header — editorial, not marketing */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 36 }}>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+        <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          What buyers say
+        </span>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+      </div>
+
+      {/* Testimonial cards */}
+      <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+        {TESTIMONIALS.map((item, i) => (
+          <div key={i} style={{
+            padding: '24px 22px 20px',
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 18,
+            display: 'flex', flexDirection: 'column', gap: 14,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'none' : 'translateY(20px)',
+            transition: `opacity 0.6s ease ${i * 110}ms, transform 0.6s ease ${i * 110}ms`,
+          }}>
+            {/* Opening quote mark */}
+            <div style={{ fontSize: 36, lineHeight: 0.8, color: 'rgba(34,211,238,0.18)', fontFamily: 'Georgia, serif', userSelect: 'none' }} aria-hidden>
+              &ldquo;
+            </div>
+            {/* Quote */}
+            <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.72, flex: 1 }}>
+              {item.quote}
+            </p>
+            {/* Attribution */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.55)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.32)', fontWeight: 500 }}>
+                {item.name} &middot; {item.location}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Disclaimer — earns trust by being transparent */}
+      <p style={{ margin: '20px auto 0', fontSize: 11, color: 'rgba(255,255,255,0.2)', textAlign: 'center', lineHeight: 1.6, maxWidth: 480 }}>
+        Quotes represent individual buyer experiences. Results vary by vehicle condition, photo quality, and inspection thoroughness.
+      </p>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
 // CLOSING CTA
 // ══════════════════════════════════════════════════════════════
 

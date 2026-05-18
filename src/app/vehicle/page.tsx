@@ -89,10 +89,15 @@ export default function VehiclePage() {
   const { t }     = useTranslation()
   const { vehicles, activeVehicle, fetchVehicles, createVehicle, deleteVehicle, setActiveVehicle, isLoading } = useVehicleStore()
 
-  const [showForm,    setShowForm]    = useState(false)
-  const [form,        setForm]        = useState<CreateVehiclePayload>(EMPTY_FORM)
-  const [submitting,  setSubmitting]  = useState(false)
-  const [formError,   setFormError]   = useState<string | null>(null)
+  const [showForm,      setShowForm]      = useState(false)
+  const [form,          setForm]          = useState<CreateVehiclePayload>(EMPTY_FORM)
+  const [submitting,    setSubmitting]    = useState(false)
+  const [formError,     setFormError]     = useState<string | null>(null)
+  // Unit state — default to USA-friendly units
+  const [engineUnit,    setEngineUnit]    = useState<'L' | 'cc'>('L')
+  const [powerUnit,     setPowerUnit]     = useState<'hp' | 'kW'>('hp')
+  const [engineDisplay, setEngineDisplay] = useState('')
+  const [powerDisplay,  setPowerDisplay]  = useState('')
 
   useEffect(() => { fetchVehicles() }, [])
 
@@ -135,6 +140,49 @@ export default function VehiclePage() {
 
   const set = (patch: Partial<CreateVehiclePayload>) => setForm(prev => ({ ...prev, ...patch }))
 
+  function resetUnitState() {
+    setEngineUnit('L'); setEngineDisplay('')
+    setPowerUnit('hp');  setPowerDisplay('')
+  }
+
+  function handleEngineInput(val: string) {
+    setEngineDisplay(val)
+    if (!val) { set({ engineCc: undefined }); return }
+    const n = parseFloat(val)
+    if (!isNaN(n) && n > 0) {
+      set({ engineCc: engineUnit === 'L' ? Math.round(n * 1000) : Math.round(n) })
+    }
+  }
+
+  function handlePowerInput(val: string) {
+    setPowerDisplay(val)
+    if (!val) { set({ powerKw: undefined }); return }
+    const n = parseFloat(val)
+    if (!isNaN(n) && n > 0) {
+      set({ powerKw: powerUnit === 'hp' ? Math.round(n * 0.7457) : Math.round(n) })
+    }
+  }
+
+  function handleEngineUnitToggle(unit: 'L' | 'cc') {
+    if (unit === engineUnit) return
+    setEngineUnit(unit)
+    if (form.engineCc) {
+      setEngineDisplay(unit === 'L'
+        ? (form.engineCc / 1000).toFixed(1)
+        : String(form.engineCc))
+    }
+  }
+
+  function handlePowerUnitToggle(unit: 'hp' | 'kW') {
+    if (unit === powerUnit) return
+    setPowerUnit(unit)
+    if (form.powerKw) {
+      setPowerDisplay(unit === 'hp'
+        ? String(Math.round(form.powerKw / 0.7457))
+        : String(form.powerKw))
+    }
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -144,6 +192,7 @@ export default function VehiclePage() {
       setActiveVehicle(v)
       setShowForm(false)
       setForm(EMPTY_FORM)
+      resetUnitState()
     } catch {
       setFormError(t('vehicle.failedToCreate'))
     } finally {
@@ -185,7 +234,7 @@ export default function VehiclePage() {
             </p>
           </div>
           <button
-            onClick={() => { setShowForm(!showForm); setFormError(null) }}
+            onClick={() => { if (!showForm) resetUnitState(); setShowForm(!showForm); setFormError(null) }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -228,36 +277,87 @@ export default function VehiclePage() {
               </Field>
             </div>
 
-            {/* Row 2: Engine CC / Power kW */}
+            {/* Optional details divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.05)' }} />
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+                Optional details
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.05)' }} />
+            </div>
+
+            {/* Row 2: Engine size / Power — dual-unit (L/cc, hp/kW) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
+
+              {/* Engine size */}
               <Field label={t('vehicle.engineCc')}>
-                <div style={{ position: 'relative' }}>
+                <div>
+                  <div style={{ display: 'flex', marginBottom: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {(['L', 'cc'] as const).map(u => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => handleEngineUnitToggle(u)}
+                        style={{
+                          flex: 1, padding: '5px 0',
+                          fontSize: 11, fontWeight: engineUnit === u ? 700 : 400,
+                          background: engineUnit === u ? 'rgba(34,211,238,0.1)' : 'rgba(255,255,255,0.02)',
+                          border: 'none',
+                          borderRight: u === 'L' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                          color: engineUnit === u ? '#22d3ee' : 'rgba(255,255,255,0.32)',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
+                        }}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     style={inp} type="number"
-                    value={form.engineCc ?? ''}
-                    onChange={e => set({ engineCc: e.target.value ? Number.parseInt(e.target.value) : undefined })}
-                    placeholder="1995"
-                    min={500} max={10000}
+                    value={engineDisplay}
+                    onChange={e => handleEngineInput(e.target.value)}
+                    placeholder={engineUnit === 'L' ? '2.0' : '1995'}
+                    min={engineUnit === 'L' ? 0.5 : 500}
+                    max={engineUnit === 'L' ? 10 : 10000}
+                    step={engineUnit === 'L' ? 0.1 : 1}
                   />
-                  {form.engineCc && (
-                    <span style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      fontSize: 11, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none',
-                    }}>
-                      {(form.engineCc / 1000).toFixed(1)}L
-                    </span>
-                  )}
                 </div>
               </Field>
+
+              {/* Power */}
               <Field label={t('vehicle.powerKw')}>
-                <input
-                  style={inp} type="number"
-                  value={form.powerKw ?? ''}
-                  onChange={e => set({ powerKw: e.target.value ? Number.parseInt(e.target.value) : undefined })}
-                  placeholder="135"
-                  min={1} max={2000}
-                />
+                <div>
+                  <div style={{ display: 'flex', marginBottom: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {(['hp', 'kW'] as const).map(u => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => handlePowerUnitToggle(u)}
+                        style={{
+                          flex: 1, padding: '5px 0',
+                          fontSize: 11, fontWeight: powerUnit === u ? 700 : 400,
+                          background: powerUnit === u ? 'rgba(34,211,238,0.1)' : 'rgba(255,255,255,0.02)',
+                          border: 'none',
+                          borderRight: u === 'hp' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                          color: powerUnit === u ? '#22d3ee' : 'rgba(255,255,255,0.32)',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
+                        }}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    style={inp} type="number"
+                    value={powerDisplay}
+                    onChange={e => handlePowerInput(e.target.value)}
+                    placeholder={powerUnit === 'hp' ? '180' : '135'}
+                    min={1}
+                    max={powerUnit === 'hp' ? 2800 : 2000}
+                  />
+                </div>
               </Field>
+
             </div>
 
             {/* Row 3: Fuel type */}
@@ -389,7 +489,7 @@ export default function VehiclePage() {
                 {submitting ? '…' : t('common.save')}
               </button>
               <button
-                type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
+                type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); resetUnitState() }}
                 style={{
                   padding: '11px 18px', background: 'transparent',
                   border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,

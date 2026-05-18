@@ -58,11 +58,11 @@ function ScoreRing({ score }: Readonly<{ score: number }>) {
 function SectionLabel({ text, action, actionHref }: Readonly<{ text: string; action?: string; actionHref?: string }>) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
         {text}
       </span>
       {action && actionHref && (
-        <Link href={actionHref} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(34,211,238,0.6)', textDecoration: 'none', letterSpacing: '-0.1px' }}>
+        <Link href={actionHref} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(34,211,238,0.55)', textDecoration: 'none', letterSpacing: '-0.1px' }}>
           {action} →
         </Link>
       )}
@@ -117,7 +117,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#22d3ee', letterSpacing: '0.04em', marginBottom: 3 }}>
                   {t('dashboard.resumeBadge')}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' }}>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <div style={{ flex: 1, minWidth: 0 }}>
               {activeVehicle ? (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(34,211,238,0.7)', letterSpacing: '0.04em', marginBottom: 5 }}>
                     {t('dashboard.activeVehicle')}
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.7px', lineHeight: 1.15, marginBottom: 6 }}>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
             {/* Score / vehicle count */}
             {aiScore ? (
               <ScoreRing score={aiScore} />
-            ) : (
+            ) : vehicles.length > 0 ? (
               <div style={{
                 width: 60, height: 60, borderRadius: 18, flexShrink: 0,
                 background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.15)',
@@ -197,9 +197,19 @@ export default function DashboardPage() {
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#22d3ee', lineHeight: 1, letterSpacing: '-1px' }}>
                   {vehicles.length}
                 </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.04em' }}>
                   {t('common.cars')}
                 </div>
+              </div>
+            ) : (
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+                background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.55)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
               </div>
             )}
           </div>
@@ -254,7 +264,62 @@ export default function DashboardPage() {
           </div>{/* /premium-glass-card */}
         </div>{/* /glass-card-wrap */}
 
-        {/* ══ Stats row ══════════════════════════════════════════ */}
+        {/* ══ First-use activation guidance ══════════════════════ */}
+        {vehicles.length === 0 && (
+          <div style={{
+            padding: '24px',
+            background: 'rgba(255,255,255,0.018)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 18,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {([
+                {
+                  tip: t('dashboard.firstUseTip1'),
+                  icon: (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.65)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  ),
+                },
+                {
+                  tip: t('dashboard.firstUseTip2'),
+                  icon: (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.65)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  ),
+                },
+                {
+                  tip: t('dashboard.firstUseTip3'),
+                  icon: (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.65)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  ),
+                },
+              ] as const).map(({ tip, icon }) => (
+                <div key={tip} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                    background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.12)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginTop: 1,
+                  }}>
+                    {icon}
+                  </div>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, paddingTop: 4 }}>
+                    {tip}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══ Stats row — only when there's something meaningful ═ */}
+        {(vehicles.length > 0 || progress > 0) && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
             {
@@ -272,28 +337,18 @@ export default function DashboardPage() {
           ].map(s => (
             <Link key={s.href} href={s.href} style={{ textDecoration: 'none' }} className="card-hover">
               <div style={{
-                padding: '14px 12px',
+                padding: '16px 14px',
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.07)',
                 borderRadius: 16,
-                display: 'flex', flexDirection: 'column', gap: 10,
               }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 9,
-                  background: `${s.color}14`, border: `1px solid ${s.color}28`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: s.color,
-                }}>
-                  {s.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(s.labelKey)}</div>
-                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1, marginBottom: 5 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontWeight: 400 }}>{t(s.labelKey)}</div>
               </div>
             </Link>
           ))}
         </div>
+        )}{/* /stats row conditional */}
 
         {/* ══ Checklist breakdown ════════════════════════════════ */}
         {session && total > 0 && (
@@ -305,9 +360,9 @@ export default function DashboardPage() {
                 { labelKey: 'dashboard.done',  value: checked,         color: '#22c55e' },
                 { labelKey: 'dashboard.left',  value: total - checked, color: '#f59e0b' },
               ].map(item => (
-                <div key={item.labelKey} style={{ textAlign: 'center', padding: '11px 8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: item.color, lineHeight: 1, letterSpacing: '-0.5px' }}>{item.value}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(item.labelKey)}</div>
+                <div key={item.labelKey} style={{ textAlign: 'center', padding: '10px 8px' }}>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: item.color, lineHeight: 1, letterSpacing: '-0.4px' }}>{item.value}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 4, fontWeight: 400 }}>{t(item.labelKey)}</div>
                 </div>
               ))}
             </div>
@@ -336,37 +391,32 @@ export default function DashboardPage() {
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.33)', marginTop: 2, lineHeight: 1.5 }}>{f.description}</div>
                     )}
                   </div>
-                  <span style={{
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase',
-                    padding: '3px 7px', borderRadius: 5, flexShrink: 0,
-                    color: severityColor(f.severity),
-                    background: `${severityColor(f.severity)}14`,
-                    border: `1px solid ${severityColor(f.severity)}28`,
-                  }}>
-                    {f.severity}
-                  </span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ══ Quick actions ═══════════════════════════════════════ */}
+        {/* ══ Next steps — only when at least one car exists ══════ */}
+        {vehicles.length > 0 && (
         <div>
           <SectionLabel text={t('dashboard.quickActions')} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {([
-              { labelKey: 'dashboard.viewReport',  subKey: 'dashboard.viewReportSub',  href: '/report',    color: '#22d3ee',
-                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+              // View Report — only shown once AI analysis results exist
+              ...(latestAI ? [{
+                labelKey: 'dashboard.viewReport',  subKey: 'dashboard.viewReportSub',  href: '/report',    color: '#22d3ee',
+                icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+              }] : []),
               { labelKey: 'dashboard.addVehicle',  subKey: 'dashboard.addVehicleSub',  href: '/vehicle',   color: '#818cf8',
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h13l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> },
               { labelKey: 'dashboard.premium',     subKey: 'dashboard.premiumSub',     href: '/premium',   color: '#a855f7',
-                feature: 'premium',
+                feature: 'premium' as FeatureFlagName,
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
               { labelKey: 'dashboard.community',   subKey: 'dashboard.communitySub',   href: '/community', color: '#22c55e',
-                feature: 'community',
+                feature: 'community' as FeatureFlagName,
                 icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-            ] satisfies QuickAction[]).filter(action => isFeatureEnabled(action.feature)).map(action => (
+            ] as QuickAction[]).filter(action => isFeatureEnabled(action.feature)).map(action => (
               <Link key={action.href} href={action.href} style={{ textDecoration: 'none' }} className="card-hover">
                 <div style={{
                   background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)',
@@ -374,10 +424,10 @@ export default function DashboardPage() {
                   display: 'flex', flexDirection: 'column', gap: 10, minHeight: 96,
                 }}>
                   <div style={{
-                    width: 34, height: 34, borderRadius: 11,
-                    background: `${action.color}12`, border: `1px solid ${action.color}25`,
+                    width: 32, height: 32, borderRadius: 10,
+                    background: 'rgba(255,255,255,0.05)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: action.color,
+                    color: 'rgba(255,255,255,0.45)',
                   }}>
                     {action.icon}
                   </div>
@@ -390,6 +440,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+        )}{/* /next steps */}
 
         {/* ══ Vehicles list ══════════════════════════════════════ */}
         {vehicles.length > 0 && (
@@ -415,13 +466,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     {isActive && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 800, padding: '3px 8px',
-                        background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.22)',
-                        borderRadius: 6, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0,
-                      }}>
-                        {t('common.active')}
-                      </span>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22d3ee', boxShadow: '0 0 6px rgba(34,211,238,0.6)', flexShrink: 0 }} />
                     )}
                   </div>
                 )
