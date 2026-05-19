@@ -42,6 +42,9 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   inspectionReports       InspectionReport[]
+  creditWallet            CreditWallet?
+  creditTransactions      CreditTransaction[]
+  googlePlayPurchases     GooglePlayPurchase[]
 
   @@index([email])
   @@map("users")
@@ -546,6 +549,122 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// =============================================================================
+// CREDIT WALLET & GOOGLE PLAY BILLING
+// =============================================================================
+
+enum CreditTransactionType {
+  PURCHASE
+  SPEND
+  REFUND
+  ADMIN_GRANT
+  PROMO_GRANT
+  ADJUSTMENT
+}
+
+enum CreditProvider {
+  GOOGLE_PLAY
+  PROMO
+  ADMIN
+  SYSTEM
+  LEGACY
+}
+
+enum GooglePlayPurchaseStatus {
+  RECEIVED
+  VERIFIED
+  GRANTED
+  CONSUMED
+  FAILED
+  REFUNDED
+  REVOKED
+}
+
+model CreditWallet {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+
+  balance           Int      @default(0)
+
+  lifetimePurchased Int      @default(0)
+  lifetimeSpent     Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      CreditTransaction[]
+
+  @@index([userId])
+  @@map("credit_wallets")
+}
+
+model CreditTransaction {
+  id             String                @id @default(cuid())
+
+  userId         String
+  walletId       String
+
+  type           CreditTransactionType
+  provider       CreditProvider
+
+  amount         Int
+
+  balanceBefore  Int
+  balanceAfter   Int
+
+  productId      String?
+  purchaseToken  String?
+  orderId        String?
+
+  idempotencyKey String                @unique
+
+  metadata       Json?
+
+  createdAt      DateTime              @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet         CreditWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([purchaseToken])
+  @@index([createdAt])
+  @@map("credit_transactions")
+}
+
+model GooglePlayPurchase {
+  id                   String                   @id @default(cuid())
+
+  userId               String
+
+  productId            String
+
+  purchaseToken        String                   @unique
+
+  orderId              String?
+
+  purchaseState        String?
+  acknowledgementState String?
+  consumptionState     String?
+
+  creditsGranted       Int
+
+  status               GooglePlayPurchaseStatus
+
+  rawPayload           Json?
+
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@map("google_play_purchases")
 }
 
 // =============================================================================
