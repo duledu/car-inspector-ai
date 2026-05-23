@@ -72,7 +72,7 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Fraud signals before you pay',
     trustParagraph: 'Used Cars Doctor helps buyers catch costly issues early, from accident history to odometer red flags.',
     secondaryCtaLabel: 'See how it works',
-    footerNote: 'You are receiving this because you created an account with Used Car Inspector AI.',
+    footerNote: 'You are receiving this because you created an account with Used Cars Doctor.',
   },
   sr: {
     subject: 'Proverite pre kupovine.',
@@ -85,7 +85,7 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Signali prevare pre plaćanja',
     trustParagraph: 'Used Cars Doctor pomaže kupcima da ranije uoče skupe probleme, od istorije nezgoda do sumnjive kilometraže.',
     secondaryCtaLabel: 'Pogledajte kako radi',
-    footerNote: 'Ovu poruku primate jer ste kreirali nalog na Used Car Inspector AI.',
+    footerNote: 'Ovu poruku primate jer ste kreirali nalog na Used Cars Doctor.',
   },
   de: {
     subject: 'Prüfen, bevor Sie kaufen.',
@@ -98,7 +98,7 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Betrugssignale vor der Zahlung',
     trustParagraph: 'Used Cars Doctor hilft Käufern, teure Probleme früh zu erkennen, von Unfallschäden bis zu Kilometerstand-Warnsignalen.',
     secondaryCtaLabel: 'So funktioniert es',
-    footerNote: 'Sie erhalten diese E-Mail, weil Sie ein Konto bei Used Car Inspector AI erstellt haben.',
+    footerNote: 'Sie erhalten diese E-Mail, weil Sie ein Konto bei Used Cars Doctor erstellt haben.',
   },
   mk: {
     subject: 'Проверете пред да купите.',
@@ -111,7 +111,7 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Сигнали за измама пред плаќање',
     trustParagraph: 'Used Cars Doctor им помага на купувачите рано да откријат скапи проблеми, од незгоди до сомнителна километража.',
     secondaryCtaLabel: 'Погледнете како работи',
-    footerNote: 'Оваа порака ја добивате затоа што креиравте налог на Used Car Inspector AI.',
+    footerNote: 'Оваа порака ја добивате затоа што креиравте налог на Used Cars Doctor.',
   },
   sq: {
     subject: 'Kontrolloni para blerjes.',
@@ -124,7 +124,7 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Sinjale mashtrimi para pagesës',
     trustParagraph: 'Used Cars Doctor ndihmon blerësit të kapin herët probleme të kushtueshme, nga aksidentet deri te kilometrazhi i dyshimtë.',
     secondaryCtaLabel: 'Shikoni si funksionon',
-    footerNote: 'Po e merrni këtë email sepse keni krijuar llogari në Used Car Inspector AI.',
+    footerNote: 'Po e merrni këtë email sepse keni krijuar llogari në Used Cars Doctor.',
   },
   bg: {
     subject: 'Проверете преди покупка.',
@@ -137,13 +137,13 @@ const marketingLanguageDefaults: LanguageDefaults<MarketingCampaignLocalizedFiel
     value3: 'Сигнали за измама преди плащане',
     trustParagraph: 'Used Cars Doctor помага на купувачите да откриват скъпи проблеми навреме — от катастрофи до съмнителен пробег.',
     secondaryCtaLabel: 'Вижте как работи',
-    footerNote: 'Получавате този имейл, защото сте създали акаунт в Used Car Inspector AI.',
+    footerNote: 'Получавате този имейл, защото сте създали акаунт в Used Cars Doctor.',
   },
 }
 
 const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields> = {
   en: {
-    introBody: "We've been hard at work adding new features and polishing every corner of Used Car Inspector AI. Here's what's waiting for you.",
+    introBody: "We've been hard at work adding new features and polishing every corner of Used Cars Doctor. Here's what's waiting for you.",
     card1Title: 'Deeper VIN Analysis',
     card1Description: 'More data sources cross-checked for every inspection.',
     card2Title: 'Enhanced Fraud Detection',
@@ -155,7 +155,7 @@ const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields>
     signatureLine: '— The Used Cars Doctor Team',
   },
   sr: {
-    introBody: 'Vredno smo radili na dodavanju novih funkcija i doterivanju svakog dela Used Car Inspector AI. Evo šta vas čeka.',
+    introBody: 'Vredno smo radili na dodavanju novih funkcija i doterivanju svakog dela Used Cars Doctor. Evo šta vas čeka.',
     card1Title: 'Detaljnija VIN analiza',
     card1Description: 'Više izvora podataka se unakrsno proverava za svaku inspekciju.',
     card2Title: 'Poboljšano otkrivanje prevara',
@@ -167,7 +167,7 @@ const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields>
     signatureLine: '— Tim Used Cars Doctor',
   },
   de: {
-    introBody: 'Wir haben intensiv daran gearbeitet, neue Funktionen hinzuzufügen und jeden Bereich von Used Car Inspector AI zu verbessern. Das wartet auf Sie.',
+    introBody: 'Wir haben intensiv daran gearbeitet, neue Funktionen hinzuzufügen und jeden Bereich von Used Cars Doctor zu verbessern. Das wartet auf Sie.',
     card1Title: 'Tiefere VIN-Analyse',
     card1Description: 'Mehr Datenquellen werden für jede Inspektion gegengeprüft.',
     card2Title: 'Verbesserte Betrugserkennung',
@@ -179,7 +179,7 @@ const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields>
     signatureLine: '— Das Used Cars Doctor Team',
   },
   mk: {
-    introBody: 'Вредно работевме на додавање нови функции и полирање на секој дел од Used Car Inspector AI. Еве што ве очекува.',
+    introBody: 'Вредно работевме на додавање нови функции и полирање на секој дел од Used Cars Doctor. Еве што ве очекува.',
     card1Title: 'Подлабока VIN анализа',
     card1Description: 'Повеќе извори на податоци се вкрстено проверуваат за секоја инспекција.',
     card2Title: 'Подобрено откривање измами',
@@ -191,7 +191,7 @@ const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields>
     signatureLine: '— Тимот на Used Cars Doctor',
   },
   sq: {
-    introBody: 'Kemi punuar shumë për të shtuar funksione të reja dhe për të përmirësuar çdo pjesë të Used Car Inspector AI. Ja çfarë ju pret.',
+    introBody: 'Kemi punuar shumë për të shtuar funksione të reja dhe për të përmirësuar çdo pjesë të Used Cars Doctor. Ja çfarë ju pret.',
     card1Title: 'Analizë më e thellë e VIN-it',
     card1Description: 'Më shumë burime të dhënash kontrollohen për çdo inspektim.',
     card2Title: 'Zbulim i përmirësuar i mashtrimit',
@@ -203,7 +203,7 @@ const announcementBodyDefaults: LanguageDefaults<AppAnnouncementLocalizedFields>
     signatureLine: '— Ekipi i Used Cars Doctor',
   },
   bg: {
-    introBody: 'Работихме усилено, за да добавим нови функции и да подобрим всеки аспект на Used Car Inspector AI. Ето какво ви очаква.',
+    introBody: 'Работихме усилено, за да добавим нови функции и да подобрим всеки аспект на Used Cars Doctor. Ето какво ви очаква.',
     card1Title: 'По-задълбочен VIN анализ',
     card1Description: 'Повече източници на данни се сверяват за всеки преглед.',
     card2Title: 'Подобрено откриване на измами',

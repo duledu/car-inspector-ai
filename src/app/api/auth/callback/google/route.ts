@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { issueTokens } from '@/utils/auth.middleware'
+import { getCountryConfig } from '@/lib/markets/country-config'
 import {
   CANONICAL_GOOGLE_CALLBACK_URL,
   buildUrlForOrigin,
@@ -18,6 +19,7 @@ import {
   shouldUseCanonicalHost,
 } from '@/utils/canonical-origin'
 
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -218,8 +220,9 @@ export async function GET(req: NextRequest) {
     const { user, action } = await upsertGoogleUser(googleUser)
     console.log(`${tag} DB OK. action=${action}`)
 
-    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, true)
     console.log(`${tag} session OK. expiresAt=${new Date(expiresAt).toISOString()}`)
+    const countryConfig = user.countryCode ? getCountryConfig(user.countryCode) : null
 
     const handoffSession = {
       expiresAt,
@@ -230,6 +233,9 @@ export async function GET(req: NextRequest) {
         avatarUrl: user.avatarUrl,
         role: user.role,
         preferredLanguage: user.preferredLanguage ?? 'en',
+        country: countryConfig?.name ?? null,
+        countryCode: user.countryCode ?? null,
+        preferredCurrency: user.preferredCurrency ?? countryConfig?.currency ?? null,
         emailVerified: true,
         createdAt: user.createdAt.toISOString(),
       },

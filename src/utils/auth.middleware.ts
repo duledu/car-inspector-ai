@@ -5,12 +5,14 @@
 
 import { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { prisma } from '@/config/prisma'
 
 interface AuthSuccess {
   success: true
   userId: string
   email: string
   role: string
+  emailVerified: boolean
 }
 
 interface AuthFailure {
@@ -22,7 +24,11 @@ type AuthResult = AuthSuccess | AuthFailure
 
 const JWT_SECRET = process.env.JWT_SECRET ?? ''
 
-export async function requireAuth(req: NextRequest): Promise<AuthResult> {
+interface RequireAuthOptions {
+  allowUnverified?: boolean
+}
+
+export async function requireAuth(req: NextRequest, options: RequireAuthOptions = {}): Promise<AuthResult> {
   if (!JWT_SECRET) {
     console.error('[auth] JWT_SECRET environment variable is not set')
     return { success: false, reason: 'Server configuration error' }
@@ -39,8 +45,26 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
       sub: string
       email: string
       role: string
+      emailVerified?: boolean
       iat: number
       exp: number
+    }
+
+    let emailVerified = payload.emailVerified === true
+
+    // Tokens issued before the emailVerified claim existed are refreshed lazily.
+    // Until then, check the database so verified users are not locked out by an
+    // old 15-minute access token.
+    if (payload.emailVerified === undefined) {
+      const user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { emailVerified: true },
+      })
+      emailVerified = !!user?.emailVerified
+    }
+
+    if (!emailVerified && !options.allowUnverified) {
+      return { success: false, reason: 'Email verification required' }
     }
 
     return {
@@ -48,6 +72,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
       userId: payload.sub,
       email: payload.email,
       role: payload.role,
+      emailVerified,
     }
   } catch (err: any) {
     if (err.name === 'TokenExpiredError') {
@@ -62,11 +87,11 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
  * Creates access + refresh tokens for a user.
  * Used in login and register routes.
  */
-export function issueTokens(userId: string, email: string, role: string) {
+export function issueTokens(userId: string, email: string, role: string, emailVerified: boolean) {
   if (!JWT_SECRET) throw new Error('JWT_SECRET is not configured')
 
   const accessToken = jwt.sign(
-    { sub: userId, email, role },
+    { sub: userId, email, role, emailVerified },
     JWT_SECRET,
     { expiresIn: '15m' }
   )

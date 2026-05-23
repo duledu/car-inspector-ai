@@ -18,6 +18,12 @@ export interface PriceQuery {
   transmission?: string
   bodyType?: string
   mileage?: number
+  /**
+   * ISO 3166-1 alpha-2 country code.
+   * Drives regional marketplace selection and pricing benchmarks.
+   * Null/undefined → falls back to "RS" (Serbia) for backward compatibility.
+   */
+  countryCode?: string | null
 }
 
 export interface FiltersUsed {
@@ -30,8 +36,8 @@ export interface MarketPriceResult {
   minPrice: number
   maxPrice: number
   avgPrice: number
-  /** Always EUR — internal normalisation */
-  currency: 'EUR'
+  /** ISO 4217 currency code — EUR for most markets, may differ for non-EU regions */
+  currency: string
   /** How reliable this estimate is */
   confidence: 'low' | 'medium' | 'high'
   /** Human-readable source label shown in UI */

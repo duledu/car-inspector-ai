@@ -147,7 +147,7 @@ function PageHero() {
             margin: '0 0 28px',
             fontSize: 'clamp(44px, 6.5vw, 80px)',
             fontWeight: 900,
-            letterSpacing: '-0.04em',
+            letterSpacing: '-0.05em',
             lineHeight: 1.04,
             color: '#fff',
           }}>
@@ -158,6 +158,7 @@ function PageHero() {
           </h1>
 
           {/* Rule */}
+          {/* Technical Rule */}
           <div style={{ ...reveal(mounted, 120), width: 32, height: 1, background: 'rgba(34,211,238,0.6)', marginBottom: 28 }} />
 
           {/* Subtext */}
@@ -166,11 +167,13 @@ function PageHero() {
             margin: '0 0 44px',
             fontSize: 'clamp(16px, 2vw, 19px)',
             color: 'rgba(255,255,255,0.48)',
-            lineHeight: 1.72,
+            lineHeight: 1.8,
             maxWidth: 520,
           }}>
             A structured approach to used car inspection — before the commitment,
             before the paperwork, before the keys change hands.
+            Experience a clinical, data-driven approach to pre-purchase due diligence. 
+            Identify risks before the commitment, the paperwork, and the transaction.
           </p>
 
           {/* CTA row */}
@@ -189,6 +192,7 @@ function PageHero() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(34,211,238,0.32)'; }}
             >
               Begin Your Inspection
+              Initiate Inspection
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </Link>
             <a
@@ -1204,12 +1208,9 @@ function PageFooter() {
     <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#070b11' }}>
       <div style={{ maxWidth: W, margin: '0 auto', padding: 'clamp(36px, 5vw, 56px) clamp(20px, 4vw, 40px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#040910" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.2px' }}>Used Cars Doctor</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="" height={30} style={{ width: 'auto', flexShrink: 0, display: 'block' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: '-0.2px' }}>Used Cars Doctor</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px, 3vw, 28px)', alignItems: 'center' }}>

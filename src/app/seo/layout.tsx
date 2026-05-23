@@ -20,18 +20,10 @@ export default function SeoLayout({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-              background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(34,211,238,0.28)',
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#050810" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.svg" alt="" height={28} style={{ width: 'auto', flexShrink: 0, display: 'block' }} />
             <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
-              <span style={{ color: '#22d3ee' }}>Used Cars</span> Doctor
+              Used Cars Doctor
             </span>
           </Link>
 

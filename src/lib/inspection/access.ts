@@ -1,4 +1,4 @@
-import { Prisma } from '.prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma, isMissingTableOrColumnError } from '@/config/prisma'
 import { getPromoMeta } from '@/lib/inspection/promo-codes'
 

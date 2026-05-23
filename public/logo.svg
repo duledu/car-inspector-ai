@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 280" width="880" height="280" role="img" aria-label="Used Cars Doctor">
+  <title>Used Cars Doctor</title>
+
+  <defs>
+    
+
+    <linearGradient id="ucdOnyx" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#0d1422"></stop>
+      <stop offset="0.55" stop-color="#080c14"></stop>
+      <stop offset="1" stop-color="#05070c"></stop>
+    </linearGradient>
+    <radialGradient id="ucdInnerHalo" cx="0.5" cy="0.52" r="0.55">
+      <stop offset="0" stop-color="#0a3a52" stop-opacity="0.28"></stop>
+      <stop offset="0.6" stop-color="#040810" stop-opacity="0.05"></stop>
+      <stop offset="1" stop-color="#040810" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="ucdPlat" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#f1f5f9"></stop>
+      <stop offset="0.35" stop-color="#cfd6e0"></stop>
+      <stop offset="0.7" stop-color="#7c8699"></stop>
+      <stop offset="1" stop-color="#2c3242"></stop>
+    </linearGradient>
+    <linearGradient id="ucdPlatBevel" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#a7b0c2" stop-opacity="0.8"></stop>
+      <stop offset="1" stop-color="#2c3242" stop-opacity="0.4"></stop>
+    </linearGradient>
+    <linearGradient id="ucdEcg" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0"></stop>
+      <stop offset="0.12" stop-color="#22d3ee" stop-opacity="0.85"></stop>
+      <stop offset="0.85" stop-color="#22d3ee"></stop>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"></stop>
+    </linearGradient>
+    <filter id="ucdGlow" x="-10%" y="-30%" width="120%" height="160%">
+      <feGaussianBlur stdDeviation="1.6"></feGaussianBlur>
+    </filter>
+
+    <linearGradient id="ucdSilverText" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#ffffff"></stop>
+      <stop offset="0.5" stop-color="#cfd6e0"></stop>
+      <stop offset="1" stop-color="#6a7387"></stop>
+    </linearGradient>
+    <linearGradient id="ucdAccentGrad" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0" stop-color="#22d3ee"></stop>
+      <stop offset="1" stop-color="#818cf8"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <g transform="translate(20 0)">
+    <path d="M 120 14 L 214 38 L 214 130 C 214 188, 178 232, 120 264 C 62 232, 26 188, 26 130 L 26 38 Z" fill="url(#ucdOnyx)"></path>
+    <path d="M 120 26 L 204 46 L 204 128 C 204 180, 172 222, 120 250 C 68 222, 36 180, 36 128 L 36 46 Z" fill="url(#ucdInnerHalo)"></path>
+    <path d="M 120 14 L 214 38 L 214 130 C 214 188, 178 232, 120 264 C 62 232, 26 188, 26 130 L 26 38 Z" fill="none" stroke="url(#ucdPlat)" stroke-width="2.5" stroke-linejoin="round"></path>
+    <path d="M 120 26 L 204 46 L 204 128 C 204 180, 172 222, 120 250 C 68 222, 36 180, 36 128 L 36 46 Z" fill="none" stroke="url(#ucdPlatBevel)" stroke-width="0.8" stroke-linejoin="round" opacity="0.55"></path>
+
+    <line x1="36" y1="152" x2="200" y2="152" stroke="#22d3ee" stroke-width="0.8" opacity="0.14" stroke-linecap="round"></line>
+    <g filter="url(#ucdGlow)" opacity="0.6">
+      <path d="M 36 152 L 56 152 L 64 158 L 70 140 L 76 158 L 82 152 L 96 152 L 104 162 L 112 122 L 120 162 L 128 152 L 144 152 L 154 164 L 164 102 L 174 164 L 184 152 L 200 152" fill="none" stroke="#22d3ee" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path>
+    </g>
+    <path d="M 36 152 L 56 152 L 64 158 L 70 140 L 76 158 L 82 152 L 96 152 L 104 162 L 112 122 L 120 162 L 128 152 L 144 152 L 154 164 L 164 102 L 174 164 L 184 152 L 200 152" fill="none" stroke="url(#ucdEcg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="164" cy="102" r="6" fill="#22d3ee" opacity="0.28"></circle>
+    <circle cx="164" cy="102" r="3" fill="#a7e9f3"></circle>
+    <circle cx="164" cy="102" r="1.6" fill="#ffffff"></circle>
+  </g>
+
+  
+  <g transform="translate(310 0)">
+    <text x="0" y="155" class="wm-h" font-size="80" letter-spacing="2" fill="url(#ucdSilverText)">USED CARS</text>
+    <text x="0" y="218" class="wm-sub" font-size="34" letter-spacing="18" fill="#22d3ee">DOCTOR</text>
+    <line x1="0" y1="244" x2="488" y2="244" stroke="url(#ucdAccentGrad)" stroke-width="1" opacity="0.45"></line>
+  </g>
+</svg>

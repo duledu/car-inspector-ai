@@ -94,7 +94,7 @@ function buildPremiumVerifyEmailHtml(opts: PremiumVerifyEmailHtmlOptions): strin
                         <td>
                           <p style="margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#00c2ff;">${escHtml(opts.eyebrow)}</p>
                           <p style="margin:0;font-size:14px;font-weight:800;letter-spacing:-0.1px;color:#ffffff;">
-                            <span style="color:#00c2ff;">Used Car</span> Inspector AI
+                            Used Cars Doctor
                           </p>
                         </td>
                       </tr>

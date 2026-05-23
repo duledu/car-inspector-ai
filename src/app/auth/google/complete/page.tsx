@@ -46,7 +46,7 @@ export default function GoogleComplete() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: '#080c14',
       display: 'flex',
       flexDirection: 'column',
@@ -54,6 +54,9 @@ export default function GoogleComplete() {
       justifyContent: 'center',
       gap: 16,
       fontFamily: 'var(--font-sans)',
+      padding: 'max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom))',
+      boxSizing: 'border-box',
+      overflowX: 'hidden',
     }}>
       {/* Spinner */}
       <div style={{

@@ -14,17 +14,17 @@ const UPDATE_CARDS: EmailCardItem[] = [
 function getAppUpdateBody(lang: string): string {
   switch (lang) {
     case 'sr':
-      return 'Vredno smo radili na dodavanju novih funkcija i doterivanju svakog dela Used Car Inspector AI. Evo šta vas čeka.'
+      return 'Vredno smo radili na dodavanju novih funkcija i doterivanju svakog dela Used Cars Doctor. Evo šta vas čeka.'
     case 'de':
-      return 'Wir haben intensiv daran gearbeitet, neue Funktionen hinzuzufügen und jeden Bereich von Used Car Inspector AI zu verbessern. Das wartet auf Sie.'
+      return 'Wir haben intensiv daran gearbeitet, neue Funktionen hinzuzufügen und jeden Bereich von Used Cars Doctor zu verbessern. Das wartet auf Sie.'
     case 'mk':
-      return 'Вредно работевме на додавање нови функции и полирање на секој дел од Used Car Inspector AI. Еве што ве очекува.'
+      return 'Вредно работевме на додавање нови функции и полирање на секој дел од Used Cars Doctor. Еве што ве очекува.'
     case 'sq':
-      return 'Kemi punuar shumë për të shtuar funksione të reja dhe për të përmirësuar çdo pjesë të Used Car Inspector AI. Ja çfarë ju pret.'
+      return 'Kemi punuar shumë për të shtuar funksione të reja dhe për të përmirësuar çdo pjesë të Used Cars Doctor. Ja çfarë ju pret.'
     case 'bg':
-      return 'Работихме усилено, за да добавим нови функции и да подобрим всеки аспект на Used Car Inspector AI. Ето какво ви очаква.'
+      return 'Работихме усилено, за да добавим нови функции и да подобрим всеки аспект на Used Cars Doctor. Ето какво ви очаква.'
     default:
-      return "We've been hard at work adding new features and polishing every corner of Used Car Inspector AI. Here's what's waiting for you."
+      return "We've been hard at work adding new features and polishing every corner of Used Cars Doctor. Here's what's waiting for you."
   }
 }
 

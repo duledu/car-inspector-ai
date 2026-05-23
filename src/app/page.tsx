@@ -444,7 +444,7 @@ function Hero() {
 
             <h1 style={{ ...balancedHeadlineStyle, margin: '0 0 20px', fontSize: 'clamp(34px, 5.4vw, 58px)', fontWeight: 900, letterSpacing: 0, lineHeight: 1.08, color: '#fff', maxWidth: 560 }}>
               {balanceHeadlineText(t('landing.hero.title'))}<br />
-              <span style={{ background: 'linear-gradient(95deg, #22d3ee 0%, #818cf8 60%, #a78bfa 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span style={{ color: 'rgba(255,255,255,0.82)' }}>
                 {balanceHeadlineText(t('landing.hero.titleAccent'))}
               </span>
             </h1>
@@ -893,7 +893,7 @@ function ReportPreviewSection() {
             </div>
             <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(22px, 3.5vw, 34px)', fontWeight: 900, letterSpacing: '-1.5px', color: '#fff', lineHeight: 1.1 }}>
               {t('landing.reportPreview.title')}<br />
-              <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span style={{ color: 'rgba(255,255,255,0.82)' }}>
                 {t('landing.reportPreview.titleAccent')}
               </span>
             </h2>
@@ -1082,7 +1082,7 @@ function ClosingCTA() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22d3ee', marginBottom: 20 }}>{t('landing.closing.badge')}</div>
           <h2 style={{ ...balancedHeadlineStyle, margin: '0 0 16px', fontSize: 'clamp(25px, 3.6vw, 44px)', fontWeight: 900, letterSpacing: 0, color: '#fff', lineHeight: 1.12, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
             {balanceHeadlineText(t('landing.closing.title'))}<br />
-            <span style={{ background: 'linear-gradient(95deg, #22d3ee, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ color: 'rgba(255,255,255,0.82)' }}>
               {balanceHeadlineText(t('landing.closing.titleAccent'))}
             </span>
           </h2>
@@ -1160,11 +1160,17 @@ function Footer() {
         }}>
 
           {/* Brand column */}
-          <div style={{ maxWidth: 320 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', marginBottom: 14 }}>
-              <span style={{ color: '#22d3ee' }}>Car Inspector</span> AI
+          <div style={{ maxWidth: 260 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-icon.svg"
+              alt=""
+              style={{ height: 67, width: 'auto', display: 'block', marginBottom: 10, opacity: 0.65 }}
+            />
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.65)', letterSpacing: '-0.1px', marginBottom: 7 }}>
+              Used Cars Doctor
             </div>
-            <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>
+            <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7 }}>
               {t('landing.footer.description')}
             </p>
           </div>

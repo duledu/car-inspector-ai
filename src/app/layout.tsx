@@ -43,9 +43,9 @@ export const metadata: Metadata = {
     title: 'Used Cars Doctor',
   },
   icons: {
-    icon:     '/icons/favicon_used_cars_doctor.png',
-    apple:    '/icons/favicon_used_cars_doctor.png',
-    shortcut: '/icons/favicon_used_cars_doctor.png',
+    icon:     '/favicon_new_3.png',
+    apple:    '/favicon_new_3.png',
+    shortcut: '/favicon_new_3.png',
   },
   openGraph: {
     title:       'Used Car Inspection Reports | Used Cars Doctor',

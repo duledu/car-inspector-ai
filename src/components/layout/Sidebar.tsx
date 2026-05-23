@@ -66,27 +66,6 @@ const NAV: NavItem[] = [
     ),
   },
   {
-    labelKey: 'nav.community',
-    href: '/community',
-    feature: 'community',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-  {
-    labelKey: 'nav.messages',
-    href: '/messages',
-    feature: 'messages',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-  },
-  {
     labelKey: 'nav.profile',
     href: '/profile',
     icon: (
@@ -117,12 +96,13 @@ export function Sidebar() {
       }}
     >
       {/* Brand */}
-      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', lineHeight: 1.3 }}>
-            <span style={{ color: '#22d3ee' }}>Used Car</span>
-            <br />
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>Inspector AI</span>
+      <div style={{ padding: '16px 14px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 9 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="" width={30} height={35} style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', lineHeight: 1.25 }}>
+            Used Cars<br />
+            <span style={{ color: '#22d3ee', fontWeight: 500 }}>Doctor</span>
           </div>
         </Link>
       </div>

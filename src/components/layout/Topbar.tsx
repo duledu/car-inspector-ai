@@ -13,8 +13,6 @@ const SLUG_MAP: Record<string, string> = {
   '/inspection': 'inspection',
   '/report':     'report',
   '/premium':    'premium',
-  '/community':  'community',
-  '/messages':   'messages',
   '/profile':    'profile',
 }
 

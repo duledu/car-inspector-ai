@@ -128,6 +128,7 @@ const sr = {
   'auth.verifyEmail.expiredBody':    'Ovaj link je istekao. Prijavite se i zatražite novi email za potvrdu.',
   'auth.verifyEmail.invalidTitle':   'Nevažeći link',
   'auth.verifyEmail.invalidBody':    'Ovaj link je nevažeći ili je već upotrebljen.',
+  'auth.verifyEmail.redirecting':    'Preusmeravamo vas na aplikaciju…',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Nazad na početnu',
@@ -754,7 +755,7 @@ const sr = {
   'pwa.addToHome':            'Dodajte na početni ekran',
   'pwa.instantAccess':        'Brzi pristup, radi offline',
   'pwa.install':              'Instaliraj',
-  'pwa.installTitle':         'Instalirajte Car Inspector',
+  'pwa.installTitle':         'Instalirajte Used Cars Doctor',
   'pwa.installSub':           'Dodajte na početni ekran',
   'pwa.maybeLater':           'Možda kasnije',
   'pwa.iosStep1':             'Tapnite dugme <strong>Deli</strong> na Safari traci',

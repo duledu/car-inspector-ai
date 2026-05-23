@@ -2,12 +2,12 @@ import type { AppAnnouncementContent, MarketingCampaignContent } from '@/lib/ema
 
 export const DEFAULT_ANNOUNCEMENT: AppAnnouncementContent = {
   campaignName:      'App Update',
-  subject:           "What's new in Used Car Inspector AI",
+  subject:           "What's new in Used Cars Doctor",
   previewText:       'Discover the latest improvements to your AI car inspection experience.',
   eyebrow:           'App Update',
   headline:          "We've been busy improving your experience",
   subheadline:       'New features and improvements are now live.',
-  introBody:         "We've been hard at work adding new features and polishing every corner of Used Car Inspector AI. Here's what's waiting for you.",
+  introBody:         "We've been hard at work adding new features and polishing every corner of Used Cars Doctor. Here's what's waiting for you.",
   ctaLabel:          "Explore What's New",
   ctaUrl:            'https://usedcarsdoctor.com',
   card1Icon:         '🔍',
@@ -48,5 +48,5 @@ export const DEFAULT_MARKETING_CAMPAIGN: MarketingCampaignContent = {
   trustParagraph:    'We\'ve helped buyers across Europe avoid expensive mistakes. Our reports have surfaced hidden accidents, odometer rollbacks, and title issues that sellers "forgot" to mention.',
   secondaryCtaLabel: 'See how it works',
   secondaryCtaUrl:   'https://usedcarsdoctor.com',
-  footerNote:        'You\'re receiving this because you created an account with Used Car Inspector AI.',
+  footerNote:        'You\'re receiving this because you created an account with Used Cars Doctor.',
 }

@@ -1,10 +1,11 @@
 // =============================================================================
 // AI Anthropic Price Provider — FALLBACK
-// Uses Claude to estimate Serbia used-car market prices when the local-market
+// Uses Claude to estimate regional used-car market prices when the local-market
 // model confidence is low or the vehicle is unusual/exotic.
 // =============================================================================
 
 import type { VehiclePriceProviderInterface, PriceQuery, MarketPriceResult } from '../provider.interface'
+import { getCountryConfig } from '@/lib/markets/country-config'
 
 interface PriceOnlyResponse {
   minPrice: number
@@ -15,7 +16,8 @@ interface PriceOnlyResponse {
 }
 
 function buildPricePrompt(query: PriceQuery): string {
-  const { make, model, year, engineCc, powerKw, trim } = query
+  const { make, model, year, engineCc, powerKw, trim, countryCode } = query
+  const cfg = getCountryConfig(countryCode)
   const age = new Date().getFullYear() - year
   const engineDesc = [
     engineCc ? `${(engineCc / 1000).toFixed(1)}L (${engineCc}cc)` : null,
@@ -23,22 +25,25 @@ function buildPricePrompt(query: PriceQuery): string {
     trim,
   ].filter(Boolean).join(', ')
 
-  return `You are a Serbian used-car market expert. Estimate the realistic market price range for a used ${year} ${make} ${model}${engineDesc ? ` (${engineDesc})` : ''} in Serbia.
+  const vehicleDesc = engineDesc ? `${year} ${make} ${model} (${engineDesc})` : `${year} ${make} ${model}`
+
+  return `You are a used-car market expert for ${cfg.name}. Estimate the realistic market price range for a used ${vehicleDesc} in ${cfg.name}.
 
 Context:
 - Vehicle age: ${age} years
-- Market: Serbia (prices in EUR, typically 15-25% below western Europe)
-- Source reference: Polovni Automobili, Oglasi.rs marketplace patterns
+- Market: ${cfg.marketDescription}
+- Source reference: ${cfg.primarySources.join(', ')}
+- Currency: ${cfg.currency}
 
 Rules:
-- Prices must be realistic EUR values for the Serbian market, NOT EU/western prices
+- Prices must be realistic ${cfg.currency} values for the ${cfg.name} market
 - Account for the specific engine/trim if given
 - Return ONLY valid JSON, no markdown, no prose
 
 {
-  "minPrice": <integer EUR>,
-  "maxPrice": <integer EUR>,
-  "avgPrice": <integer EUR>,
+  "minPrice": <integer ${cfg.currency}>,
+  "maxPrice": <integer ${cfg.currency}>,
+  "avgPrice": <integer ${cfg.currency}>,
   "confidence": "high" | "medium" | "low",
   "note": "<one sentence about this estimate>"
 }`
@@ -83,14 +88,15 @@ export class AIAnthropicPriceProvider implements VehiclePriceProviderInterface {
       const raw: string = json.content?.[0]?.text ?? ''
       const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
       const parsed = JSON.parse(cleaned) as PriceOnlyResponse
+      const cfg = getCountryConfig(query.countryCode)
 
       return {
         minPrice: Math.round(parsed.minPrice / 100) * 100,
         maxPrice: Math.round(parsed.maxPrice / 100) * 100,
         avgPrice: Math.round(parsed.avgPrice / 100) * 100,
-        currency: 'EUR',
+        currency: cfg.currency,
         confidence: parsed.confidence ?? 'low',
-        source: 'AI estimate (Claude)',
+        source: `AI estimate (Claude) — ${cfg.name}`,
         note: parsed.note,
       }
     } finally {

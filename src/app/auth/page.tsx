@@ -9,6 +9,7 @@ import { useUserStore } from '@/store'
 import { SUPPORTED_LANGS, LANG_META, isSupportedLang, LANG_COOKIE } from '@/i18n/shared'
 import type { SupportedLang } from '@/i18n/shared'
 import { balanceHeadlineText } from '@/lib/typography'
+import { COUNTRY_LIST, getCountryConfig } from '@/lib/markets/country-config'
 
 type Tab = 'login' | 'register'
 
@@ -41,6 +42,8 @@ function AuthPageContent() {
   const [email,            setEmail]            = useState('')
   const [password,         setPassword]         = useState('')
   const [showPassword,     setShowPassword]      = useState(false)
+  const [countryCode,      setCountryCode]      = useState('')
+  const [countryTouched,   setCountryTouched]   = useState(false)
   const [consentAccepted,  setConsentAccepted]  = useState(false)
   const [consentTouched,   setConsentTouched]   = useState(false)
   const [lang,         setLang]         = useState<SupportedLang>(() => {
@@ -53,6 +56,8 @@ function AuthPageContent() {
   useEffect(() => { if (isAuthenticated) router.replace(redirect) }, [isAuthenticated])
   useEffect(() => {
     clearError()
+    setCountryCode('')
+    setCountryTouched(false)
     setConsentAccepted(false)
     setConsentTouched(false)
   }, [tab])
@@ -72,11 +77,24 @@ function AuthPageContent() {
       setConsentTouched(true)
       return
     }
+    if (tab === 'register' && !countryCode) {
+      setCountryTouched(true)
+      return
+    }
     try {
       if (tab === 'login') {
         await login({ email, password })
       } else {
-        await register({ name, email, password, preferredLanguage: lang })
+        const countryConfig = getCountryConfig(countryCode)
+        await register({
+          name,
+          email,
+          password,
+          preferredLanguage: lang,
+          country: countryConfig.name,
+          countryCode,
+          preferredCurrency: countryConfig.currency,
+        })
       }
       router.replace(redirect)
     } catch { /* error shown via store */ }
@@ -107,6 +125,8 @@ function AuthPageContent() {
     return t('auth.createAccount')
   }
 
+  const registerBlocked = tab === 'register' && (!countryCode || !consentAccepted)
+
   const inp: React.CSSProperties = {
     width: '100%', padding: '13px 14px', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
@@ -115,42 +135,44 @@ function AuthPageContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', fontFamily: 'var(--font-sans)' }}>
+    <div className="auth-root" style={{ minHeight: '100dvh', background: '#080c14', display: 'flex', fontFamily: 'var(--font-sans)', overflowX: 'hidden' }}>
 
       {/* Left — form column */}
-      <div style={{ flex: '0 0 auto', width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', position: 'relative', zIndex: 1 }}>
+      <div className="auth-form-column" style={{ flex: '0 0 auto', width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', position: 'relative', zIndex: 1 }}>
 
       {/* Background glow (left panel only) */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-15%', left: '-5%',  width: 520, height: 520, borderRadius: '50%', background: 'rgba(34,211,238,0.035)', filter: 'blur(120px)' }} />
-        <div style={{ position: 'absolute', bottom: '-15%', right: '-5%', width: 440, height: 440, borderRadius: '50%', background: 'rgba(129,140,248,0.035)', filter: 'blur(120px)' }} />
+      <div className="auth-glow-wrap" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <div className="auth-glow" style={{ position: 'absolute', top: '-15%', left: '-5%',  width: 520, height: 520, borderRadius: '50%', background: 'rgba(34,211,238,0.035)', filter: 'blur(120px)' }} />
+        <div className="auth-glow" style={{ position: 'absolute', bottom: '-15%', right: '-5%', width: 440, height: 440, borderRadius: '50%', background: 'rgba(129,140,248,0.035)', filter: 'blur(120px)' }} />
       </div>
 
-      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}>
+      <div className="auth-card-shell" style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}>
 
         {/* Brand */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
+        <div className="auth-brand" style={{ textAlign: 'center', marginBottom: 28 }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="auth-logo" src="/logo-icon.svg" alt="Used Cars Doctor" width={48} height={56} />
+            <div className="auth-brand-title" style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: 0 }}>
+              Used Cars Doctor
             </div>
           </Link>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', marginTop: 6 }}>
+          <div className="auth-tagline" style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', marginTop: 6 }}>
             {t('auth.tagline')}
           </div>
         </div>
 
         {/* Card */}
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 28px 32px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+        <div className="auth-card" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 28px 32px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
 
           {/* Tab switcher */}
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 11, padding: 4, marginBottom: 26, gap: 4 }}>
+          <div className="auth-tabbar" style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', borderRadius: 11, padding: 4, marginBottom: 26, gap: 4 }}>
             {(['login', 'register'] as Tab[]).map(tabOption => (
               <button
                 key={tabOption}
                 onClick={() => setTab(tabOption)}
                 style={{
-                  flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  flex: 1, minHeight: 42, padding: '9px 8px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
                   background: tab === tabOption ? 'rgba(255,255,255,0.09)' : 'transparent',
                   color:      tab === tabOption ? '#fff' : 'rgba(255,255,255,0.35)',
@@ -164,12 +186,13 @@ function AuthPageContent() {
 
           {/* Google sign-in */}
           <a
+            className="auth-google-button"
             href={isLoading ? undefined : '/api/auth/google/init'}
             onClick={handleGoogleSignIn}
             aria-disabled={isLoading}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '12px 0', width: '100%', borderRadius: 11, textDecoration: 'none',
+              minHeight: 46, padding: '12px 14px', width: '100%', boxSizing: 'border-box', borderRadius: 11, textDecoration: 'none',
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
               color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-sans)',
               transition: 'opacity 0.15s',
@@ -206,7 +229,7 @@ function AuthPageContent() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+          <form className="auth-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
 
             {/* Name — register only */}
             {tab === 'register' && (
@@ -265,7 +288,7 @@ function AuthPageContent() {
                   onClick={() => setShowPassword(v => !v)}
                   tabIndex={-1}
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   {showPassword ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -308,7 +331,7 @@ function AuthPageContent() {
                     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
                     borderRadius: 11, fontSize: 15, color: '#fff',
                     fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer',
-                    appearance: 'none', WebkitAppearance: 'none',
+                    appearance: 'auto', WebkitAppearance: 'menulist',
                   }}
                 >
                   {SUPPORTED_LANGS.map(l => (
@@ -317,6 +340,50 @@ function AuthPageContent() {
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Country / market location - register tab only */}
+            {tab === 'register' && (
+              <div>
+                <label htmlFor="auth-country" style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
+                  {t('auth.countryMarketLocation', { defaultValue: 'Country / Market Location' })}
+                </label>
+                <select
+                  id="auth-country"
+                  value={countryCode}
+                  onChange={e => {
+                    setCountryCode(e.target.value)
+                    if (e.target.value) setCountryTouched(false)
+                  }}
+                  onBlur={() => setCountryTouched(true)}
+                  required
+                  aria-describedby="auth-country-help"
+                  aria-invalid={countryTouched && !countryCode}
+                  style={{
+                    width: '100%', padding: '13px 14px', boxSizing: 'border-box',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${countryTouched && !countryCode ? 'rgba(239,68,68,0.45)' : 'rgba(255,255,255,0.09)'}`,
+                    borderRadius: 11, fontSize: 15, color: countryCode ? '#fff' : 'rgba(255,255,255,0.42)',
+                    fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer',
+                    appearance: 'auto', WebkitAppearance: 'menulist',
+                    boxShadow: countryTouched && !countryCode ? '0 0 0 3px rgba(239,68,68,0.08)' : 'none',
+                  }}
+                >
+                  <option value="" style={{ background: '#0d1420', color: 'rgba(255,255,255,0.5)' }}>
+                    {t('auth.selectCountryMarket', { defaultValue: 'Select your country / market' })}
+                  </option>
+                  {COUNTRY_LIST.map(country => (
+                    <option key={country.code} value={country.code} style={{ background: '#0d1420', color: '#fff' }}>
+                      {country.name} ({country.currency})
+                    </option>
+                  ))}
+                </select>
+                <p id="auth-country-help" style={{ margin: '7px 0 0', fontSize: 12, color: countryTouched && !countryCode ? '#f87171' : 'rgba(255,255,255,0.32)', lineHeight: 1.45 }}>
+                  {countryTouched && !countryCode
+                    ? t('auth.countryRequired', { defaultValue: 'Select your country / market location to continue.' })
+                    : t('auth.countryMarketHelp', { defaultValue: 'Used to estimate average vehicle prices in your local market.' })}
+                </p>
               </div>
             )}
 
@@ -336,20 +403,48 @@ function AuthPageContent() {
                     transition: 'border-color 0.15s, background 0.15s',
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    id="auth-consent"
-                    checked={consentAccepted}
-                    onChange={e => {
-                      setConsentAccepted(e.target.checked)
-                      if (e.target.checked) setConsentTouched(false)
-                    }}
-                    style={{
-                      width: 20, height: 20, flexShrink: 0,
-                      marginTop: 1, cursor: 'pointer',
-                      accentColor: '#22d3ee',
-                    }}
-                  />
+                  <span style={{ position: 'relative', width: 22, height: 22, flexShrink: 0, marginTop: 1 }}>
+                    <input
+                      type="checkbox"
+                      id="auth-consent"
+                      checked={consentAccepted}
+                      onChange={e => {
+                        setConsentAccepted(e.target.checked)
+                        if (e.target.checked) setConsentTouched(false)
+                      }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: 22,
+                        height: 22,
+                        margin: 0,
+                        opacity: 0,
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: consentAccepted ? '#22d3ee' : 'rgba(255,255,255,0.045)',
+                        border: `1px solid ${consentAccepted ? '#22d3ee' : 'rgba(255,255,255,0.2)'}`,
+                        boxShadow: consentAccepted ? '0 0 0 3px rgba(34,211,238,0.12)' : 'inset 0 0 0 1px rgba(0,0,0,0.2)',
+                        color: '#020617',
+                        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
+                      }}
+                    >
+                      {consentAccepted && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </span>
+                  </span>
                   <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6 }}>
                     {t('auth.register.consentPre')}{' '}
                     <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
@@ -394,14 +489,15 @@ function AuthPageContent() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading || (tab === 'register' && !consentAccepted)}
+              disabled={isLoading || registerBlocked}
+              className="auth-submit"
               style={{
-                marginTop: 4, padding: '14px 0', width: '100%',
-                background: isLoading || (tab === 'register' && !consentAccepted) ? 'rgba(34,211,238,0.35)' : '#22d3ee',
+                marginTop: 4, minHeight: 48, padding: '14px 16px', width: '100%',
+                background: isLoading || registerBlocked ? 'rgba(34,211,238,0.35)' : '#22d3ee',
                 color: '#000', border: 'none', borderRadius: 11,
-                fontSize: 14, fontWeight: 800, letterSpacing: '-0.2px',
+                fontSize: 14, fontWeight: 800, letterSpacing: 0,
                 fontFamily: 'var(--font-sans)',
-                cursor: isLoading || (tab === 'register' && !consentAccepted) ? 'not-allowed' : 'pointer',
+                cursor: isLoading || registerBlocked ? 'not-allowed' : 'pointer',
                 transition: 'opacity 0.15s, background 0.15s',
               }}
             >
@@ -411,7 +507,7 @@ function AuthPageContent() {
         </div>
 
         {/* Footer note */}
-        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6 }}>
+        <div className="auth-footer-note" style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6 }}>
           <div>{t('auth.termsNote')}</div>
           <div style={{ marginTop: 6 }}>
             <Link href="/legal/terms" style={{ color: 'rgba(255,255,255,0.32)', textDecoration: 'none' }}
@@ -480,8 +576,112 @@ function AuthPageContent() {
       </div>
 
       <style>{`
+        .auth-root {
+          min-height: 100vh;
+          min-height: 100dvh;
+        }
+        .auth-form-column {
+          padding-top: max(24px, env(safe-area-inset-top));
+          padding-bottom: max(24px, env(safe-area-inset-bottom));
+        }
+        .auth-card-shell {
+          min-width: 0;
+        }
+        .auth-card,
+        .auth-google-button,
+        .auth-submit,
+        .auth-tabbar button,
+        .auth-footer-note {
+          max-width: 100%;
+        }
+        .auth-footer-note a {
+          display: inline-flex;
+          min-height: 32px;
+          align-items: center;
+        }
         @media (min-width: 960px) {
           .auth-image-panel { display: block !important; }
+        }
+        @media (max-width: 520px) {
+          .auth-form-column {
+            max-width: none !important;
+            justify-content: flex-start !important;
+            padding: max(14px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom)) !important;
+          }
+          .auth-brand {
+            margin-bottom: 16px !important;
+          }
+          .auth-logo {
+            width: 38px !important;
+            height: auto !important;
+          }
+          .auth-brand-title {
+            font-size: 18px !important;
+          }
+          .auth-tagline {
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+          }
+          .auth-card {
+            border-radius: 16px !important;
+            padding: 18px 16px 20px !important;
+          }
+          .auth-tabbar {
+            margin-bottom: 16px !important;
+          }
+          .auth-form {
+            gap: 11px !important;
+          }
+          .auth-glow {
+            width: 260px !important;
+            height: 260px !important;
+            filter: blur(82px) !important;
+            opacity: 0.75;
+          }
+          .auth-footer-note {
+            margin-top: 12px !important;
+            font-size: 11px !important;
+          }
+        }
+        @media (max-height: 700px) and (max-width: 520px) {
+          .auth-brand {
+            margin-bottom: 10px !important;
+          }
+          .auth-logo {
+            width: 32px !important;
+          }
+          .auth-tagline {
+            display: none !important;
+          }
+          .auth-card {
+            padding: 14px 14px 16px !important;
+          }
+          .auth-tabbar {
+            margin-bottom: 12px !important;
+          }
+          .auth-form {
+            gap: 9px !important;
+          }
+          .auth-footer-note {
+            margin-top: 8px !important;
+          }
+        }
+        @media (orientation: landscape) and (max-height: 520px) {
+          .auth-form-column {
+            justify-content: flex-start !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+          }
+          .auth-brand {
+            margin-bottom: 8px !important;
+          }
+          .auth-logo,
+          .auth-tagline {
+            display: none !important;
+          }
+          .auth-card {
+            padding: 14px !important;
+          }
         }
       `}</style>
     </div>

@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { vehicleResearchService } from '@/modules/research/research.service'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { prisma } from '@/config/prisma'
 
 const schema = z.object({
   make:         z.string().min(1).max(60),
@@ -26,6 +27,7 @@ const schema = z.object({
   bodyType:     z.enum(['sedan', 'wagon', 'hatchback', 'suv', 'coupe', 'van']).optional(),
   mileage:      z.number().finite().int().positive().optional(),
   locale:       z.string().min(2).max(10).optional().default('en'),
+  countryCode:  z.string().length(2).toUpperCase().optional().nullable(),
 })
 
 export async function POST(req: NextRequest) {
@@ -46,13 +48,18 @@ export async function POST(req: NextRequest) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
   }
 
-  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, locale } = parsed.data
+  const { make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency, fuelType, transmission, drivetrain, bodyType, mileage, locale, countryCode } = parsed.data
+  // Request body takes priority; fall back to the user's stored country code
+  const resolvedCountryCode = countryCode
+    ?? (await prisma.user.findUnique({ where: { id: auth.userId }, select: { countryCode: true } }))?.countryCode
+    ?? null
 
   // research() never throws — it always returns useful content
   try {
     const result = await vehicleResearchService.research({
       make, model, year, engineCc, powerKw, engine, trim, askingPrice, currency,
       fuelType, transmission, drivetrain, bodyType, mileage, locale,
+      countryCode: resolvedCountryCode,
     })
 
     return NextResponse.json({

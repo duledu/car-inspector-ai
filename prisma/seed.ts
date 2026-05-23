@@ -9,7 +9,7 @@
 // =============================================================================
 
 import fs from 'fs'
-import { PrismaClient } from '.prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 function loadLocalEnv() {

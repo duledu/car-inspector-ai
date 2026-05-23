@@ -33,13 +33,15 @@ function isProductionDeployment(): boolean {
 export function getAppOrigin(req?: NextRequest): string {
   if (isProductionDeployment()) return CANONICAL_APP_ORIGIN
 
+  if (req) return getRequestOrigin(req)
+
   const nextAuthUrl = cleanOrigin(process.env.NEXTAUTH_URL)
   if (nextAuthUrl) return nextAuthUrl
 
   const publicAppUrl = cleanOrigin(process.env.NEXT_PUBLIC_APP_URL)
   if (publicAppUrl) return publicAppUrl
 
-  return req ? getRequestOrigin(req) : CANONICAL_APP_ORIGIN
+  return CANONICAL_APP_ORIGIN
 }
 
 export function shouldUseCanonicalHost(req: NextRequest): boolean {

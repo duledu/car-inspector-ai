@@ -69,7 +69,7 @@ export default function VerifyRequiredPage() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
+              Used Cars Doctor
             </div>
           </Link>
         </div>

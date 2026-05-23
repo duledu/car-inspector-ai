@@ -4,7 +4,7 @@
 
 const DOMAIN   = 'https://usedcarsdoctor.com'
 const ORG_NAME = 'Used Cars Doctor'
-const LOGO_URL = `${DOMAIN}/icons/favicon_used_cars_doctor.png`
+const LOGO_URL = `${DOMAIN}/logo-transparent.png`
 
 // ─── WebSite ──────────────────────────────────────────────────────────────────
 export function websiteSchema() {

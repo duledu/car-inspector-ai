@@ -12,6 +12,7 @@ import { normalizeVehicle }                         from '@/lib/vehicle/normaliz
 import { matchIssues }                              from '@/lib/vehicle/matcher'
 import { allIssues }                                from '../../../data/vehicle-issues'
 import type { MatchedIssue }                        from '@/lib/vehicle/types'
+import { getCountryConfig }                         from '@/lib/markets/country-config'
 
 export interface ResearchParams {
   make: string
@@ -29,6 +30,8 @@ export interface ResearchParams {
   bodyType?: string
   mileage?: number
   locale?: string
+  /** ISO 3166-1 alpha-2 country code — drives regional pricing & marketplace selection */
+  countryCode?: string | null
 }
 
 export interface ResearchOutput extends VehicleResearchResult {
@@ -273,17 +276,25 @@ function buildPriceContext(
   askingPrice?: number,
   currency = 'EUR',
   locale = 'en',
+  countryCode?: string | null,
 ): PriceContext {
   const { minPrice, maxPrice, avgPrice, confidence, source, listingCount, filtersUsed } = market
+  const cfg = getCountryConfig(countryCode)
+  const marketName = cfg.name
+  const marketCurrency = market.currency
 
-  const rangeStr = `â‚¬${minPrice.toLocaleString('de-DE')} â€“ â‚¬${maxPrice.toLocaleString('de-DE')}`
-
-  let evaluation: PriceContext['evaluation']
-  let evaluationLabel: string
-  let summary: string
   const lang = normalizeLocale(locale)
 
-  const fmtMoney = (value: number) => `€${value.toLocaleString('de-DE')}`
+  const fmtMoney = (value: number) => {
+    try {
+      return new Intl.NumberFormat(cfg.numberLocale, {
+        style: 'currency', currency: marketCurrency,
+        minimumFractionDigits: 0, maximumFractionDigits: 0,
+      }).format(value)
+    } catch {
+      return `${cfg.currencySymbol}${value.toLocaleString()}`
+    }
+  }
   const rangeForLocale = `${fmtMoney(minPrice)} - ${fmtMoney(maxPrice)}`
   const localizedMessages = {
     en: {
@@ -301,27 +312,27 @@ function buildPriceContext(
       low: 'Ispod tržišta - proveriti razlog',
       fair: 'U okviru tržišta',
       high: 'Iznad tržišta',
-      summaryEstimate: `Procenjen tržišni raspon u Srbiji za ovo vozilo: ${rangeForLocale} (prosek ${fmtMoney(avgPrice)}).`,
-      summaryLow: (price: number) => `Tražena cena od ${fmtMoney(price)} je ispod tipičnog raspona u Srbiji (${rangeForLocale}). Neuobičajeno niska cena zahteva dodatnu proveru.`,
-      summaryFair: (price: number) => `Tražena cena od ${fmtMoney(price)} je u okviru tipičnog raspona u Srbiji (${rangeForLocale}).`,
-      summaryHigh: (price: number) => `Tražena cena od ${fmtMoney(price)} je iznad tipičnog raspona u Srbiji (${rangeForLocale}). Pregovarajte ili proverite da li oprema i stanje opravdavaju razliku.`,
+      summaryEstimate: `Procenjen tržišni raspon (${marketName}) za ovo vozilo: ${rangeForLocale} (prosek ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Tražena cena od ${fmtMoney(price)} je ispod tipičnog raspona na tržištu ${marketName} (${rangeForLocale}). Neuobičajeno niska cena zahteva dodatnu proveru.`,
+      summaryFair: (price: number) => `Tražena cena od ${fmtMoney(price)} je u okviru tipičnog raspona na tržištu ${marketName} (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Tražena cena od ${fmtMoney(price)} je iznad tipičnog raspona na tržištu ${marketName} (${rangeForLocale}). Pregovarajte ili proverite da li oprema i stanje opravdavaju razliku.`,
     },
     de: {
       estimate: 'Nur Schätzung',
       low: 'Unter Marktwert - Grund prüfen',
       fair: 'Marktgerechter Preis',
       high: 'Über Marktwert',
-      summaryEstimate: `Geschätzte Marktspanne in Serbien für dieses Fahrzeug: ${rangeForLocale} (Durchschnitt ${fmtMoney(avgPrice)}).`,
-      summaryLow: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt unter der typischen Spanne in Serbien (${rangeForLocale}). Ungewöhnlich niedrige Preise sollten genauer geprüft werden.`,
-      summaryFair: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt innerhalb der typischen Spanne in Serbien (${rangeForLocale}).`,
-      summaryHigh: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt über der typischen Spanne in Serbien (${rangeForLocale}). Verhandeln Sie oder prüfen Sie, ob Ausstattung und Zustand den Aufpreis rechtfertigen.`,
+      summaryEstimate: `Geschätzte Marktspanne (${marketName}) für dieses Fahrzeug: ${rangeForLocale} (Durchschnitt ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt unter der typischen Spanne auf dem ${marketName}-Markt (${rangeForLocale}). Ungewöhnlich niedrige Preise sollten genauer geprüft werden.`,
+      summaryFair: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt innerhalb der typischen Spanne auf dem ${marketName}-Markt (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Der Angebotspreis von ${fmtMoney(price)} liegt über der typischen Spanne auf dem ${marketName}-Markt (${rangeForLocale}). Verhandeln Sie oder prüfen Sie, ob Ausstattung und Zustand den Aufpreis rechtfertigen.`,
     },
     mk: {
       estimate: 'Само проценка',
       low: 'Под пазарот - проверете ја причината',
       fair: 'Во рамки на пазарот',
       high: 'Над пазарот',
-      summaryEstimate: `Проценет пазарен опсег во Србија за ова возило: ${rangeForLocale} (просек ${fmtMoney(avgPrice)}).`,
+      summaryEstimate: `Проценет пазарен опсег (${marketName}) за ова возило: ${rangeForLocale} (просек ${fmtMoney(avgPrice)}).`,
       summaryLow: (price: number) => `Бараната цена од ${fmtMoney(price)} е под типичниот опсег во Србија (${rangeForLocale}). Невообичаено ниска цена бара дополнителна проверка.`,
       summaryFair: (price: number) => `Бараната цена од ${fmtMoney(price)} е во рамки на типичниот опсег во Србија (${rangeForLocale}).`,
       summaryHigh: (price: number) => `Бараната цена од ${fmtMoney(price)} е над типичниот опсег во Србија (${rangeForLocale}). Преговарајте или проверете дали опремата и состојбата ја оправдуваат разликата.`,
@@ -331,20 +342,20 @@ function buildPriceContext(
       low: 'Nën treg - kontrolloni arsyen',
       fair: 'Brenda tregut',
       high: 'Mbi treg',
-      summaryEstimate: `Gama e vlerësuar e tregut në Serbi për këtë automjet: ${rangeForLocale} (mesatarja ${fmtMoney(avgPrice)}).`,
-      summaryLow: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është nën gamën tipike në Serbi (${rangeForLocale}). Çmimet shumë të ulëta kërkojnë kontroll shtesë.`,
-      summaryFair: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është brenda gamës tipike në Serbi (${rangeForLocale}).`,
-      summaryHigh: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është mbi gamën tipike në Serbi (${rangeForLocale}). Negocioni ose verifikoni nëse pajisjet dhe gjendja e justifikojnë diferencën.`,
+      summaryEstimate: `Gama e vlerësuar e tregut (${marketName}) për këtë automjet: ${rangeForLocale} (mesatarja ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është nën gamën tipike të tregut ${marketName} (${rangeForLocale}). Çmimet shumë të ulëta kërkojnë kontroll shtesë.`,
+      summaryFair: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është brenda gamës tipike të tregut ${marketName} (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Çmimi i kërkuar prej ${fmtMoney(price)} është mbi gamën tipike të tregut ${marketName} (${rangeForLocale}). Negocioni ose verifikoni nëse pajisjet dhe gjendja e justifikojnë diferencën.`,
     },
     bg: {
       estimate: 'Само оценка',
       low: 'Под пазара - проверете причината',
       fair: 'В рамките на пазара',
       high: 'Над пазара',
-      summaryEstimate: `Оцененият пазарен диапазон в Сърбия за този автомобил е ${rangeForLocale} (средно ${fmtMoney(avgPrice)}).`,
-      summaryLow: (price: number) => `Исканата цена от ${fmtMoney(price)} е под типичния диапазон в Сърбия (${rangeForLocale}). Необичайно ниската цена изисква допълнителна проверка.`,
-      summaryFair: (price: number) => `Исканата цена от ${fmtMoney(price)} е в рамките на типичния диапазон в Сърбия (${rangeForLocale}).`,
-      summaryHigh: (price: number) => `Исканата цена от ${fmtMoney(price)} е над типичния диапазон в Сърбия (${rangeForLocale}). Преговаряйте или проверете дали оборудването и състоянието оправдават разликата.`,
+      summaryEstimate: `Оцененият пазарен диапазон (${marketName}) за този автомобил е ${rangeForLocale} (средно ${fmtMoney(avgPrice)}).`,
+      summaryLow: (price: number) => `Исканата цена от ${fmtMoney(price)} е под типичния диапазон на пазара ${marketName} (${rangeForLocale}). Необичайно ниската цена изисква допълнителна проверка.`,
+      summaryFair: (price: number) => `Исканата цена от ${fmtMoney(price)} е в рамките на типичния диапазон на пазара ${marketName} (${rangeForLocale}).`,
+      summaryHigh: (price: number) => `Исканата цена от ${fmtMoney(price)} е над типичния диапазон на пазара ${marketName} (${rangeForLocale}). Преговаряйте или проверете дали оборудването и състоянието оправдават разликата.`,
     },
   } as const
   const copy = localizedMessages[lang as keyof typeof localizedMessages] ?? localizedMessages.en
@@ -377,7 +388,7 @@ function buildPriceContext(
     : undefined
 
   return {
-    ...(askingPrice != null ? { askingPrice, currency } : {}),
+    ...(askingPrice != null ? { askingPrice, currency: marketCurrency } : {}),
     marketRangeFrom: minPrice,
     marketRangeTo: maxPrice,
     avgPrice,
@@ -709,6 +720,7 @@ export class VehicleResearchService {
         transmission: params.transmission,
         bodyType:     params.bodyType,
         mileage:      params.mileage,
+        countryCode:  params.countryCode,
       }),
     ])
 
@@ -748,6 +760,7 @@ export class VehicleResearchService {
         params.askingPrice,
         params.currency,
         params.locale,
+        params.countryCode,
       )
       console.log('[pricing] Context set from pricing service')
     } else if (!base.priceContext) {

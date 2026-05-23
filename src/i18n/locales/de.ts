@@ -124,6 +124,7 @@ const de = {
   'auth.verifyEmail.expiredBody':    'Dieser Link ist abgelaufen. Melden Sie sich an und fordern Sie eine neue Bestätigungs-E-Mail an.',
   'auth.verifyEmail.invalidTitle':   'Ungültiger Link',
   'auth.verifyEmail.invalidBody':    'Dieser Link ist ungültig oder wurde bereits verwendet.',
+  'auth.verifyEmail.redirecting':    'Weiterleitung zur App…',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Zur Startseite',
@@ -638,7 +639,7 @@ const de = {
   'pwa.addToHome':            'Zum Startbildschirm hinzufügen',
   'pwa.instantAccess':        'Sofortzugriff, funktioniert offline',
   'pwa.install':              'Installieren',
-  'pwa.installTitle':         'Car Inspector installieren',
+  'pwa.installTitle':         'Used Cars Doctor installieren',
   'pwa.installSub':           'Zum Startbildschirm hinzufügen',
   'pwa.maybeLater':           'Vielleicht später',
   'pwa.iosStep1':             'Tippen Sie auf <strong>Teilen</strong> in der Safari-Leiste',

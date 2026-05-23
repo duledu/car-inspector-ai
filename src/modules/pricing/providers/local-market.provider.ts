@@ -1,16 +1,18 @@
 // =============================================================================
-// Local Market Provider — Serbia used-car price estimator
-// PRIMARY provider. Knowledge-based model calibrated to the Serbian market.
-// Simulates what a real Polovni Automobili / Oglasi scrape would return.
+// Local Market Provider — regional used-car price estimator
+// PRIMARY provider. Knowledge-based model with Serbia baseline prices,
+// scaled by per-country regional multipliers from country-config.ts.
 //
 // Methodology:
-//   1. Classify vehicle → segment → new-car EUR base price (Serbia market)
-//   2. Apply age depreciation curve (Serbia market is ~15% below EU)
-//   3. Apply engine-size adjustment
-//   4. Return range (avg ± spread based on market segment spread)
+//   1. Classify vehicle → segment → new-car EUR base price (Serbia baseline)
+//   2. Apply age depreciation curve
+//   3. Apply engine-size, fuel, transmission, body adjustments
+//   4. Apply regional multiplier (countryCode → COUNTRY_MARKET_CONFIG)
+//   5. Return range (avg ± spread based on market segment spread)
 // =============================================================================
 
 import type { VehiclePriceProviderInterface, PriceQuery, MarketPriceResult } from '../provider.interface'
+import { getCountryConfig } from '@/lib/markets/country-config'
 
 // ─── Segment base prices (new-car EUR equivalent, Serbia 2024) ────────────────
 
@@ -286,7 +288,7 @@ function resolveSegment(make: string, model: string): Segment {
 
 export class LocalMarketProvider implements VehiclePriceProviderInterface {
   readonly providerId = 'local-market'
-  readonly providerName = 'Serbia Market Estimate (Polovni Automobili pattern)'
+  readonly providerName = 'Regional Market Estimate'
 
   isAvailable(): boolean {
     // Always available — pure computation, no external calls
@@ -294,26 +296,26 @@ export class LocalMarketProvider implements VehiclePriceProviderInterface {
   }
 
   async getMarketPrice(query: PriceQuery): Promise<MarketPriceResult> {
-    const { make, model, year, engineCc, fuelType, transmission, bodyType } = query
+    const { make, model, year, engineCc, fuelType, transmission, bodyType, countryCode } = query
+    const cfg = getCountryConfig(countryCode)
     const age = new Date().getFullYear() - year
 
     const segment = resolveSegment(make, model)
     const [baseNew, spread] = SEGMENT_PRICE[segment]
 
-    const depr    = depreciation(age)
-    const engMul  = engineMultiplier(engineCc)
-    const fuelMul = fuelMultiplier(fuelType)
-    const transMul = transmissionMultiplier(transmission)
-    const bodyMul  = bodyMultiplier(bodyType)
+    const depr      = depreciation(age)
+    const engMul    = engineMultiplier(engineCc)
+    const fuelMul   = fuelMultiplier(fuelType)
+    const transMul  = transmissionMultiplier(transmission)
+    const bodyMul   = bodyMultiplier(bodyType)
 
-    const midPoint = Math.round(baseNew * depr * engMul * fuelMul * transMul * bodyMul)
+    const midPoint = Math.round(baseNew * depr * engMul * fuelMul * transMul * bodyMul * cfg.regionalMultiplier)
 
     const halfSpread = Math.round(midPoint * spread * 0.5)
     const minPrice = Math.max(500, Math.round((midPoint - halfSpread) / 100) * 100)
     const maxPrice = Math.round((midPoint + halfSpread) / 100) * 100
     const avgPrice = Math.round(midPoint / 100) * 100
 
-    // Confidence: higher for common vehicles, lower for older/unusual ones
     let confidence: 'low' | 'medium' | 'high' = 'medium'
     const isWellKnownMake = Object.keys(MAKE_SEGMENT).includes(make.toLowerCase())
     if (isWellKnownMake && age <= 12) confidence = 'high'
@@ -327,9 +329,9 @@ export class LocalMarketProvider implements VehiclePriceProviderInterface {
       minPrice,
       maxPrice,
       avgPrice,
-      currency: 'EUR',
+      currency: cfg.currency,
       confidence,
-      source: 'Serbia market model (Polovni Automobili pattern)',
+      source: `${cfg.name} market model (${cfg.primarySources[0]})`,
       note: `Based on ${segment.replace('_', ' ')} segment, ${age}-year depreciation`,
       listingCount: 0,
       filtersUsed: filtersApplied,

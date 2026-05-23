@@ -394,8 +394,8 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
     pageSize: 'A4',
     pageMargins: [42, 48, 42, 54],
     info: {
-      title: `Used Cars Doctor AI - ${vehicleTitle(vehicle)}`,
-      author: 'Used Cars Doctor AI',
+      title: `Used Cars Doctor - ${vehicleTitle(vehicle)}`,
+      author: 'Used Cars Doctor',
       subject: t('pdf.metadata.subject'),
     },
     defaultStyle: {
@@ -420,7 +420,7 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
     footer: (currentPage, pageCount) => ({
       margin: [42, 0],
       columns: [
-        { text: 'Used Cars Doctor AI', style: 'caption' },
+        { text: 'Used Cars Doctor', style: 'caption' },
         { text: `${currentPage} / ${pageCount}`, style: 'caption', alignment: 'right' },
       ],
     }),

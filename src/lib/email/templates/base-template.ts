@@ -62,13 +62,12 @@ export function buildBaseTemplate(opts: BaseTemplateOptions): string {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:36px;">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);">Used Cars Doctor</p>
                     <p style="margin:0;font-size:19px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;">
-                      <span style="color:#22d3ee;">Used Car</span> Inspector AI
+                      Used Cars Doctor
                     </p>
                   </td>
-                  <td align="right" style="vertical-align:middle;width:41px;">
-                    <img src="https://usedcarsdoctor.com/icons/logo_usedcarsdoctor_no_bg_newlast.svg" width="41" height="34" alt="" style="display:block;width:41px;height:34px;" />
+                  <td align="right" style="vertical-align:middle;width:48px;">
+                    <img src="https://usedcarsdoctor.com/favicon-64.png" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border-radius:10px;" />
                   </td>
                 </tr>
               </table>

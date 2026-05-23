@@ -30,22 +30,22 @@ export interface VerifyEmailStrings {
 
 const verifyEmailTranslations: Record<string, VerifyEmailStrings> = {
   en: {
-    subject:            'Verify your email — Used Car Inspector AI',
-    previewText:        'Verify your email to activate your Used Car Inspector AI account.',
+    subject:            'Verify your email — Used Cars Doctor',
+    previewText:        'Verify your email to activate your Used Cars Doctor account.',
     eyebrow:            'Account Verification',
     headline:           'Verify your email address',
     subheadline:        'One click and you\'re ready to inspect your next car.',
     headerContextLabel: 'Verification Link',
     greeting:           'Hi {{name}},',
-    p1:                 'Thanks for creating your Used Car Inspector AI account. To start using all features, please verify your email address by clicking the button below.',
+    p1:                 'Thanks for creating your Used Cars Doctor account. To start using all features, please verify your email address by clicking the button below.',
     p2:                 'This link is valid for <strong style="color:#ffffff;">{{hours}} hours</strong>. After that, you can request a new one from the settings page.',
     infoBlockTitle:     'What happens next?',
     ctaLabel:           'Verify Email Address',
-    footnote:           'If you didn\'t create an account with Used Car Inspector AI, you can safely ignore this email. No action is needed.',
+    footnote:           'If you didn\'t create an account with Used Cars Doctor, you can safely ignore this email. No action is needed.',
     textBody:
 `Hi {{name}},
 
-Thanks for creating your Used Car Inspector AI account.
+Thanks for creating your Used Cars Doctor account.
 
 To verify your email address, visit the link below:
 {{url}}
@@ -54,27 +54,27 @@ This link is valid for {{hours}} hours.
 
 If you didn't create an account, you can safely ignore this email.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sr: {
-    subject:            'Potvrdite vašu e-poštu — Used Car Inspector AI',
-    previewText:        'Potvrdite e-poštu da biste aktivirali vaš Used Car Inspector AI nalog.',
+    subject:            'Potvrdite vašu e-poštu — Used Cars Doctor',
+    previewText:        'Potvrdite e-poštu da biste aktivirali vaš Used Cars Doctor nalog.',
     eyebrow:            'Verifikacija naloga',
     headline:           'Potvrdite vašu e-adresu',
     subheadline:        'Jedan klik i možete početi sa pregledanjem vozila.',
     headerContextLabel: 'Link za verifikaciju',
     greeting:           'Zdravo {{name}},',
-    p1:                 'Hvala što ste kreirali Used Car Inspector AI nalog. Da biste počeli koristiti sve funkcije, molimo potvrdite vašu e-adresu klikom na dugme ispod.',
+    p1:                 'Hvala što ste kreirali Used Cars Doctor nalog. Da biste počeli koristiti sve funkcije, molimo potvrdite vašu e-adresu klikom na dugme ispod.',
     p2:                 'Ovaj link važi <strong style="color:#ffffff;">{{hours}} sata</strong>. Nakon toga, možete zatražiti novi putem stranice sa podešavanjima.',
     infoBlockTitle:     'Šta se dešava dalje?',
     ctaLabel:           'Potvrdi e-adresu',
-    footnote:           'Ako niste kreirali nalog na Used Car Inspector AI, slobodno ignorišite ovaj e-mail. Nije potrebna nikakva akcija.',
+    footnote:           'Ako niste kreirali nalog na Used Cars Doctor, slobodno ignorišite ovaj e-mail. Nije potrebna nikakva akcija.',
     textBody:
 `Zdravo {{name}},
 
-Hvala što ste kreirali Used Car Inspector AI nalog.
+Hvala što ste kreirali Used Cars Doctor nalog.
 
 Da biste potvrdili e-adresu, posetite link ispod:
 {{url}}
@@ -83,27 +83,27 @@ Ovaj link važi {{hours}} sata.
 
 Ako niste kreirali nalog, slobodno ignorišite ovaj e-mail.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   de: {
-    subject:            'E-Mail-Adresse bestätigen — Used Car Inspector AI',
-    previewText:        'Bestätigen Sie Ihre E-Mail-Adresse, um Ihr Used Car Inspector AI-Konto zu aktivieren.',
+    subject:            'E-Mail-Adresse bestätigen — Used Cars Doctor',
+    previewText:        'Bestätigen Sie Ihre E-Mail-Adresse, um Ihr Used Cars Doctor-Konto zu aktivieren.',
     eyebrow:            'Kontobestätigung',
     headline:           'E-Mail-Adresse bestätigen',
     subheadline:        'Ein Klick und Sie können Ihr nächstes Auto inspizieren.',
     headerContextLabel: 'Bestätigungslink',
     greeting:           'Hallo {{name}},',
-    p1:                 'Vielen Dank, dass Sie ein Used Car Inspector AI-Konto erstellt haben. Um alle Funktionen nutzen zu können, bestätigen Sie bitte Ihre E-Mail-Adresse über den Button unten.',
+    p1:                 'Vielen Dank, dass Sie ein Used Cars Doctor-Konto erstellt haben. Um alle Funktionen nutzen zu können, bestätigen Sie bitte Ihre E-Mail-Adresse über den Button unten.',
     p2:                 'Dieser Link ist <strong style="color:#ffffff;">{{hours}} Stunden</strong> gültig. Danach können Sie einen neuen Link über die Einstellungsseite anfordern.',
     infoBlockTitle:     'Was passiert als nächstes?',
     ctaLabel:           'E-Mail-Adresse bestätigen',
-    footnote:           'Falls Sie kein Used Car Inspector AI-Konto erstellt haben, können Sie diese E-Mail ignorieren. Es sind keine weiteren Schritte erforderlich.',
+    footnote:           'Falls Sie kein Used Cars Doctor-Konto erstellt haben, können Sie diese E-Mail ignorieren. Es sind keine weiteren Schritte erforderlich.',
     textBody:
 `Hallo {{name}},
 
-Vielen Dank für die Erstellung Ihres Used Car Inspector AI-Kontos.
+Vielen Dank für die Erstellung Ihres Used Cars Doctor-Kontos.
 
 Um Ihre E-Mail-Adresse zu bestätigen, besuchen Sie den folgenden Link:
 {{url}}
@@ -112,27 +112,27 @@ Dieser Link ist {{hours}} Stunden gültig.
 
 Falls Sie kein Konto erstellt haben, ignorieren Sie diese E-Mail bitte.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   mk: {
-    subject:            'Потврдете ја вашата е-пошта — Used Car Inspector AI',
-    previewText:        'Потврдете ја е-поштата за да го активирате вашиот Used Car Inspector AI налог.',
+    subject:            'Потврдете ја вашата е-пошта — Used Cars Doctor',
+    previewText:        'Потврдете ја е-поштата за да го активирате вашиот Used Cars Doctor налог.',
     eyebrow:            'Верификација на налог',
     headline:           'Потврдете ја вашата е-адреса',
     subheadline:        'Еден клик и сте подготвени да го прегледате вашиот следен автомобил.',
     headerContextLabel: 'Линк за верификација',
     greeting:           'Здраво {{name}},',
-    p1:                 'Благодариме за создавањето на Used Car Inspector AI налог. За да ги користите сите функции, ве молиме потврдете ја вашата е-адреса со клик на копчето подолу.',
+    p1:                 'Благодариме за создавањето на Used Cars Doctor налог. За да ги користите сите функции, ве молиме потврдете ја вашата е-адреса со клик на копчето подолу.',
     p2:                 'Овој линк е важечки <strong style="color:#ffffff;">{{hours}} часа</strong>. После тоа, можете да побарате нов преку страницата за поставки.',
     infoBlockTitle:     'Што се случува следно?',
     ctaLabel:           'Потврди е-адреса',
-    footnote:           'Ако не сте создале налог на Used Car Inspector AI, слободно игнорирајте го овој е-маил. Не е потребна никаква акција.',
+    footnote:           'Ако не сте создале налог на Used Cars Doctor, слободно игнорирајте го овој е-маил. Не е потребна никаква акција.',
     textBody:
 `Здраво {{name}},
 
-Благодариме за создавањето на Used Car Inspector AI налог.
+Благодариме за создавањето на Used Cars Doctor налог.
 
 За да ја потврдите е-адресата, посетете го линкот подолу:
 {{url}}
@@ -141,27 +141,27 @@ support@usedcarsdoctor.com`,
 
 Ако не сте создале налог, слободно игнорирајте го овој е-маил.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sq: {
-    subject:            'Verifikoni e-mailin tuaj — Used Car Inspector AI',
-    previewText:        'Verifikoni e-mailin tuaj për të aktivizuar llogarinë tuaj të Used Car Inspector AI.',
+    subject:            'Verifikoni e-mailin tuaj — Used Cars Doctor',
+    previewText:        'Verifikoni e-mailin tuaj për të aktivizuar llogarinë tuaj të Used Cars Doctor.',
     eyebrow:            'Verifikimi i llogarisë',
     headline:           'Verifikoni adresën tuaj të e-mailit',
     subheadline:        'Një klik dhe jeni gati të inspektoni makinën tuaj të ardhshme.',
     headerContextLabel: 'Lidhja e verifikimit',
     greeting:           'Përshëndetje {{name}},',
-    p1:                 'Faleminderit që krijuat një llogari në Used Car Inspector AI. Për të filluar përdorimin e të gjitha funksioneve, ju lutemi verifikoni adresën tuaj të e-mailit duke klikuar butonin më poshtë.',
+    p1:                 'Faleminderit që krijuat një llogari në Used Cars Doctor. Për të filluar përdorimin e të gjitha funksioneve, ju lutemi verifikoni adresën tuaj të e-mailit duke klikuar butonin më poshtë.',
     p2:                 'Kjo lidhje është e vlefshme për <strong style="color:#ffffff;">{{hours}} orë</strong>. Pas kësaj, mund të kërkoni një të re nga faqja e cilësimeve.',
     infoBlockTitle:     'Çfarë ndodh më pas?',
     ctaLabel:           'Verifiko adresën e e-mailit',
-    footnote:           'Nëse nuk keni krijuar një llogari në Used Car Inspector AI, mund ta injoroni këtë e-mail pa problem. Nuk kërkohet asnjë veprim.',
+    footnote:           'Nëse nuk keni krijuar një llogari në Used Cars Doctor, mund ta injoroni këtë e-mail pa problem. Nuk kërkohet asnjë veprim.',
     textBody:
 `Përshëndetje {{name}},
 
-Faleminderit që krijuat llogarinë tuaj të Used Car Inspector AI.
+Faleminderit që krijuat llogarinë tuaj të Used Cars Doctor.
 
 Për të verifikuar adresën tuaj të e-mailit, vizitoni lidhjen më poshtë:
 {{url}}
@@ -170,26 +170,26 @@ Kjo lidhje është e vlefshme për {{hours}} orë.
 
 Nëse nuk keni krijuar një llogari, mund ta injoroni këtë e-mail.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
   bg: {
-    subject:            'Потвърдете имейла си — Used Car Inspector AI',
-    previewText:        'Потвърдете имейла си, за да активирате акаунта си в Used Car Inspector AI.',
+    subject:            'Потвърдете имейла си — Used Cars Doctor',
+    previewText:        'Потвърдете имейла си, за да активирате акаунта си в Used Cars Doctor.',
     eyebrow:            'Потвърждение на акаунта',
     headline:           'Потвърдете имейл адреса си',
     subheadline:        'Едно кликване и сте готови да проверите следващия си автомобил.',
     headerContextLabel: 'Линк за потвърждение',
     greeting:           'Здравейте {{name}},',
-    p1:                 'Благодарим ви, че създадохте акаунт в Used Car Inspector AI. За да използвате всички функции, потвърдете имейл адреса си чрез бутона по-долу.',
+    p1:                 'Благодарим ви, че създадохте акаунт в Used Cars Doctor. За да използвате всички функции, потвърдете имейл адреса си чрез бутона по-долу.',
     p2:                 'Този линк е валиден <strong style="color:#ffffff;">{{hours}} часа</strong>. След това можете да поискате нов от страницата с настройки.',
     infoBlockTitle:     'Какво следва?',
     ctaLabel:           'Потвърди имейл адреса',
-    footnote:           'Ако не сте създавали акаунт в Used Car Inspector AI, можете спокойно да игнорирате този имейл. Не е нужно действие.',
+    footnote:           'Ако не сте създавали акаунт в Used Cars Doctor, можете спокойно да игнорирате този имейл. Не е нужно действие.',
     textBody:
 `Здравейте {{name}},
 
-Благодарим ви, че създадохте акаунт в Used Car Inspector AI.
+Благодарим ви, че създадохте акаунт в Used Cars Doctor.
 
 За да потвърдите имейл адреса си, посетете линка по-долу:
 {{url}}
@@ -198,13 +198,13 @@ support@usedcarsdoctor.com`,
 
 Ако не сте създавали акаунт, можете спокойно да игнорирате този имейл.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 }
 
 export function getVerifyEmailStrings(lang: string | null | undefined): VerifyEmailStrings {
-  return verifyEmailTranslations[resolveEmailLang(lang)] ?? verifyEmailTranslations.mk ?? verifyEmailTranslations.en
+  return verifyEmailTranslations[resolveEmailLang(lang)] ?? verifyEmailTranslations.en
 }
 
 // ─── Reset Password ───────────────────────────────────────────────────────────
@@ -228,14 +228,14 @@ export interface ResetPasswordStrings {
 
 const resetPasswordTranslations: Record<string, ResetPasswordStrings> = {
   en: {
-    subject:            'Reset your password — Used Car Inspector AI',
-    previewText:        'Reset your Used Car Inspector AI password. This link expires in 1 hour.',
+    subject:            'Reset your password — Used Cars Doctor',
+    previewText:        'Reset your Used Cars Doctor password. This link expires in 1 hour.',
     eyebrow:            'Password Reset',
     headline:           'Reset your password',
     subheadline:        'Follow the link below to set a new password for your account.',
     headerContextLabel: 'Secure Reset Link',
     greeting:           'Hi {{name}},',
-    p1:                 'We received a request to reset the password for your Used Car Inspector AI account. Click the button below to choose a new password.',
+    p1:                 'We received a request to reset the password for your Used Cars Doctor account. Click the button below to choose a new password.',
     p2:                 'This link is valid for <strong style="color:#ffffff;">{{hours}} hour</strong> and can only be used once. If it expires, you can request a new reset link from the login page.',
     p3:                 'If you did not request a password reset, your account is safe — no changes have been made.',
     infoBlockTitle:     'Need help?',
@@ -244,7 +244,7 @@ const resetPasswordTranslations: Record<string, ResetPasswordStrings> = {
     textBody:
 `Hi {{name}},
 
-We received a request to reset your Used Car Inspector AI password.
+We received a request to reset your Used Cars Doctor password.
 
 To set a new password, visit the link below:
 {{url}}
@@ -253,19 +253,19 @@ This link is valid for {{hours}} hour and can only be used once.
 
 If you didn't request a password reset, you can safely ignore this email.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sr: {
-    subject:            'Resetujte lozinku — Used Car Inspector AI',
-    previewText:        'Resetujte lozinku za Used Car Inspector AI. Ovaj link ističe za 1 sat.',
+    subject:            'Resetujte lozinku — Used Cars Doctor',
+    previewText:        'Resetujte lozinku za Used Cars Doctor. Ovaj link ističe za 1 sat.',
     eyebrow:            'Resetovanje lozinke',
     headline:           'Resetujte vašu lozinku',
     subheadline:        'Pratite link ispod da biste postavili novu lozinku za vaš nalog.',
     headerContextLabel: 'Sigurni link za resetovanje',
     greeting:           'Zdravo {{name}},',
-    p1:                 'Primili smo zahtev za resetovanje lozinke za vaš Used Car Inspector AI nalog. Kliknite na dugme ispod da izaberete novu lozinku.',
+    p1:                 'Primili smo zahtev za resetovanje lozinke za vaš Used Cars Doctor nalog. Kliknite na dugme ispod da izaberete novu lozinku.',
     p2:                 'Ovaj link važi <strong style="color:#ffffff;">{{hours}} sat</strong> i može se koristiti samo jednom. Ako istekne, možete zatražiti novi putem stranice za prijavu.',
     p3:                 'Ako niste tražili resetovanje lozinke, vaš nalog je bezbedan — nikakve izmene nisu napravljene.',
     infoBlockTitle:     'Trebate pomoć?',
@@ -274,7 +274,7 @@ support@usedcarsdoctor.com`,
     textBody:
 `Zdravo {{name}},
 
-Primili smo zahtev za resetovanje lozinke za vaš Used Car Inspector AI nalog.
+Primili smo zahtev za resetovanje lozinke za vaš Used Cars Doctor nalog.
 
 Da biste postavili novu lozinku, posetite link ispod:
 {{url}}
@@ -283,19 +283,19 @@ Ovaj link važi {{hours}} sat i može se koristiti samo jednom.
 
 Ako niste tražili resetovanje lozinke, slobodno ignorišite ovaj e-mail.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   de: {
-    subject:            'Passwort zurücksetzen — Used Car Inspector AI',
-    previewText:        'Setzen Sie Ihr Used Car Inspector AI-Passwort zurück. Dieser Link läuft in 1 Stunde ab.',
+    subject:            'Passwort zurücksetzen — Used Cars Doctor',
+    previewText:        'Setzen Sie Ihr Used Cars Doctor-Passwort zurück. Dieser Link läuft in 1 Stunde ab.',
     eyebrow:            'Passwort zurücksetzen',
     headline:           'Passwort zurücksetzen',
     subheadline:        'Folgen Sie dem Link unten, um ein neues Passwort für Ihr Konto festzulegen.',
     headerContextLabel: 'Sicherer Reset-Link',
     greeting:           'Hallo {{name}},',
-    p1:                 'Wir haben eine Anfrage zum Zurücksetzen des Passworts für Ihr Used Car Inspector AI-Konto erhalten. Klicken Sie auf den Button unten, um ein neues Passwort zu wählen.',
+    p1:                 'Wir haben eine Anfrage zum Zurücksetzen des Passworts für Ihr Used Cars Doctor-Konto erhalten. Klicken Sie auf den Button unten, um ein neues Passwort zu wählen.',
     p2:                 'Dieser Link ist <strong style="color:#ffffff;">{{hours}} Stunde</strong> gültig und kann nur einmal verwendet werden. Falls er abläuft, können Sie einen neuen Link über die Anmeldeseite anfordern.',
     p3:                 'Falls Sie kein Zurücksetzen des Passworts beantragt haben, ist Ihr Konto sicher — es wurden keine Änderungen vorgenommen.',
     infoBlockTitle:     'Brauchen Sie Hilfe?',
@@ -304,7 +304,7 @@ support@usedcarsdoctor.com`,
     textBody:
 `Hallo {{name}},
 
-Wir haben eine Anfrage zum Zurücksetzen Ihres Used Car Inspector AI-Passworts erhalten.
+Wir haben eine Anfrage zum Zurücksetzen Ihres Used Cars Doctor-Passworts erhalten.
 
 Um ein neues Passwort festzulegen, besuchen Sie den folgenden Link:
 {{url}}
@@ -313,19 +313,19 @@ Dieser Link ist {{hours}} Stunde gültig und kann nur einmal verwendet werden.
 
 Falls Sie kein Zurücksetzen beantragt haben, ignorieren Sie diese E-Mail bitte.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   mk: {
-    subject:            'Ресетирајте ја лозинката — Used Car Inspector AI',
-    previewText:        'Ресетирајте ја лозинката за Used Car Inspector AI. Овој линк истекува за 1 час.',
+    subject:            'Ресетирајте ја лозинката — Used Cars Doctor',
+    previewText:        'Ресетирајте ја лозинката за Used Cars Doctor. Овој линк истекува за 1 час.',
     eyebrow:            'Ресетирање лозинка',
     headline:           'Ресетирајте ја лозинката',
     subheadline:        'Следете го линкот подолу за да поставите нова лозинка за вашиот налог.',
     headerContextLabel: 'Безбеден линк за ресетирање',
     greeting:           'Здраво {{name}},',
-    p1:                 'Примивме барање за ресетирање на лозинката за вашиот Used Car Inspector AI налог. Кликнете на копчето подолу за да изберете нова лозинка.',
+    p1:                 'Примивме барање за ресетирање на лозинката за вашиот Used Cars Doctor налог. Кликнете на копчето подолу за да изберете нова лозинка.',
     p2:                 'Овој линк е важечки <strong style="color:#ffffff;">{{hours}} час</strong> и може да се користи само еднаш. Ако истече, можете да побарате нов преку страницата за најавување.',
     p3:                 'Ако не сте барале ресетирање на лозинката, вашиот налог е безбеден — не се направени никакви промени.',
     infoBlockTitle:     'Потребна ви е помош?',
@@ -334,7 +334,7 @@ support@usedcarsdoctor.com`,
     textBody:
 `Здраво {{name}},
 
-Примивме барање за ресетирање на лозинката за вашиот Used Car Inspector AI налог.
+Примивме барање за ресетирање на лозинката за вашиот Used Cars Doctor налог.
 
 За да поставите нова лозинка, посетете го линкот подолу:
 {{url}}
@@ -343,19 +343,19 @@ support@usedcarsdoctor.com`,
 
 Ако не сте барале ресетирање, слободно игнорирајте го овој е-маил.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sq: {
-    subject:            'Rivendosni fjalëkalimin — Used Car Inspector AI',
-    previewText:        'Rivendosni fjalëkalimin tuaj të Used Car Inspector AI. Kjo lidhje skadon në 1 orë.',
+    subject:            'Rivendosni fjalëkalimin — Used Cars Doctor',
+    previewText:        'Rivendosni fjalëkalimin tuaj të Used Cars Doctor. Kjo lidhje skadon në 1 orë.',
     eyebrow:            'Rivendosja e fjalëkalimit',
     headline:           'Rivendosni fjalëkalimin tuaj',
     subheadline:        'Ndiqni lidhjen më poshtë për të vendosur një fjalëkalim të ri për llogarinë tuaj.',
     headerContextLabel: 'Lidhja e sigurt e rivendosjes',
     greeting:           'Përshëndetje {{name}},',
-    p1:                 'Morëm një kërkesë për rivendosjen e fjalëkalimit të llogarisë suaj të Used Car Inspector AI. Klikoni butonin më poshtë për të zgjedhur një fjalëkalim të ri.',
+    p1:                 'Morëm një kërkesë për rivendosjen e fjalëkalimit të llogarisë suaj të Used Cars Doctor. Klikoni butonin më poshtë për të zgjedhur një fjalëkalim të ri.',
     p2:                 'Kjo lidhje është e vlefshme për <strong style="color:#ffffff;">{{hours}} orë</strong> dhe mund të përdoret vetëm një herë. Nëse skadon, mund të kërkoni një të re nga faqja e hyrjes.',
     p3:                 'Nëse nuk keni kërkuar rivendosjen e fjalëkalimit, llogaria juaj është e sigurt — nuk janë bërë ndryshime.',
     infoBlockTitle:     'Keni nevojë për ndihmë?',
@@ -364,7 +364,7 @@ support@usedcarsdoctor.com`,
     textBody:
 `Përshëndetje {{name}},
 
-Morëm një kërkesë për rivendosjen e fjalëkalimit tuaj të Used Car Inspector AI.
+Morëm një kërkesë për rivendosjen e fjalëkalimit tuaj të Used Cars Doctor.
 
 Për të vendosur një fjalëkalim të ri, vizitoni lidhjen më poshtë:
 {{url}}
@@ -373,18 +373,18 @@ Kjo lidhje është e vlefshme për {{hours}} orë dhe mund të përdoret vetëm 
 
 Nëse nuk keni kërkuar rivendosjen, mund ta injoroni këtë e-mail.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
   bg: {
-    subject:            'Смяна на паролата — Used Car Inspector AI',
-    previewText:        'Сменете паролата си за Used Car Inspector AI. Този линк изтича след 1 час.',
+    subject:            'Смяна на паролата — Used Cars Doctor',
+    previewText:        'Сменете паролата си за Used Cars Doctor. Този линк изтича след 1 час.',
     eyebrow:            'Смяна на парола',
     headline:           'Сменете паролата си',
     subheadline:        'Следвайте линка по-долу, за да зададете нова парола за акаунта си.',
     headerContextLabel: 'Защитен линк за смяна',
     greeting:           'Здравейте {{name}},',
-    p1:                 'Получихме заявка за смяна на паролата за вашия акаунт в Used Car Inspector AI. Натиснете бутона по-долу, за да изберете нова парола.',
+    p1:                 'Получихме заявка за смяна на паролата за вашия акаунт в Used Cars Doctor. Натиснете бутона по-долу, за да изберете нова парола.',
     p2:                 'Този линк е валиден <strong style="color:#ffffff;">{{hours}} час</strong> и може да се използва само веднъж. Ако изтече, можете да поискате нов от страницата за вход.',
     p3:                 'Ако не сте поискали смяна на паролата, акаунтът ви е защитен — не са направени промени.',
     infoBlockTitle:     'Нуждаете се от помощ?',
@@ -393,7 +393,7 @@ support@usedcarsdoctor.com`,
     textBody:
 `Здравейте {{name}},
 
-Получихме заявка за смяна на паролата за вашия акаунт в Used Car Inspector AI.
+Получихме заявка за смяна на паролата за вашия акаунт в Used Cars Doctor.
 
 За да зададете нова парола, посетете линка по-долу:
 {{url}}
@@ -402,13 +402,13 @@ support@usedcarsdoctor.com`,
 
 Ако не сте поискали смяна на паролата, можете спокойно да игнорирате този имейл.
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 }
 
 export function getResetPasswordStrings(lang: string | null | undefined): ResetPasswordStrings {
-  return resetPasswordTranslations[resolveEmailLang(lang)] ?? resetPasswordTranslations.mk ?? resetPasswordTranslations.en
+  return resetPasswordTranslations[resolveEmailLang(lang)] ?? resetPasswordTranslations.en
 }
 
 // ─── App Update ───────────────────────────────────────────────────────────────
@@ -425,101 +425,101 @@ export interface AppUpdateStrings {
 
 const appUpdateTranslations: Record<string, AppUpdateStrings> = {
   en: {
-    subject:     'What\'s new in Used Car Inspector AI',
+    subject:     'What\'s new in Used Cars Doctor',
     previewText: 'Discover the latest improvements to your AI car inspection experience.',
     eyebrow:     'App Update',
     headline:    'We\'ve been busy improving your experience',
     subheadline: 'New features and improvements are now live.',
     ctaLabel:    'Explore What\'s New',
     textBody:
-`We've rolled out improvements to Used Car Inspector AI.
+`We've rolled out improvements to Used Cars Doctor.
 
 See what's new: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sr: {
-    subject:     'Šta je novo u Used Car Inspector AI',
+    subject:     'Šta je novo u Used Cars Doctor',
     previewText: 'Otkrijte najnovija poboljšanja vašeg AI iskustva inspekcije automobila.',
     eyebrow:     'Ažuriranje aplikacije',
     headline:    'Radili smo na poboljšanju vašeg iskustva',
     subheadline: 'Nove funkcije i poboljšanja su sada dostupna.',
     ctaLabel:    'Istražite šta je novo',
     textBody:
-`Uveli smo poboljšanja u Used Car Inspector AI.
+`Uveli smo poboljšanja u Used Cars Doctor.
 
 Pogledajte šta je novo: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   de: {
-    subject:     'Was gibt es Neues in Used Car Inspector AI',
+    subject:     'Was gibt es Neues in Used Cars Doctor',
     previewText: 'Entdecken Sie die neuesten Verbesserungen Ihres KI-Fahrzeuginspektionserlebnisses.',
     eyebrow:     'App-Update',
     headline:    'Wir haben fleißig an Ihrem Erlebnis gearbeitet',
     subheadline: 'Neue Funktionen und Verbesserungen sind jetzt verfügbar.',
     ctaLabel:    'Neuheiten entdecken',
     textBody:
-`Wir haben Verbesserungen an Used Car Inspector AI eingeführt.
+`Wir haben Verbesserungen an Used Cars Doctor eingeführt.
 
 Sehen Sie, was neu ist: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   mk: {
-    subject:     'Што е ново во Used Car Inspector AI',
+    subject:     'Што е ново во Used Cars Doctor',
     previewText: 'Откријте ги најновите подобрувања на вашето AI искуство за инспекција на автомобили.',
     eyebrow:     'Ажурирање на апликацијата',
     headline:    'Работевме на подобрување на вашето искуство',
     subheadline: 'Нови функции и подобрувања се сега достапни.',
     ctaLabel:    'Истражете ги новостите',
     textBody:
-`Воведовме подобрувања во Used Car Inspector AI.
+`Воведовме подобрувања во Used Cars Doctor.
 
 Погледнете што е ново: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 
   sq: {
-    subject:     'Çfarë është e re në Used Car Inspector AI',
+    subject:     'Çfarë është e re në Used Cars Doctor',
     previewText: 'Zbuloni përmirësimet më të fundit të përvojës suaj të inspektimit të makinave me AI.',
     eyebrow:     'Përditësim i aplikacionit',
     headline:    'Kemi punuar shumë për të përmirësuar përvojën tuaj',
     subheadline: 'Funksione dhe përmirësime të reja janë tani të disponueshme.',
     ctaLabel:    'Eksploroni të rejat',
     textBody:
-`Kemi prezantuar përmirësime në Used Car Inspector AI.
+`Kemi prezantuar përmirësime në Used Cars Doctor.
 
 Shikoni çfarë është e re: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
   bg: {
-    subject:     'Какво е новото в Used Car Inspector AI',
+    subject:     'Какво е новото в Used Cars Doctor',
     previewText: 'Открийте последните подобрения в AI прегледа на автомобили.',
     eyebrow:     'Обновление на приложението',
     headline:    'Подобрихме вашето изживяване',
     subheadline: 'Новите функции и подобрения вече са активни.',
     ctaLabel:    'Разгледайте новото',
     textBody:
-`Въведохме подобрения в Used Car Inspector AI.
+`Въведохме подобрения в Used Cars Doctor.
 
 Вижте какво е новото: {{url}}
 
-— Used Car Inspector AI
+— Used Cars Doctor
 support@usedcarsdoctor.com`,
   },
 }
 
 export function getAppUpdateStrings(lang: string | null | undefined): AppUpdateStrings {
-  return appUpdateTranslations[resolveEmailLang(lang)] ?? appUpdateTranslations.mk ?? appUpdateTranslations.en
+  return appUpdateTranslations[resolveEmailLang(lang)] ?? appUpdateTranslations.en
 }

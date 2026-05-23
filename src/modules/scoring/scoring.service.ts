@@ -8,7 +8,7 @@ import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspecti
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
-import type { AIResult, ChecklistItem } from '.prisma/client'
+import type { AIResult, ChecklistItem } from '@prisma/client'
 
 function sanitizeDimension(raw: any, label: string, weight: number, fallbackScore: number) {
   if (!raw || typeof raw !== 'object') {

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useUserStore, useVehicleStore, usePaymentStore, useInspectionStore } from '@/store'
 import { SUPPORTED_LANGS, LANG_META, isSupportedLang } from '@/i18n/shared'
 import type { SupportedLang } from '@/i18n/shared'
+import { COUNTRY_LIST } from '@/lib/markets/country-config'
 import AppShell from '../AppShell'
 import { DeleteAccountTrigger } from '@/components/account/DeleteAccountTrigger'
 
@@ -50,8 +51,12 @@ export default function ProfilePage() {
 
   const rawLang = user?.preferredLanguage
   const currentLang: SupportedLang = isSupportedLang(rawLang) ? rawLang : 'en'
-  const [langSaving,    setLangSaving]    = useState(false)
-  const [langSaveError, setLangSaveError] = useState<string | null>(null)
+  const [langSaving,      setLangSaving]      = useState(false)
+  const [langSaveError,   setLangSaveError]   = useState<string | null>(null)
+
+  const currentCountry = user?.countryCode ?? ''
+  const [countrySaving,   setCountrySaving]   = useState(false)
+  const [countrySaveError,setCountrySaveError] = useState<string | null>(null)
 
   const handleLogout = async () => {
     await logout()
@@ -289,6 +294,58 @@ export default function ProfilePage() {
           )}
           <p style={{ margin: '10px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
             {t('profile.languageDesc')}
+          </p>
+        </div>
+
+        {/* ── Market region ── */}
+        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+            {t('profile.marketRegion', { defaultValue: 'Market Region' })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <select
+                value={currentCountry}
+                onChange={async (e) => {
+                  const selected = e.target.value || null
+                  setCountrySaving(true)
+                  setCountrySaveError(null)
+                  try {
+                    await updateProfile({ countryCode: selected })
+                  } catch {
+                    setCountrySaveError(t('profile.regionSaveError', { defaultValue: 'Failed to save region.' }))
+                  } finally {
+                    setCountrySaving(false)
+                  }
+                }}
+                disabled={countrySaving}
+                style={{
+                  width: '100%', padding: '11px 13px', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)',
+                  borderRadius: 10, fontSize: 14, color: countrySaving ? 'rgba(255,255,255,0.4)' : '#fff',
+                  fontFamily: 'var(--font-sans)', outline: 'none', cursor: countrySaving ? 'not-allowed' : 'pointer',
+                  appearance: 'none', WebkitAppearance: 'none',
+                }}
+              >
+                <option value="" style={{ background: '#0d1420', color: 'rgba(255,255,255,0.45)' }}>
+                  {t('profile.selectCountry', { defaultValue: 'Select country…' })}
+                </option>
+                {COUNTRY_LIST.map(c => (
+                  <option key={c.code} value={c.code} style={{ background: '#0d1420', color: '#fff' }}>
+                    {c.name} ({c.currency})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {countrySaving && (
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{t('common.saving')}</span>
+            )}
+          </div>
+          {countrySaveError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>{countrySaveError}</div>
+          )}
+          <p style={{ margin: '10px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
+            {t('profile.regionDesc', { defaultValue: 'Sets the market used for pricing benchmarks in your vehicle research reports.' })}
           </p>
         </div>
 

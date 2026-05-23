@@ -124,6 +124,7 @@ const sq = {
   'auth.verifyEmail.expiredBody':    'Kjo lidhje ka skaduar. Hyni dhe kërkoni një e-mail verifikimi të ri.',
   'auth.verifyEmail.invalidTitle':   'Lidhje e pavlefshme',
   'auth.verifyEmail.invalidBody':    'Kjo lidhje është e pavlefshme ose tashmë është përdorur.',
+  'auth.verifyEmail.redirecting':    'Po ju ridrejtojmë drejt aplikacionit…',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Kthehu në faqen kryesore',
@@ -637,7 +638,7 @@ const sq = {
   'pwa.addToHome':            'Shto në ekranin kryesor',
   'pwa.instantAccess':        'Qasje e menjëhershme, punon offline',
   'pwa.install':              'Instalo',
-  'pwa.installTitle':         'Instalo Car Inspector',
+  'pwa.installTitle':         'Instalo Used Cars Doctor',
   'pwa.installSub':           'Shto në ekranin kryesor',
   'pwa.maybeLater':           'Ndoshta më vonë',
   'pwa.iosStep1':             'Prekni butonin <strong>Nda</strong> në shiritin e Safari',

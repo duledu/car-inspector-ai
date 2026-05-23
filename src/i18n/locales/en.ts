@@ -128,6 +128,7 @@ const en = {
   'auth.verifyEmail.expiredBody':      'This verification link has expired. Please sign in and request a new verification email from your account settings.',
   'auth.verifyEmail.invalidTitle':     'Invalid link',
   'auth.verifyEmail.invalidBody':      'This verification link is invalid or has already been used.',
+  'auth.verifyEmail.redirecting':      'Redirecting you to the app…',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Back to Home',
@@ -838,7 +839,7 @@ const en = {
   'pwa.addToHome':            'Add to Home Screen',
   'pwa.instantAccess':        'Instant access, works offline',
   'pwa.install':              'Install',
-  'pwa.installTitle':         'Install Car Inspector',
+  'pwa.installTitle':         'Install Used Cars Doctor',
   'pwa.installSub':           'Add to Home Screen',
   'pwa.maybeLater':           'Maybe Later',
   'pwa.iosStep1':             'Tap the <strong>Share</strong> button in Safari',

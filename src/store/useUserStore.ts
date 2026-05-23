@@ -44,7 +44,7 @@ interface UserActions {
   deleteAccount: () => Promise<void>
   refreshSession: () => Promise<void>
   clearError: () => void
-  updateProfile: (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage'>>) => Promise<void>
+  updateProfile: (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage' | 'countryCode' | 'preferredCurrency'>>) => Promise<void>
 }
 
 type UserStore = UserState & UserActions
@@ -181,6 +181,15 @@ export const useUserStore = create<UserStore>()(
             if (updated.preferredLanguage !== undefined) {
               state.user.preferredLanguage = updated.preferredLanguage
             }
+            if (updated.countryCode !== undefined) {
+              state.user.countryCode = updated.countryCode
+            }
+            if (updated.country !== undefined) {
+              state.user.country = updated.country
+            }
+            if (updated.preferredCurrency !== undefined) {
+              state.user.preferredCurrency = updated.preferredCurrency
+            }
           }
           // Keep session.user in sync so Zustand persists the updated value
           if (state.session?.user) {
@@ -188,6 +197,15 @@ export const useUserStore = create<UserStore>()(
             state.session.user.avatarUrl = updated.avatarUrl
             if (updated.preferredLanguage !== undefined) {
               state.session.user.preferredLanguage = updated.preferredLanguage
+            }
+            if (updated.countryCode !== undefined) {
+              state.session.user.countryCode = updated.countryCode
+            }
+            if (updated.country !== undefined) {
+              state.session.user.country = updated.country
+            }
+            if (updated.preferredCurrency !== undefined) {
+              state.session.user.preferredCurrency = updated.preferredCurrency
             }
           }
         })

@@ -55,7 +55,7 @@ function ResetPasswordContent() {
 
   if (!token) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', padding: '24px 16px' }}>
+      <div className="auth-helper-root" style={{ minHeight: '100dvh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', padding: '24px 16px', overflowX: 'hidden' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: '#f87171', marginBottom: 16 }}>{t('auth.resetPassword.noToken')}</p>
           <Link href="/auth/forgot-password" style={{ color: '#22d3ee', fontSize: 14 }}>{t('auth.forgotPassword.title')}</Link>
@@ -65,23 +65,27 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', padding: '24px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
+    <div className="auth-helper-root" style={{ minHeight: '100dvh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', padding: '24px 16px', overflowX: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: 400, minWidth: 0 }}>
 
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
+        <div className="auth-helper-brand" style={{ textAlign: 'center', marginBottom: 28 }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="auth-helper-logo" src="/logo-icon.svg" alt="Used Cars Doctor" width={44} height={51} />
+            <div className="auth-helper-title" style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: 0 }}>
+              Used Cars Doctor
             </div>
           </Link>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 28px 32px' }}>
+        <div className="auth-helper-card" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 28px 32px' }}>
 
           {done ? (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 22 }}>
-                ✓
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#22d3ee' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
               </div>
               <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 800, color: '#fff' }}>
                 {t('auth.resetPassword.doneTitle')}
@@ -121,7 +125,7 @@ function ResetPasswordContent() {
                       onClick={() => setShowPassword(v => !v)}
                       tabIndex={-1}
                       aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-                      style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center' }}
+                      style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       {showPassword ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -145,7 +149,7 @@ function ResetPasswordContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  style={{ padding: '14px 0', width: '100%', background: loading ? 'rgba(34,211,238,0.45)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 11, fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-sans)', cursor: loading ? 'not-allowed' : 'pointer' }}
+                  style={{ minHeight: 48, padding: '14px 16px', width: '100%', background: loading ? 'rgba(34,211,238,0.45)' : '#22d3ee', color: '#000', border: 'none', borderRadius: 11, fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-sans)', cursor: loading ? 'not-allowed' : 'pointer' }}
                 >
                   {loading ? t('auth.resetPassword.saving') : t('auth.resetPassword.submit')}
                 </button>
@@ -154,6 +158,50 @@ function ResetPasswordContent() {
           )}
         </div>
       </div>
+      <style>{`
+        .auth-helper-root {
+          min-height: 100vh;
+          min-height: 100dvh;
+          padding-top: max(24px, env(safe-area-inset-top));
+          padding-bottom: max(24px, env(safe-area-inset-bottom));
+        }
+        @media (max-width: 520px) {
+          .auth-helper-root {
+            align-items: flex-start !important;
+            padding: max(16px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom)) !important;
+          }
+          .auth-helper-brand {
+            margin-bottom: 16px !important;
+          }
+          .auth-helper-logo {
+            width: 36px !important;
+            height: auto !important;
+          }
+          .auth-helper-title {
+            font-size: 18px !important;
+          }
+          .auth-helper-card {
+            border-radius: 16px !important;
+            padding: 20px 16px 22px !important;
+          }
+        }
+        @media (orientation: landscape) and (max-height: 520px) {
+          .auth-helper-root {
+            align-items: flex-start !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+          }
+          .auth-helper-brand {
+            margin-bottom: 8px !important;
+          }
+          .auth-helper-logo {
+            display: none !important;
+          }
+          .auth-helper-card {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

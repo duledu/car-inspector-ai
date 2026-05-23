@@ -7,12 +7,9 @@ import { usePathname } from 'next/navigation'
 import '@/i18n/config'
 import { useUserStore } from '@/store/useUserStore'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
-import { isFeatureEnabled, type FeatureFlagName } from '@/config/features'
-
 type LandingLink = {
   label: string
   href: string
-  feature?: FeatureFlagName
 }
 
 export function LandingNav() {
@@ -45,11 +42,10 @@ export function LandingNav() {
     ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?'
 
-  const navLinks = ([
+  const navLinks: LandingLink[] = [
     { label: t('nav.inspect'),      href: '/inspection' },
     { label: t('nav.beforeYouBuy'), href: '/before-you-buy' },
-    { label: t('nav.community'),    href: '/community', feature: 'community' },
-  ] satisfies LandingLink[]).filter(item => isFeatureEnabled(item.feature))
+  ]
 
   return (
     <nav style={{
@@ -62,18 +58,10 @@ export function LandingNav() {
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(34,211,238,0.32)',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#050810" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="" width={28} height={33} style={{ flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Car Inspector</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Used Cars Doctor</div>
             <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{t('landing.aiPowered')}</div>
           </div>
         </Link>

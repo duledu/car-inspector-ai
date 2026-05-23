@@ -141,16 +141,8 @@ export default function AppShell({ children }: AppShellProps) {
           {/* Left: brand mark + page title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 10,
-                background: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 12px rgba(34,211,238,0.25)',
-              }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#050810" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-icon.svg" alt="" height={32} style={{ width: 'auto', display: 'block', flexShrink: 0 }} />
             </Link>
 
             <div style={{ minWidth: 0 }}>

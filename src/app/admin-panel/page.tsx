@@ -868,7 +868,7 @@ export default function AdminPanelPage() {
       <div style={{ ...S.header, gap: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
-            <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
+            Used Cars Doctor
           </span>
           <span style={S.badge}>⬡ Admin Panel</span>
         </div>

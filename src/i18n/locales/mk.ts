@@ -124,6 +124,7 @@ const mk = {
   'auth.verifyEmail.expiredBody':    'Овој линк истече. Најавете се и побарајте нов.',
   'auth.verifyEmail.invalidTitle':   'Неважечки линк',
   'auth.verifyEmail.invalidBody':    'Овој линк е неважечки или веќе е употребен.',
+  'auth.verifyEmail.redirecting':    'Пренасочување кон апликацијата…',
 
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Назад на почетна',
@@ -637,7 +638,7 @@ const mk = {
   'pwa.addToHome':            'Додај на почетниот екран',
   'pwa.instantAccess':        'Брз пристап, работи офлајн',
   'pwa.install':              'Инсталирај',
-  'pwa.installTitle':         'Инсталирај Car Inspector',
+  'pwa.installTitle':         'Инсталирај Used Cars Doctor',
   'pwa.installSub':           'Додај на почетниот екран',
   'pwa.maybeLater':           'Можеби подоцна',
   'pwa.iosStep1':             'Допрете го копчето <strong>Сподели</strong> во Safari лентата',

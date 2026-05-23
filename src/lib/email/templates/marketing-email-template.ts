@@ -55,9 +55,8 @@ export function buildMarketingEmailTemplate(
 
           <tr>
             <td class="card-pad" style="background:linear-gradient(170deg,#0f1823 0%,#0a1018 100%);border:1px solid #1a2232;border-top:none;border-radius:0 0 22px 22px;padding:30px 34px 30px;">
-              <p style="margin:0 0 2px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.25);">Used Cars Doctor</p>
               <p class="brand-name" style="margin:0;font-size:16px;font-weight:800;color:#ffffff;letter-spacing:-0.3px;">
-                <span style="color:#00c2ff;">Used Car</span> Inspector AI
+                Used Cars Doctor
               </p>
 
               <table class="divider" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:22px 0 24px;">

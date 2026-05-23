@@ -24,9 +24,11 @@ model User {
   role          UserRole  @default(USER)
   googleId          String?   @unique
   emailVerified     DateTime?
-  preferredLanguage String?   @default("en")
-  createdAt         DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  preferredLanguage  String?   @default("en")
+  countryCode        String?             // ISO 3166-1 alpha-2 (e.g. "DE", "RS", "US")
+  preferredCurrency  String?             // ISO 4217 (e.g. "EUR", "USD") — derived from countryCode if null
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Relations
   vehicles                Vehicle[]

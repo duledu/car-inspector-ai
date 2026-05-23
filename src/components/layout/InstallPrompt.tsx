@@ -281,7 +281,7 @@ function AndroidBanner({ onInstall, onDismiss, installing }: Readonly<AndroidBan
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/icons/favicon_used_cars_doctor.png"
+            src="/app-icon.png"
             alt="App icon"
             width={48}
             height={48}
@@ -424,7 +424,7 @@ function IOSSheet({ onDismiss }: Readonly<{ onDismiss: () => void }>) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icons/favicon_used_cars_doctor.png"
+              src="/app-icon.png"
               alt=""
               width={40}
               height={40}

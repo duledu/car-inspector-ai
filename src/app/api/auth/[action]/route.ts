@@ -13,6 +13,9 @@ import { apiError, logApiError } from '@/utils/api-response'
 import { consumeEmailVerificationToken, consumePasswordResetToken } from '@/lib/email/token-utils'
 import { sendVerifyEmail } from '@/lib/email/senders/send-verify-email'
 import { sendResetPasswordEmail } from '@/lib/email/senders/send-reset-password-email'
+import { COUNTRY_MARKET_CONFIG, getCountryConfig } from '@/lib/markets/country-config'
+
+export const runtime = 'nodejs'
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +31,10 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
   preferredLanguage: z.enum(SUPPORTED_LANGS).optional().default('en'),
+  countryCode: z.string().length(2).toUpperCase().refine(code => code in COUNTRY_MARKET_CONFIG, {
+    message: 'Unsupported country code',
+  }),
+  preferredCurrency: z.string().min(3).max(3).toUpperCase().optional().nullable(),
 })
 
 const forgotPasswordSchema = z.object({
@@ -55,7 +62,7 @@ export async function POST(
     case 'login':
       return handleLogin(body)
     case 'register':
-      return handleRegister(body)
+      return handleRegister(req, body)
     case 'refresh':
       return handleRefresh(req)
     case 'logout': {
@@ -151,7 +158,8 @@ function clearAuthCookies(res: NextResponse) {
 
 // ─── DTO helper ──────────────────────────────────────────────────────────────
 
-function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; emailVerified: Date | null; createdAt: Date }) {
+function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; countryCode?: string | null; preferredCurrency?: string | null; emailVerified: Date | null; createdAt: Date }) {
+  const countryConfig = user.countryCode ? getCountryConfig(user.countryCode) : null
   return {
     id:                user.id,
     email:             user.email,
@@ -159,6 +167,9 @@ function toUserDto(user: { id: string; email: string; name: string; avatarUrl: s
     avatarUrl:         user.avatarUrl,
     role:              user.role,
     preferredLanguage: user.preferredLanguage ?? 'en',
+    country:           countryConfig?.name ?? null,
+    countryCode:       user.countryCode ?? null,
+    preferredCurrency: user.preferredCurrency ?? countryConfig?.currency ?? null,
     emailVerified:     !!user.emailVerified,
     createdAt:         user.createdAt.toISOString(),
   }
@@ -197,11 +208,12 @@ async function handleLogin(body: unknown) {
       return apiError('Invalid email or password', { status: 401, code: 'INVALID_CREDENTIALS' })
     }
 
-    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+    const emailVerified = !!user.emailVerified
+    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, emailVerified)
     const res = NextResponse.json({
       data: { expiresAt, user: toUserDto(user) },
     })
-    setEvCookie(res, !!user.emailVerified)
+    setEvCookie(res, emailVerified)
     setAuthCookies(res, accessToken, refreshToken)
     return res
   } catch (error) {
@@ -211,7 +223,7 @@ async function handleLogin(body: unknown) {
   }
 }
 
-async function handleRegister(body: unknown) {
+async function handleRegister(req: NextRequest, body: unknown) {
   const parsed = registerSchema.safeParse(body)
   if (!parsed.success) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
@@ -223,6 +235,7 @@ async function handleRegister(body: unknown) {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12)
+  const countryConfig = getCountryConfig(parsed.data.countryCode)
 
   const user = await prisma.user.create({
     data: {
@@ -231,23 +244,27 @@ async function handleRegister(body: unknown) {
       passwordHash,
       role: 'USER',
       preferredLanguage: parsed.data.preferredLanguage,
+      countryCode: parsed.data.countryCode,
+      preferredCurrency: parsed.data.preferredCurrency ?? countryConfig.currency,
     },
   })
 
-  const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
-
-  // Fire-and-forget — never block registration on email delivery
-  sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
-    .then(result => {
-      if (!result.success) console.error('[auth/register] verification email failed', {
+  const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage, req })
+  if (!emailResult.success) {
+    console.error('[auth/register] verification email failed', {
+      userId: user.id,
+      errorCode: emailResult.error ?? 'UNKNOWN',
+    })
+    await prisma.user.delete({ where: { id: user.id } }).catch(err => {
+      console.error('[auth/register] cleanup after verification email failure failed', {
         userId: user.id,
-        errorCode: result.error ?? 'UNKNOWN',
+        errorName: err instanceof Error ? err.name : 'unknown',
       })
     })
-    .catch(err => console.error('[auth/register] verification email unexpected error', {
-      userId: user.id,
-      errorName: err instanceof Error ? err.name : 'unknown',
-    }))
+    return apiError('Failed to send verification email. Please try again.', { status: 502, code: 'EMAIL_DELIVERY_FAILED' })
+  }
+
+  const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, false)
 
   const res = NextResponse.json(
     { data: { expiresAt, user: toUserDto(user) } },
@@ -281,11 +298,12 @@ async function handleRefresh(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { id: payload.sub } })
     if (!user) throw new Error('User not found')
 
-    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role)
+    const emailVerified = !!user.emailVerified
+    const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, emailVerified)
     const res = NextResponse.json({
       data: { expiresAt, user: toUserDto(user) },
     })
-    setEvCookie(res, !!user.emailVerified)
+    setEvCookie(res, emailVerified)
     setAuthCookies(res, accessToken, refreshToken)
     return res
   } catch {
@@ -294,7 +312,7 @@ async function handleRefresh(req: NextRequest) {
 }
 
 async function handleGetMe(req: NextRequest) {
-  const authResult = await requireAuth(req)
+  const authResult = await requireAuth(req, { allowUnverified: true })
   if (!authResult.success) {
     return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
@@ -381,7 +399,7 @@ async function handleResetPassword(body: unknown) {
 }
 
 async function handleSendVerification(req: NextRequest) {
-  const authResult = await requireAuth(req)
+  const authResult = await requireAuth(req, { allowUnverified: true })
   if (!authResult.success) {
     return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
@@ -391,7 +409,7 @@ async function handleSendVerification(req: NextRequest) {
     if (!user) return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
     if (user.emailVerified) return NextResponse.json({ data: { success: true, alreadyVerified: true } })
 
-    const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage })
+    const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage, req })
     if (!emailResult.success) {
       console.error('[auth/send-verification] email failed', {
         userId: authResult.userId,
@@ -442,6 +460,10 @@ async function handleUpdateProfile(req: NextRequest) {
     name: z.string().min(2).max(100).optional(),
     avatarUrl: z.string().url().nullable().optional(),
     preferredLanguage: z.enum(SUPPORTED_LANGS).optional(),
+    countryCode: z.string().length(2).toUpperCase().refine(code => code in COUNTRY_MARKET_CONFIG, {
+      message: 'Unsupported country code',
+    }).nullable().optional(),
+    preferredCurrency: z.string().min(3).max(3).toUpperCase().nullable().optional(),
   })
 
   const parsed = schema.safeParse(body)
@@ -449,9 +471,16 @@ async function handleUpdateProfile(req: NextRequest) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR' })
   }
 
+  const updateData = { ...parsed.data }
+  if (parsed.data.countryCode !== undefined) {
+    updateData.preferredCurrency = parsed.data.countryCode
+      ? getCountryConfig(parsed.data.countryCode).currency
+      : null
+  }
+
   const updated = await prisma.user.update({
     where: { id: authResult.userId },
-    data: { ...parsed.data },
+    data: updateData,
   })
 
   return NextResponse.json({ data: toUserDto(updated) })

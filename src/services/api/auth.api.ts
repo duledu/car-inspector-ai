@@ -35,7 +35,7 @@ export const authApi = {
     return data.data
   },
 
-  updateProfile: async (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage'>>): Promise<AuthUser> => {
+  updateProfile: async (updates: Partial<Pick<AuthUser, 'name' | 'avatarUrl' | 'preferredLanguage' | 'countryCode' | 'preferredCurrency'>>): Promise<AuthUser> => {
     const { data } = await apiClient.patch<ApiResponse<AuthUser>>('/auth/me', updates)
     return data.data
   },

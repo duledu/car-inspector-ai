@@ -26,16 +26,20 @@ export class PricingService {
 
   async getMarketPrice(query: PriceQuery): Promise<MarketPriceResult> {
     let lastError: unknown
+    const countryCode = (query.countryCode ?? 'RS').toUpperCase()
 
     for (const provider of this.providers) {
+      // PalovniProvider only covers the Serbian market
+      if (provider.providerId === 'polovni' && countryCode !== 'RS') continue
+
       const available = await Promise.resolve(provider.isAvailable())
       if (!available) continue
 
       try {
         const result = await provider.getMarketPrice(query)
         console.log(
-          `[pricing] ${provider.providerId} → ${result.minPrice}–${result.maxPrice} EUR` +
-          ` (${result.confidence})` +
+          `[pricing] ${provider.providerId} → ${result.minPrice}–${result.maxPrice} ${result.currency}` +
+          ` (${result.confidence}, ${countryCode})` +
           (result.listingCount != null && result.listingCount > 0 ? `, ${result.listingCount} listings` : '')
         )
         return result

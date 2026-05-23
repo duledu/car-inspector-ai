@@ -68,18 +68,20 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif", padding: '24px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
+    <div className="auth-helper-root" style={{ minHeight: '100dvh', background: '#080c14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', padding: '24px 16px', overflowX: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: 400, minWidth: 0 }}>
 
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              <span style={{ color: '#22d3ee' }}>Used Car</span> Inspector AI
+        <div className="auth-helper-brand" style={{ textAlign: 'center', marginBottom: 28 }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="auth-helper-logo" src="/logo-icon.svg" alt="Used Cars Doctor" width={44} height={51} />
+            <div className="auth-helper-title" style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: 0 }}>
+              Used Cars Doctor
             </div>
           </Link>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '36px 28px', textAlign: 'center' }}>
+        <div className="auth-helper-card" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '36px 28px', textAlign: 'center' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: iconBg(), border: `1px solid ${iconBorder()}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             {iconSvg()}
           </div>
@@ -95,7 +97,7 @@ function VerifyEmailContent() {
           </p>
 
           {state === 'success' && !isAuthenticated && (
-            <Link href="/auth" style={{ display: 'inline-block', padding: '12px 28px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 800, textDecoration: 'none' }}>
+            <Link href="/auth" style={{ display: 'inline-flex', minHeight: 46, alignItems: 'center', justifyContent: 'center', padding: '12px 28px', background: '#22d3ee', color: '#000', borderRadius: 11, fontSize: 14, fontWeight: 800, textDecoration: 'none' }}>
               {t('auth.signIn')}
             </Link>
           )}
@@ -106,6 +108,50 @@ function VerifyEmailContent() {
           )}
         </div>
       </div>
+      <style>{`
+        .auth-helper-root {
+          min-height: 100vh;
+          min-height: 100dvh;
+          padding-top: max(24px, env(safe-area-inset-top));
+          padding-bottom: max(24px, env(safe-area-inset-bottom));
+        }
+        @media (max-width: 520px) {
+          .auth-helper-root {
+            align-items: flex-start !important;
+            padding: max(16px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom)) !important;
+          }
+          .auth-helper-brand {
+            margin-bottom: 16px !important;
+          }
+          .auth-helper-logo {
+            width: 36px !important;
+            height: auto !important;
+          }
+          .auth-helper-title {
+            font-size: 18px !important;
+          }
+          .auth-helper-card {
+            border-radius: 16px !important;
+            padding: 24px 16px !important;
+          }
+        }
+        @media (orientation: landscape) and (max-height: 520px) {
+          .auth-helper-root {
+            align-items: flex-start !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+          }
+          .auth-helper-brand {
+            margin-bottom: 8px !important;
+          }
+          .auth-helper-logo {
+            display: none !important;
+          }
+          .auth-helper-card {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

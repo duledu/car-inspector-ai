@@ -1,5 +1,5 @@
 // =============================================================================
-// Used Car Inspector AI — Core Type Definitions
+// Used Cars Doctor — Core Type Definitions
 // All shared types used across modules, services, and components
 // =============================================================================
 
@@ -14,6 +14,12 @@ export interface AuthUser {
   avatarUrl?: string | null
   role: UserRole
   preferredLanguage?: string | null
+  /** Display country/market name derived from countryCode. Null = unknown. */
+  country?: string | null
+  /** ISO 3166-1 alpha-2 country code (e.g. "DE", "RS", "US"). Null = unknown / fallback to RS. */
+  countryCode?: string | null
+  /** ISO 4217 preferred currency. Derived from countryCode when null. */
+  preferredCurrency?: string | null
   emailVerified: boolean
   createdAt: string
 }
@@ -34,6 +40,9 @@ export interface RegisterPayload {
   email: string
   password: string
   preferredLanguage?: string
+  country?: string
+  countryCode?: string
+  preferredCurrency?: string
 }
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
