@@ -1152,12 +1152,7 @@ function Footer() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 32px 48px' }}>
 
         {/* ── Top grid ── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr',
-          gap: '48px 64px',
-          marginBottom: 56,
-        }}>
+        <div className="footer-grid">
 
           {/* Brand column */}
           <div style={{ maxWidth: 260 }}>

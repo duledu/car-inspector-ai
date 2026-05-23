@@ -56,13 +56,13 @@ export function LandingNav() {
       WebkitBackdropFilter: 'blur(24px)',
       transition: 'background 0.3s ease, border-color 0.3s ease',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" alt="" width={28} height={33} style={{ flexShrink: 0 }} />
+          <img src="/logo-icon.svg" alt="" style={{ width: 42, height: 49, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>Used Cars Doctor</div>
-            <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{t('landing.aiPowered')}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.1 }}>Used Cars Doctor</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{t('landing.aiPowered')}</div>
           </div>
         </Link>
 

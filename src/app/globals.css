@@ -799,3 +799,20 @@ body.camera-capture-active .bottom-nav-container {
     animation: none !important;
   }
 }
+
+/* ─── Footer grid ────────────────────────────────────────────── */
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 48px 64px;
+  margin-bottom: 56px;
+}
+@media (max-width: 640px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px 24px;
+  }
+  .footer-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}

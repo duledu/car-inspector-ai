@@ -123,7 +123,7 @@ export default function AppShell({ children }: AppShellProps) {
         <AmbientBackground variant="mobile" context={backgroundContext} />
         {/* ── Premium glass top bar ── */}
         <header style={{
-          height: 56,
+          height: 64,
           flexShrink: 0,
           background: 'rgba(6,9,16,0.97)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -142,7 +142,7 @@ export default function AppShell({ children }: AppShellProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Link href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-icon.svg" alt="" height={32} style={{ width: 'auto', display: 'block', flexShrink: 0 }} />
+              <img src="/logo-icon.svg" alt="" style={{ height: 48, width: 'auto', display: 'block', flexShrink: 0 }} />
             </Link>
 
             <div style={{ minWidth: 0 }}>
