@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/config/prisma'
-import { grantAccess } from '@/lib/inspection/access'
+import { grantPremiumAccess } from '@/lib/payments/premium-access'
 import { StripeAdapter } from './providers/stripe/stripe.adapter'
 import { getProductPrice } from './pricing'
 import type {
@@ -212,40 +212,10 @@ export class PaymentService {
     const purchaseId = data?.metadata?.purchaseId
     if (!purchaseId) return
 
-    const purchase = await prisma.premiumPurchase.update({
-      where: { id: purchaseId },
-      data: { status: 'PAID', purchasedAt: new Date() },
-    })
-
-    // Grant access
-    await prisma.accessGrant.upsert({
-      where: { purchaseId },
-      update: { isActive: true, grantedAt: new Date() },
-      create: {
-        userId: purchase.userId,
-        purchaseId: purchase.id,
-        productType: purchase.productType,
-        vehicleId: purchase.vehicleId,
-        grantedAt: new Date(),
-      },
-    })
-
-    if (purchase.productType === 'INSPECTION_REPORT') {
-      await grantAccess(purchase.userId, purchase.vehicleId, {
-        grantedVia: 'purchase',
-        purchaseId: purchase.id,
-      })
-    }
-
-    // Log billing event
-    await prisma.paymentEvent.create({
-      data: {
-        purchaseId,
-        userId: purchase.userId,
-        eventType: 'payment.succeeded',
-        provider: this.provider.providerId,
-        payload: data as any,
-      },
+    await grantPremiumAccess(purchaseId, {
+      provider: this.provider.providerId,
+      eventType: 'payment.succeeded',
+      payload: data,
     })
   }
 

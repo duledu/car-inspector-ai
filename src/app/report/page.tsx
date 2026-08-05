@@ -9,6 +9,9 @@ import { inspectionApi } from '@/services/api/inspection.api'
 import { reportApi, type ReportPhotoDraft } from '@/services/api/report.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { InspectionReportAccessGate } from '@/components/payment/InspectionReportAccessGate'
+import { GooglePlayCreditPurchase } from '@/components/payment/GooglePlayCreditPurchase'
+import { isRunningInTwa } from '@/utils/platform/is-twa'
+import { getCreditCost } from '@/lib/credits/product-credit-costs'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { buildInspectionReturnHref, detectPreliminaryMissingData } from '@/lib/report/preliminary'
 import { calculatePreliminaryRiskScore, AI_TOTAL_EXPECTED_PHOTOS } from '@/modules/scoring'
@@ -738,6 +741,11 @@ export default function ReportPage() {
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
   const [accessRequired, setAccessRequired] = useState(false)
+  // Start false on the server (document.referrer is unavailable during SSR);
+  // the effect below reads the real value once mounted on the client, same
+  // pattern as vehicleStoreHydrated below.
+  const [isAndroidApp, setIsAndroidApp] = useState(false)
+  const inspectionReportCreditCost = getCreditCost('INSPECTION_REPORT')
   const [reportAccessInfo, setReportAccessInfo] = useState<{ status: string; grantedVia?: string | null } | null>(null)
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
@@ -950,6 +958,10 @@ export default function ReportPage() {
       setInspectionStoreHydrated(true)
     }, 4_000)
     return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    setIsAndroidApp(isRunningInTwa())
   }, [])
 
   // Hard loading timeout — if `loading` or `autoRecalculating` is still true
@@ -1361,6 +1373,16 @@ export default function ReportPage() {
           setPromoSuccess(null)
         }}
         onPurchase={() => undefined}
+        androidPurchaseSlot={
+          isAndroidApp && activeVehicle && inspectionReportCreditCost !== null ? (
+            <GooglePlayCreditPurchase
+              vehicleId={activeVehicle.id}
+              productType="INSPECTION_REPORT"
+              requiredCredits={inspectionReportCreditCost}
+              onUnlocked={handleCalculate}
+            />
+          ) : undefined
+        }
       />
     </div>
   )

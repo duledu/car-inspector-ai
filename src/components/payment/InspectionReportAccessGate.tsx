@@ -20,6 +20,13 @@ interface Props {
   onRedeemPromo: () => void | Promise<void>
   onContinue: () => void | Promise<void>
   onPurchase: () => void | Promise<void>
+  /**
+   * When provided (Android/TWA only), replaces the primary Stripe purchase
+   * CTA with this node — e.g. <GooglePlayCreditPurchase>. Everything else
+   * (promo panel, benefits list, status pill) is unchanged on every
+   * platform; this is the only thing that differs for Android.
+   */
+  androidPurchaseSlot?: React.ReactNode
 }
 
 function vehicleTitle(vehicle?: Vehicle): string {
@@ -78,6 +85,7 @@ export function InspectionReportAccessGate({
   onRedeemPromo,
   onContinue,
   onPurchase,
+  androidPurchaseSlot,
 }: Props) {
   const { t, i18n } = useTranslation()
   const [showPromo, setShowPromo] = useState(false)
@@ -185,37 +193,43 @@ export function InspectionReportAccessGate({
 
       {/* ── Primary CTA ── */}
       <div style={{ marginBottom: 8 }}>
-        <button
-          type="button"
-          className="gate-primary-cta"
-          onClick={hasRedeemedAccess ? onContinue : onPurchase}
-          disabled={isBusy}
-          aria-busy={hasRedeemedAccess ? calculating : purchaseLoading}
-        >
-          {hasRedeemedAccess && calculating ? (
-            <>
-              <Loader2 className="gate-spin" size={17} />
-              {t('report.accessGate.continuing')}
-            </>
-          ) : !hasRedeemedAccess && purchaseLoading ? (
-            <>
-              <Loader2 className="gate-spin" size={17} />
-              {t('report.accessGate.preparingCheckout')}
-            </>
-          ) : (
-            <>
-              {hasRedeemedAccess
-                ? t('report.accessGate.generateNow')
-                : t('report.accessGate.purchaseReport', { price: priceLabel })}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </>
-          )}
-        </button>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 9, lineHeight: 1.5 }}>
-          {hasRedeemedAccess ? t('report.accessGate.readyCtaSubtext') : t('report.accessGate.ctaSubtext')}
-        </div>
+        {!hasRedeemedAccess && androidPurchaseSlot ? (
+          androidPurchaseSlot
+        ) : (
+          <>
+            <button
+              type="button"
+              className="gate-primary-cta"
+              onClick={hasRedeemedAccess ? onContinue : onPurchase}
+              disabled={isBusy}
+              aria-busy={hasRedeemedAccess ? calculating : purchaseLoading}
+            >
+              {hasRedeemedAccess && calculating ? (
+                <>
+                  <Loader2 className="gate-spin" size={17} />
+                  {t('report.accessGate.continuing')}
+                </>
+              ) : !hasRedeemedAccess && purchaseLoading ? (
+                <>
+                  <Loader2 className="gate-spin" size={17} />
+                  {t('report.accessGate.preparingCheckout')}
+                </>
+              ) : (
+                <>
+                  {hasRedeemedAccess
+                    ? t('report.accessGate.generateNow')
+                    : t('report.accessGate.purchaseReport', { price: priceLabel })}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </>
+              )}
+            </button>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 9, lineHeight: 1.5 }}>
+              {hasRedeemedAccess ? t('report.accessGate.readyCtaSubtext') : t('report.accessGate.ctaSubtext')}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Promo toggle ── */}

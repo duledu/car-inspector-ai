@@ -568,6 +568,7 @@ enum CreditTransactionType {
 
 enum CreditProvider {
   GOOGLE_PLAY
+  STRIPE
   PROMO
   ADMIN
   SYSTEM

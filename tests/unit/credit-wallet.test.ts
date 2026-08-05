@@ -1,6 +1,16 @@
 // =============================================================================
 // Credit Wallet Service — Unit Tests
 // All Prisma calls are mocked; no database connection required.
+//
+// Concurrency note: these tests mock $transaction to run its callback
+// synchronously against a single shared `mockTx`, so they verify the
+// *logic* inside each function (balance math, idempotency, error codes) but
+// cannot exercise real interleaved/concurrent transactions the way two
+// simultaneous requests against a live Postgres database would. The
+// SELECT ... FOR UPDATE locking added to lockWalletForUpdate is a standard,
+// well-understood Postgres mechanism for preventing lost updates under
+// concurrency; proving it holds under real concurrent load requires a test
+// against an actual database (or staging), not this mocked suite.
 // =============================================================================
 
 import { getCreditsForGooglePlayProduct, isValidGooglePlayProduct, GOOGLE_PLAY_PRODUCTS } from '../../src/lib/payments/google-play-products'
@@ -35,9 +45,13 @@ const { prisma: mockPrisma } = jest.requireMock('../../src/config/prisma') as {
 
 // The tx object used inside $transaction callbacks mimics the interactive
 // transaction client. We control it separately from the outer client mock.
+// $queryRaw stands in for lockWalletForUpdate's `SELECT ... FOR UPDATE` —
+// it's called as a tagged template, but that's just a regular function call
+// under the hood, so mockResolvedValue works the same as any other mock.
 const mockTx = {
-  creditWallet: { upsert: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+  creditWallet: { upsert: jest.fn(), update: jest.fn() },
   creditTransaction: { create: jest.fn() },
+  $queryRaw: jest.fn(),
 }
 
 // Import the module under test AFTER mocks are in place.
@@ -48,6 +62,7 @@ import {
   spendCredit,
   refundCredits,
   assertSufficientCredits,
+  recordExternalPurchaseAudit,
   WalletError,
 } from '../../src/lib/credits/credit-wallet'
 
@@ -63,6 +78,11 @@ const baseWallet = {
 
 function walletWith(overrides: Partial<typeof baseWallet>) {
   return { ...baseWallet, ...overrides }
+}
+
+/** Sets up lockWalletForUpdate's raw query to resolve to this wallet row. */
+function lockResolves(wallet: typeof baseWallet | null) {
+  mockTx.$queryRaw.mockResolvedValue(wallet ? [wallet] : [])
 }
 
 beforeEach(() => {
@@ -134,7 +154,7 @@ describe('grantCredits', () => {
     const after  = walletWith({ balance: 2, lifetimePurchased: 2 })
 
     mockPrisma.creditTransaction.findFirst.mockResolvedValue(null) // no duplicate token
-    mockTx.creditWallet.upsert.mockResolvedValue(before)
+    lockResolves(before)
     mockTx.creditWallet.update.mockResolvedValue(after)
     mockTx.creditTransaction.create.mockResolvedValue({})
 
@@ -160,6 +180,29 @@ describe('grantCredits', () => {
         }),
       }),
     )
+  })
+
+  test('reduces a negative balance when granting credits (debt repayment)', async () => {
+    const before = walletWith({ balance: -3, lifetimePurchased: 2 })
+    const after  = walletWith({ balance: 2, lifetimePurchased: 7 })
+
+    mockPrisma.creditTransaction.findFirst.mockResolvedValue(null)
+    lockResolves(before)
+    mockTx.creditWallet.update.mockResolvedValue(after)
+    mockTx.creditTransaction.create.mockResolvedValue({})
+
+    const result = await grantCredits({
+      userId: 'user-1',
+      amount: 5,
+      provider: 'GOOGLE_PLAY',
+      type: 'PURCHASE',
+      idempotencyKey: 'key-debt-repay',
+      purchaseToken: 'tok-new',
+    })
+
+    expect(result.balance).toBe(2)
+    const updateCall = mockTx.creditWallet.update.mock.calls[0][0]
+    expect(updateCall.data.balance).toBe(2) // -3 + 5
   })
 
   test('throws INVALID_AMOUNT for zero amount', async () => {
@@ -209,7 +252,7 @@ describe('grantCredits', () => {
     mockPrisma.creditTransaction.findFirst.mockResolvedValue(null)
     const before = walletWith({ balance: 0 })
     const after  = walletWith({ balance: 1, lifetimePurchased: 1 })
-    mockTx.creditWallet.upsert.mockResolvedValue(before)
+    lockResolves(before)
     mockTx.creditWallet.update.mockResolvedValue(after)
     mockTx.creditTransaction.create.mockResolvedValue({})
 
@@ -256,7 +299,7 @@ describe('spendCredit', () => {
     const before = walletWith({ balance: 3, lifetimeSpent: 1 })
     const after  = walletWith({ balance: 2, lifetimeSpent: 2 })
 
-    mockTx.creditWallet.findUnique.mockResolvedValue(before)
+    lockResolves(before)
     mockTx.creditWallet.update.mockResolvedValue(after)
     mockTx.creditTransaction.create.mockResolvedValue({})
 
@@ -278,7 +321,7 @@ describe('spendCredit', () => {
   })
 
   test('throws INSUFFICIENT_CREDITS when balance is 0', async () => {
-    mockTx.creditWallet.findUnique.mockResolvedValue(walletWith({ balance: 0 }))
+    lockResolves(walletWith({ balance: 0 }))
 
     await expect(
       spendCredit({ userId: 'user-1', idempotencyKey: 'spend-002' }),
@@ -288,11 +331,21 @@ describe('spendCredit', () => {
   })
 
   test('throws WALLET_NOT_FOUND when user has no wallet', async () => {
-    mockTx.creditWallet.findUnique.mockResolvedValue(null)
+    lockResolves(null)
 
     await expect(
       spendCredit({ userId: 'user-no-wallet', idempotencyKey: 'spend-003' }),
     ).rejects.toMatchObject({ code: 'WALLET_NOT_FOUND' })
+  })
+
+  test('throws NEGATIVE_BALANCE_DEBT when the wallet balance is already negative', async () => {
+    lockResolves(walletWith({ balance: -3 }))
+
+    await expect(
+      spendCredit({ userId: 'user-1', idempotencyKey: 'spend-debt' }),
+    ).rejects.toMatchObject({ code: 'NEGATIVE_BALANCE_DEBT' })
+
+    expect(mockTx.creditWallet.update).not.toHaveBeenCalled()
   })
 
   test('is idempotent: returns current wallet on duplicate idempotencyKey', async () => {
@@ -304,6 +357,95 @@ describe('spendCredit', () => {
     const result = await spendCredit({ userId: 'user-1', idempotencyKey: 'spend-already-used' })
 
     expect(result.balance).toBe(1)
+  })
+
+  test('deducts a custom amount when provided (e.g. redeeming a multi-credit product)', async () => {
+    const before = walletWith({ balance: 5, lifetimeSpent: 0 })
+    const after  = walletWith({ balance: 2, lifetimeSpent: 3 })
+
+    lockResolves(before)
+    mockTx.creditWallet.update.mockResolvedValue(after)
+    mockTx.creditTransaction.create.mockResolvedValue({})
+
+    const result = await spendCredit({ userId: 'user-1', idempotencyKey: 'spend-multi', amount: 3 })
+
+    expect(result.balance).toBe(2)
+    expect(mockTx.creditTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ amount: 3, balanceBefore: 5, balanceAfter: 2 }) }),
+    )
+  })
+
+  test('omitting amount still defaults to 1 (backward compatible)', async () => {
+    const before = walletWith({ balance: 5 })
+    const after  = walletWith({ balance: 4 })
+    lockResolves(before)
+    mockTx.creditWallet.update.mockResolvedValue(after)
+    mockTx.creditTransaction.create.mockResolvedValue({})
+
+    await spendCredit({ userId: 'user-1', idempotencyKey: 'spend-default' })
+
+    expect(mockTx.creditTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ amount: 1 }) }),
+    )
+  })
+
+  test('throws INSUFFICIENT_CREDITS when balance is less than the custom amount', async () => {
+    lockResolves(walletWith({ balance: 2 }))
+
+    await expect(
+      spendCredit({ userId: 'user-1', idempotencyKey: 'spend-insufficient-multi', amount: 3 }),
+    ).rejects.toMatchObject({ code: 'INSUFFICIENT_CREDITS' })
+  })
+
+  test('throws INVALID_AMOUNT for a zero or negative custom amount', async () => {
+    await expect(
+      spendCredit({ userId: 'user-1', idempotencyKey: 'spend-zero', amount: 0 }),
+    ).rejects.toMatchObject({ code: 'INVALID_AMOUNT' })
+    await expect(
+      spendCredit({ userId: 'user-1', idempotencyKey: 'spend-negative', amount: -2 }),
+    ).rejects.toMatchObject({ code: 'INVALID_AMOUNT' })
+  })
+})
+
+// =============================================================================
+// recordExternalPurchaseAudit
+// =============================================================================
+
+describe('recordExternalPurchaseAudit', () => {
+  test('records a zero-amount ledger row without mutating wallet balance', async () => {
+    const wallet = walletWith({ balance: 7 })
+    mockPrisma.creditWallet.upsert.mockResolvedValue(wallet)
+    mockPrisma.creditTransaction.create.mockResolvedValue({})
+
+    await recordExternalPurchaseAudit({
+      userId: 'user-1',
+      idempotencyKey: 'stripe-purchase-audit:purchase-1',
+      provider: 'STRIPE',
+      productId: 'INSPECTION_REPORT',
+    })
+
+    expect(mockPrisma.creditTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'PURCHASE',
+          provider: 'STRIPE',
+          amount: 0,
+          balanceBefore: 7,
+          balanceAfter: 7,
+        }),
+      }),
+    )
+    // Never touches CreditWallet.balance directly.
+    expect(mockPrisma.creditWallet.update).not.toHaveBeenCalled()
+  })
+
+  test('is a silent no-op on duplicate idempotencyKey', async () => {
+    mockPrisma.creditWallet.upsert.mockResolvedValue(walletWith({ balance: 1 }))
+    mockPrisma.creditTransaction.create.mockRejectedValue({ code: 'P2002' })
+
+    await expect(
+      recordExternalPurchaseAudit({ userId: 'user-1', idempotencyKey: 'dup-key', provider: 'STRIPE' }),
+    ).resolves.toBeUndefined()
   })
 })
 
@@ -345,7 +487,7 @@ describe('refundCredits', () => {
     const before = walletWith({ balance: 3 })
     const after  = walletWith({ balance: 2 })
 
-    mockTx.creditWallet.upsert.mockResolvedValue(before)
+    lockResolves(before)
     mockTx.creditWallet.update.mockResolvedValue(after)
     mockTx.creditTransaction.create.mockResolvedValue({})
 
@@ -362,23 +504,41 @@ describe('refundCredits', () => {
         data: expect.objectContaining({
           type: 'REFUND',
           provider: 'GOOGLE_PLAY',
+          amount: -1,
         }),
       }),
     )
   })
 
-  test('clamps balance to 0 — never goes negative on refund', async () => {
+  test('goes negative (debt) when the refund exceeds the current balance — never clamps', async () => {
     const before = walletWith({ balance: 0 })
-    const after  = walletWith({ balance: 0 })
+    const after  = walletWith({ balance: -5 })
 
-    mockTx.creditWallet.upsert.mockResolvedValue(before)
+    lockResolves(before)
     mockTx.creditWallet.update.mockResolvedValue(after)
     mockTx.creditTransaction.create.mockResolvedValue({})
 
-    await refundCredits({ userId: 'user-1', amount: 5, idempotencyKey: 'refund-002' })
+    const result = await refundCredits({ userId: 'user-1', amount: 5, idempotencyKey: 'refund-002' })
 
+    expect(result.balance).toBe(-5)
     const updateCall = mockTx.creditWallet.update.mock.calls[0][0]
-    expect(updateCall.data.balance).toBe(0)
+    expect(updateCall.data.balance).toBe(-5)
+    expect(mockTx.creditTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ amount: -5, balanceBefore: 0, balanceAfter: -5 }) }),
+    )
+  })
+
+  test('a partial refund shortfall also goes negative rather than clamping to 0', async () => {
+    const before = walletWith({ balance: 2 })
+    const after  = walletWith({ balance: -3 })
+
+    lockResolves(before)
+    mockTx.creditWallet.update.mockResolvedValue(after)
+    mockTx.creditTransaction.create.mockResolvedValue({})
+
+    const result = await refundCredits({ userId: 'user-1', amount: 5, idempotencyKey: 'refund-partial' })
+
+    expect(result.balance).toBe(-3) // 2 - 5
   })
 
   test('throws INVALID_AMOUNT for zero refund', async () => {
@@ -405,6 +565,11 @@ describe('WalletError', () => {
     expect(err.code).toBe('INSUFFICIENT_CREDITS')
     expect(err.message).toBe('test error')
     expect(err).toBeInstanceOf(Error)
+  })
+
+  test('supports the NEGATIVE_BALANCE_DEBT code', () => {
+    const err = new WalletError('you owe credits', 'NEGATIVE_BALANCE_DEBT')
+    expect(err.code).toBe('NEGATIVE_BALANCE_DEBT')
   })
 })
 

@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next'
 import { usePaymentStore } from '@/store'
 import { paymentApi, type ProductPriceDto } from '@/services/api/payment.api'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
+import { isRunningInTwa } from '@/utils/platform/is-twa'
+import { isCreditUnlockable, getCreditCost } from '@/lib/credits/product-credit-costs'
+import { GooglePlayCreditPurchase } from '@/components/payment/GooglePlayCreditPurchase'
 import type { Vehicle, PremiumProduct } from '@/types'
 
 interface Props {
@@ -51,7 +54,12 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
   const { startCheckout, isCreatingCheckout, error } = usePaymentStore()
   const [clicked, setClicked] = useState(false)
   const [price, setPrice] = useState<ProductPriceDto | null>(null)
+  const [isAndroidApp, setIsAndroidApp] = useState(false)
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
+
+  useEffect(() => {
+    setIsAndroidApp(isRunningInTwa())
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -244,6 +252,31 @@ export function PremiumLockedState({ vehicle, productType, comingSoon = false }:
           >
             {t('premiumPage.locked.currentlyUnavailable')}
           </div>
+        ) : isAndroidApp && !isCreditUnlockable(productType) ? (
+          // Third-party / non-AI-native products (e.g. CarVertical) are not
+          // sold inside the Android app at all — no Stripe, no Play Billing.
+          <div
+            role="status"
+            style={{
+              padding: '13px 14px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10,
+              fontSize: 12.5,
+              color: 'rgba(255,255,255,0.5)',
+              lineHeight: 1.6,
+              textAlign: 'center',
+            }}
+          >
+            {t('premiumPage.locked.notAvailableOnAndroid', 'This report isn’t available for purchase in the Android app.')}
+          </div>
+        ) : isAndroidApp && vehicle ? (
+          <GooglePlayCreditPurchase
+            vehicleId={vehicle.id}
+            productType={productType}
+            requiredCredits={getCreditCost(productType) ?? 0}
+            onUnlocked={() => { globalThis.location.reload() }}
+          />
         ) : (
           <button
             onClick={handlePurchase}
