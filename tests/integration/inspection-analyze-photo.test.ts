@@ -8,7 +8,7 @@
 // file only proves the security gate, not the analysis pipeline.
 // =============================================================================
 
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 jest.mock('../../src/utils/auth.middleware', () => ({
   requireAuth: jest.fn(),
@@ -19,14 +19,20 @@ jest.mock('../../src/lib/inspection/access', () => ({
   hasAiAnalysisAccess: jest.fn(),
 }))
 
+jest.mock('../../src/lib/legal/consent-guard', () => ({
+  requireCurrentConsent: jest.fn(),
+}))
+
 import { POST } from '../../src/app/api/inspection/analyze-photo/route'
 import { requireAuth } from '../../src/utils/auth.middleware'
 import { verifyVehicleOwnership, hasAiAnalysisAccess } from '../../src/lib/inspection/access'
+import { requireCurrentConsent } from '../../src/lib/legal/consent-guard'
 import { resetRateLimits } from '../../src/lib/security/rate-limit'
 
 const mockRequireAuth = requireAuth as jest.Mock
 const mockVerifyOwnership = verifyVehicleOwnership as jest.Mock
 const mockHasAiAnalysisAccess = hasAiAnalysisAccess as jest.Mock
+const mockRequireCurrentConsent = requireCurrentConsent as jest.Mock
 
 const AUTH_SUCCESS = { success: true, userId: 'user-1', email: 'u@test.com', role: 'USER', emailVerified: true }
 
@@ -68,6 +74,7 @@ beforeEach(() => {
   resetRateLimits()
   process.env = { ...ORIGINAL_ENV, OPENAI_API_KEY: 'test-key' }
   mockRequireAuth.mockResolvedValue(AUTH_SUCCESS)
+  mockRequireCurrentConsent.mockResolvedValue(null)
   mockVerifyOwnership.mockResolvedValue(true)
   mockHasAiAnalysisAccess.mockResolvedValue(false)
 })
@@ -81,6 +88,13 @@ describe('POST /api/inspection/analyze-photo — payment gate', () => {
     mockRequireAuth.mockResolvedValue({ success: false, reason: 'Missing auth cookie' })
     const res = await POST(req(validBody()))
     expect(res.status).toBe(401)
+  })
+
+  test('403s when the caller lacks current consent, before ownership is even checked', async () => {
+    mockRequireCurrentConsent.mockResolvedValue(NextResponse.json({ code: 'CONSENT_REQUIRED' }, { status: 403 }))
+    const res = await POST(req(validBody()))
+    expect(res.status).toBe(403)
+    expect(mockVerifyOwnership).not.toHaveBeenCalled()
   })
 
   test('422s when vehicleId is missing — no longer optional', async () => {

@@ -6,12 +6,16 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const BodySchema = z.object({ vehicleId: z.string().min(1) })
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   const parsed = BodySchema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {

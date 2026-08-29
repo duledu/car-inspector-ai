@@ -5,7 +5,7 @@
 // its redemption endpoint must not be brute-forceable).
 // =============================================================================
 
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 jest.mock('../../src/utils/auth.middleware', () => ({
   requireAuth: jest.fn(),
@@ -17,14 +17,20 @@ jest.mock('../../src/lib/inspection/access', () => ({
   verifyVehicleOwnership: jest.fn(),
 }))
 
+jest.mock('../../src/lib/legal/consent-guard', () => ({
+  requireCurrentConsent: jest.fn(),
+}))
+
 import { GET, POST } from '../../src/app/api/inspection/access/route'
 import { requireAuth } from '../../src/utils/auth.middleware'
 import { verifyVehicleOwnership, grantAccess } from '../../src/lib/inspection/access'
+import { requireCurrentConsent } from '../../src/lib/legal/consent-guard'
 import { resetRateLimits } from '../../src/lib/security/rate-limit'
 
 const mockRequireAuth = requireAuth as jest.Mock
 const mockVerifyOwnership = verifyVehicleOwnership as jest.Mock
 const mockGrantAccess = grantAccess as jest.Mock
+const mockRequireCurrentConsent = requireCurrentConsent as jest.Mock
 
 const AUTH_SUCCESS = { success: true, userId: 'user-1', email: 'u@test.com', role: 'USER', emailVerified: true }
 
@@ -40,11 +46,19 @@ beforeEach(() => {
   jest.clearAllMocks()
   resetRateLimits()
   mockRequireAuth.mockResolvedValue(AUTH_SUCCESS)
+  mockRequireCurrentConsent.mockResolvedValue(null)
   mockVerifyOwnership.mockResolvedValue(true)
   mockGrantAccess.mockResolvedValue({ id: 'report-1', status: 'ACTIVE' })
 })
 
 describe('POST /api/inspection/access — promo redemption', () => {
+  test('403s when the caller lacks current consent, before rate-limit/ownership checks', async () => {
+    mockRequireCurrentConsent.mockResolvedValue(NextResponse.json({ code: 'CONSENT_REQUIRED' }, { status: 403 }))
+    const res = await POST(postReq({ vehicleId: 'v1', code: 'VIP0629' }))
+    expect(res.status).toBe(403)
+    expect(mockGrantAccess).not.toHaveBeenCalled()
+  })
+
   test('400s for an unknown code', async () => {
     const res = await POST(postReq({ vehicleId: 'v1', code: 'NOT-REAL' }))
     expect(res.status).toBe(400)
@@ -89,5 +103,13 @@ describe('GET /api/inspection/access — unaffected by promo hardening', () => {
       lastStatus = res.status
     }
     expect(lastStatus).toBe(200)
+  })
+
+  test('is never gated by consent — reading access status must not require re-consent', async () => {
+    mockRequireCurrentConsent.mockResolvedValue(NextResponse.json({ code: 'CONSENT_REQUIRED' }, { status: 403 }))
+    const { getInspectionAccess } = jest.requireMock('../../src/lib/inspection/access')
+    getInspectionAccess.mockResolvedValue({ status: 'NONE', grantedVia: null })
+    const res = await GET(getReq('v1'))
+    expect(res.status).toBe(200)
   })
 })

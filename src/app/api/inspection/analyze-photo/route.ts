@@ -24,6 +24,7 @@ import { generateRequestId, parseRequestId, pipelineLog } from '@/lib/logger'
 import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
 import { checkRateLimit } from '@/lib/security/rate-limit'
 import { hasAiAnalysisAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
@@ -715,6 +716,10 @@ export async function POST(req: NextRequest) {
   if (!auth.success) {
     return requestError(auth.reason, 401, 'UNAUTHORIZED', requestId)
   }
+
+  // Step 1a: Consent — server-authoritative, independent of any frontend gate.
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   // Step 1b: Rate limit — bounds OpenAI Vision cost exposure per user against
   // request storms, retry loops, or deliberate abuse. Defense-in-depth only;

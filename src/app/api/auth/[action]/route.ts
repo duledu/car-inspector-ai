@@ -14,6 +14,9 @@ import { consumeEmailVerificationToken, consumePasswordResetToken } from '@/lib/
 import { sendVerifyEmail } from '@/lib/email/senders/send-verify-email'
 import { sendResetPasswordEmail } from '@/lib/email/senders/send-reset-password-email'
 import { COUNTRY_MARKET_CONFIG, getCountryConfig } from '@/lib/markets/country-config'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, CURRENT_RISK_ACK_VERSION } from '@/lib/legal/legal-config'
+import { recordConsent, getRequestMeta } from '@/lib/legal/consent-record'
+import { hasCurrentConsent } from '@/lib/legal/consent-guard'
 
 export const runtime = 'nodejs'
 
@@ -35,6 +38,17 @@ const registerSchema = z.object({
     message: 'Unsupported country code',
   }),
   preferredCurrency: z.string().min(3).max(3).toUpperCase().optional().nullable(),
+  // ─── Mandatory consent — server-authoritative, not just a UI checkbox ──────
+  // Both acknowledgements must be affirmatively true, and the versions the
+  // client claims to have shown the user must exactly match the CURRENT
+  // required versions (see legal-config.ts) — a stale, forged, or omitted
+  // version is rejected, never silently accepted.
+  termsAccepted: z.literal(true, { errorMap: () => ({ message: 'Terms of Use acceptance is required.' }) }),
+  riskAckAccepted: z.literal(true, { errorMap: () => ({ message: 'Risk acknowledgement acceptance is required.' }) }),
+  termsVersion: z.string().min(1),
+  privacyVersion: z.string().min(1),
+  riskAckVersion: z.string().min(1),
+  platform: z.enum(['WEB', 'ANDROID']).optional().default('WEB'),
 })
 
 const forgotPasswordSchema = z.object({
@@ -48,6 +62,16 @@ const resetPasswordSchema = z.object({
 
 const verifyEmailSchema = z.object({
   token: z.string().min(1),
+})
+
+const consentSchema = z.object({
+  termsAccepted: z.literal(true, { errorMap: () => ({ message: 'Terms of Use acceptance is required.' }) }),
+  riskAckAccepted: z.literal(true, { errorMap: () => ({ message: 'Risk acknowledgement acceptance is required.' }) }),
+  termsVersion: z.string().min(1),
+  privacyVersion: z.string().min(1),
+  riskAckVersion: z.string().min(1),
+  locale: z.enum(SUPPORTED_LANGS).optional().default('en'),
+  platform: z.enum(['WEB', 'ANDROID']).optional().default('WEB'),
 })
 
 // ─── Route Handlers ──────────────────────────────────────────────────────────
@@ -71,6 +95,8 @@ export async function POST(
       clearAuthCookies(logoutRes)
       return logoutRes
     }
+    case 'consent':
+      return handleConsent(req, body)
     case 'forgot-password':
       return handleForgotPassword(body)
     case 'reset-password':
@@ -158,8 +184,9 @@ function clearAuthCookies(res: NextResponse) {
 
 // ─── DTO helper ──────────────────────────────────────────────────────────────
 
-function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; countryCode?: string | null; preferredCurrency?: string | null; emailVerified: Date | null; createdAt: Date }) {
+async function toUserDto(user: { id: string; email: string; name: string; avatarUrl: string | null; role: string; preferredLanguage: string | null; countryCode?: string | null; preferredCurrency?: string | null; emailVerified: Date | null; createdAt: Date }) {
   const countryConfig = user.countryCode ? getCountryConfig(user.countryCode) : null
+  const { hasCurrentConsent: consentOk } = await hasCurrentConsent(user.id)
   return {
     id:                user.id,
     email:             user.email,
@@ -171,6 +198,7 @@ function toUserDto(user: { id: string; email: string; name: string; avatarUrl: s
     countryCode:       user.countryCode ?? null,
     preferredCurrency: user.preferredCurrency ?? countryConfig?.currency ?? null,
     emailVerified:     !!user.emailVerified,
+    hasCurrentConsent: consentOk,
     createdAt:         user.createdAt.toISOString(),
   }
 }
@@ -211,7 +239,7 @@ async function handleLogin(body: unknown) {
     const emailVerified = !!user.emailVerified
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, emailVerified)
     const res = NextResponse.json({
-      data: { expiresAt, user: toUserDto(user) },
+      data: { expiresAt, user: await toUserDto(user) },
     })
     setEvCookie(res, emailVerified)
     setAuthCookies(res, accessToken, refreshToken)
@@ -229,6 +257,21 @@ async function handleRegister(req: NextRequest, body: unknown) {
     return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
   }
 
+  // Never trust client-supplied version identifiers — the versions the
+  // client says it showed the user must exactly equal what we currently
+  // require. A stale, forged, or otherwise-mismatched version is rejected
+  // outright; there is no partial credit for "accepted an old version."
+  if (
+    parsed.data.termsVersion !== CURRENT_TERMS_VERSION ||
+    parsed.data.privacyVersion !== CURRENT_PRIVACY_VERSION ||
+    parsed.data.riskAckVersion !== CURRENT_RISK_ACK_VERSION
+  ) {
+    return apiError(
+      'The Terms of Use, Privacy Policy, or risk acknowledgement you reviewed are out of date. Please reload and accept the current versions.',
+      { status: 422, code: 'CONSENT_VERSION_MISMATCH' },
+    )
+  }
+
   const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
   if (existing) {
     return apiError('An account with this email already exists', { status: 409, code: 'EMAIL_IN_USE' })
@@ -236,17 +279,27 @@ async function handleRegister(req: NextRequest, body: unknown) {
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12)
   const countryConfig = getCountryConfig(parsed.data.countryCode)
+  const requestMeta = getRequestMeta(req)
 
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      passwordHash,
-      role: 'USER',
-      preferredLanguage: parsed.data.preferredLanguage,
-      countryCode: parsed.data.countryCode,
-      preferredCurrency: parsed.data.preferredCurrency ?? countryConfig.currency,
-    },
+  // Account creation and consent evidence are atomic — there is no window
+  // in which a User row exists without a matching ConsentRecord.
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        passwordHash,
+        role: 'USER',
+        preferredLanguage: parsed.data.preferredLanguage,
+        countryCode: parsed.data.countryCode,
+        preferredCurrency: parsed.data.preferredCurrency ?? countryConfig.currency,
+      },
+    })
+    await recordConsent(
+      { userId: created.id, locale: parsed.data.preferredLanguage, platform: parsed.data.platform, meta: requestMeta },
+      tx,
+    )
+    return created
   })
 
   const emailResult = await sendVerifyEmail({ userId: user.id, to: user.email, name: user.name, lang: user.preferredLanguage, req })
@@ -267,12 +320,54 @@ async function handleRegister(req: NextRequest, body: unknown) {
   const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, false)
 
   const res = NextResponse.json(
-    { data: { expiresAt, user: toUserDto(user) } },
+    { data: { expiresAt, user: await toUserDto(user) } },
     { status: 201 }
   )
   setEvCookie(res, false) // new registrations are always unverified
   setAuthCookies(res, accessToken, refreshToken)
   return res
+}
+
+/**
+ * POST /api/auth/consent — records affirmative acceptance for an ALREADY
+ * authenticated user who does not yet have current consent. Covers two
+ * cases: a Google OAuth account that was created with zero consent UI (see
+ * the OAuth callback), and an existing user re-consenting after a required
+ * legal-document version change. Never fabricates acceptance — the caller
+ * must affirmatively submit both acknowledgements and the exact current
+ * versions, validated the same way as at registration.
+ */
+async function handleConsent(req: NextRequest, body: unknown) {
+  const authResult = await requireAuth(req, { allowUnverified: true })
+  if (!authResult.success) {
+    return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
+  }
+
+  const parsed = consentSchema.safeParse(body)
+  if (!parsed.success) {
+    return apiError('Validation failed', { status: 422, code: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors })
+  }
+
+  if (
+    parsed.data.termsVersion !== CURRENT_TERMS_VERSION ||
+    parsed.data.privacyVersion !== CURRENT_PRIVACY_VERSION ||
+    parsed.data.riskAckVersion !== CURRENT_RISK_ACK_VERSION
+  ) {
+    return apiError(
+      'The Terms of Use, Privacy Policy, or risk acknowledgement you reviewed are out of date. Please reload and accept the current versions.',
+      { status: 422, code: 'CONSENT_VERSION_MISMATCH' },
+    )
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: authResult.userId } })
+  if (!user) return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
+
+  await recordConsent(
+    { userId: user.id, locale: parsed.data.locale, platform: parsed.data.platform, meta: getRequestMeta(req) },
+    prisma,
+  )
+
+  return NextResponse.json({ data: await toUserDto(user) })
 }
 
 async function handleRefresh(req: NextRequest) {
@@ -301,7 +396,7 @@ async function handleRefresh(req: NextRequest) {
     const emailVerified = !!user.emailVerified
     const { accessToken, refreshToken, expiresAt } = issueTokens(user.id, user.email, user.role, emailVerified)
     const res = NextResponse.json({
-      data: { expiresAt, user: toUserDto(user) },
+      data: { expiresAt, user: await toUserDto(user) },
     })
     setEvCookie(res, emailVerified)
     setAuthCookies(res, accessToken, refreshToken)
@@ -322,7 +417,7 @@ async function handleGetMe(req: NextRequest) {
     return apiError('User not found', { status: 404, code: 'NOT_FOUND' })
   }
 
-  return NextResponse.json({ data: toUserDto(user) })
+  return NextResponse.json({ data: await toUserDto(user) })
 }
 
 async function handleForgotPassword(body: unknown) {
@@ -483,7 +578,7 @@ async function handleUpdateProfile(req: NextRequest) {
     data: updateData,
   })
 
-  return NextResponse.json({ data: toUserDto(updated) })
+  return NextResponse.json({ data: await toUserDto(updated) })
 }
 
 async function handleDeleteAccount(req: NextRequest, body: unknown) {

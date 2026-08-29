@@ -12,6 +12,7 @@ import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { getChecklistDiagnostics, getInspectionCompletion } from '@/lib/inspection/checklist'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
+import { CURRENT_INSPECTION_START_ACK_VERSION } from '@/lib/legal/legal-config'
 import AppShell from '../AppShell'
 
 // ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
@@ -209,10 +210,10 @@ const PHOTO_DRAFT_KEY   = 'uci-photo-drafts'
 const AI_CONSENT_KEY    = 'uci-ai-consent'
 
 function readAiConsent(): boolean {
-  try { return localStorage.getItem(AI_CONSENT_KEY) === 'true' } catch { return false }
+  try { return localStorage.getItem(AI_CONSENT_KEY) === CURRENT_INSPECTION_START_ACK_VERSION } catch { return false }
 }
 function writeAiConsent(): void {
-  try { localStorage.setItem(AI_CONSENT_KEY, 'true') } catch { /* quota */ }
+  try { localStorage.setItem(AI_CONSENT_KEY, CURRENT_INSPECTION_START_ACK_VERSION) } catch { /* quota */ }
 }
 
 interface PhotoDraft {

@@ -7,7 +7,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { AuthUser, AuthSession, LoginCredentials, RegisterPayload } from '@/types'
-import { authApi } from '@/services/api/auth.api'
+import { authApi, type ConsentPayload } from '@/services/api/auth.api'
 
 // ─── Error key resolver ──────────────────────────────────────────────────────
 // Returns a translation key (e.g. 'auth.error.invalidCredentials').
@@ -19,6 +19,7 @@ function resolveAuthError(err: any, action: 'login' | 'register'): string {
   if (code === 'CONFIG_ERROR'       || status === 503) return 'auth.error.unavailable'
   if (code === 'INVALID_CREDENTIALS'|| status === 401) return 'auth.error.invalidCredentials'
   if (code === 'EMAIL_IN_USE'       || status === 409) return 'auth.error.emailInUse'
+  if (code === 'CONSENT_VERSION_MISMATCH')             return 'auth.error.consentVersionStale'
   if (code === 'VALIDATION_ERROR'   || status === 422)
     return action === 'login' ? 'auth.error.validationLogin' : 'auth.error.validationRegister'
   if (action === 'login' && (status >= 500 || !status)) return 'auth.error.genericLogin'
@@ -39,6 +40,7 @@ interface UserState {
 interface UserActions {
   login: (credentials: LoginCredentials) => Promise<void>
   register: (payload: RegisterPayload) => Promise<void>
+  submitConsent: (payload: ConsentPayload) => Promise<void>
   loginWithGoogle: (session: AuthSession) => void
   logout: () => Promise<void>
   deleteAccount: () => Promise<void>
@@ -103,6 +105,20 @@ export const useUserStore = create<UserStore>()(
             state.isAuthenticated = true
             state.isLoading = false
           })
+        } catch (err: any) {
+          set((state) => {
+            state.isLoading = false
+            state.error = resolveAuthError(err, 'register')
+          })
+          throw err
+        }
+      },
+
+      submitConsent: async (payload) => {
+        set((state) => { state.isLoading = true; state.error = null })
+        try {
+          const user = await authApi.consent(payload)
+          set((state) => { state.user = user; state.isLoading = false })
         } catch (err: any) {
           set((state) => {
             state.isLoading = false

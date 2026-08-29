@@ -10,6 +10,7 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { isDatabaseUnavailableError } from '@/config/prisma'
 import { canViewInspectionReport, getInspectionAccess, lockReport, releaseReportGeneration, startReportGeneration, verifyVehicleOwnership } from '@/lib/inspection/access'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const schema = z.object({ vehicleId: z.string().min(1) })
 
@@ -18,6 +19,11 @@ export async function POST(req: NextRequest) {
   if (!authResult.success) {
     return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
+
+  // Same score-generation logic as /api/inspection/score — must not be a
+  // path that skips the consent gate applied there.
+  const consentBlock = await requireCurrentConsent(authResult.userId)
+  if (consentBlock) return consentBlock
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {

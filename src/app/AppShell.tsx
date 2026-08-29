@@ -47,6 +47,12 @@ const PAGE_SLUG: Record<string, { slug: string; accent?: string }> = {
   '/profile':    { slug: 'profile' },
 }
 
+// Paths that must remain reachable even for a consent-pending user — legally
+// required account/privacy functionality (e.g. account deletion, language
+// preference) must never be blocked behind a NEW Terms acceptance. Does not
+// exempt inspection/report/purchase functionality.
+const CONSENT_GATE_EXEMPT_PATHS = new Set(['/profile'])
+
 const APP_BACKGROUND_PATHS = new Set([
   '/dashboard',
   '/vehicle',
@@ -80,12 +86,22 @@ export default function AppShell({ children }: AppShellProps) {
       router.replace('/verify-required')
       return
     }
+    // Frontend gating only — UX convenience so an unconsented user sees the
+    // right screen immediately. The SERVER independently rejects every
+    // protected inspection/report/purchase route via requireCurrentConsent()
+    // regardless of what this redirect does; a client that skips this check
+    // entirely (a direct API call) is still blocked there.
+    if (user?.hasCurrentConsent === false && !CONSENT_GATE_EXEMPT_PATHS.has(pathname)) {
+      router.replace('/consent-required')
+      return
+    }
     refreshSession()
-  }, [hydrated, isAuthenticated, pathname, router, user?.emailVerified, refreshSession])
+  }, [hydrated, isAuthenticated, pathname, router, user?.emailVerified, user?.hasCurrentConsent, refreshSession])
 
   if (!hydrated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (!isAuthenticated) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
   if (user?.emailVerified === false) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
+  if (user?.hasCurrentConsent === false && !CONSENT_GATE_EXEMPT_PATHS.has(pathname)) return <div style={{ minHeight: '100svh', background: '#080c14' }} />
 
   const pageMeta = PAGE_SLUG[pathname] ?? { slug: 'fallback' }
   const backgroundContext = pathname === '/inspection'

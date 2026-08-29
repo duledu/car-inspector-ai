@@ -21,6 +21,8 @@ export interface AuthUser {
   /** ISO 4217 preferred currency. Derived from countryCode when null. */
   preferredCurrency?: string | null
   emailVerified: boolean
+  /** True only when the user's latest ConsentRecord matches every CURRENT_* legal-document version. Server-authoritative — see src/lib/legal/consent-guard.ts. */
+  hasCurrentConsent: boolean
   createdAt: string
 }
 
@@ -43,6 +45,13 @@ export interface RegisterPayload {
   country?: string
   countryCode?: string
   preferredCurrency?: string
+  // ─── Mandatory consent — see src/lib/legal/legal-config.ts ─────────────────
+  termsAccepted: true
+  riskAckAccepted: true
+  termsVersion: string
+  privacyVersion: string
+  riskAckVersion: string
+  platform: 'WEB' | 'ANDROID'
 }
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────

@@ -11,6 +11,13 @@
 import fs from 'fs'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { computeLegalContentHash } from '../src/lib/legal/legal-content-hash'
+import {
+  CURRENT_TERMS_VERSION,
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_RISK_ACK_VERSION,
+  LEGAL_EFFECTIVE_DATE,
+} from '../src/lib/legal/legal-config'
 
 function loadLocalEnv() {
   for (const file of ['.env.local', '.env']) {
@@ -109,18 +116,55 @@ async function upsertAccount(account: SeedAccount) {
   console.log(`  Created ${user.role}: ${user.email}`)
 }
 
+// =============================================================================
+// Legal document versions
+//
+// Records the canonical content hash for each currently-required legal
+// document version, so drift between the running app (legal-config.ts) and
+// the actual en.ts text can be detected later (see
+// tests/unit/legal-content-hash.test.ts). This table is append-only evidence
+// metadata, not a live document store — the rendered legal pages always read
+// directly from en.ts/sr.ts. Upsert is keyed on [documentType, version], so
+// re-running the seed after a version bump adds a new row rather than
+// mutating history.
+// =============================================================================
+const LEGAL_DOCUMENT_VERSIONS = [
+  { documentType: 'TERMS' as const, version: CURRENT_TERMS_VERSION },
+  { documentType: 'PRIVACY' as const, version: CURRENT_PRIVACY_VERSION },
+  { documentType: 'RISK_ACKNOWLEDGEMENT' as const, version: CURRENT_RISK_ACK_VERSION },
+]
+
+async function seedLegalDocumentVersions() {
+  console.log('\nSeeding legal document versions\n')
+  for (const { documentType, version } of LEGAL_DOCUMENT_VERSIONS) {
+    const contentHash = computeLegalContentHash(documentType)
+    await prisma.legalDocumentVersion.upsert({
+      where: { documentType_version: { documentType, version } },
+      update: { contentHash, effectiveDate: new Date(LEGAL_EFFECTIVE_DATE) },
+      create: {
+        documentType,
+        version,
+        effectiveDate: new Date(LEGAL_EFFECTIVE_DATE),
+        contentHash,
+      },
+    })
+    console.log(`  ${documentType} ${version} -> ${contentHash.slice(0, 12)}...`)
+  }
+}
+
 async function main() {
   const accounts = getSeedAccounts()
 
   console.log('\nSeeding development accounts\n')
   if (accounts.length === 0) {
     console.log('  No seed accounts configured. Set SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD or SEED_USER_EMAIL/SEED_USER_PASSWORD.')
-    return
+  } else {
+    for (const account of accounts) {
+      await upsertAccount(account)
+    }
   }
 
-  for (const account of accounts) {
-    await upsertAccount(account)
-  }
+  await seedLegalDocumentVersions()
 }
 
 main()

@@ -5,6 +5,7 @@ import { apiError, logApiError } from '@/utils/api-response'
 import { getInspectionAccess, grantAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
 import { getPromoMeta } from '@/lib/inspection/promo-codes'
 import { checkRateLimit } from '@/lib/security/rate-limit'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const PromoSchema = z.object({
   vehicleId: z.string().min(1),
@@ -35,6 +36,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   // Promo codes are a guessable-secret entitlement path — rate limit
   // redemption attempts so this endpoint can't be used to brute-force codes.

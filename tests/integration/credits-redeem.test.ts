@@ -5,7 +5,7 @@
 // helpers mocked at their module boundaries.
 // =============================================================================
 
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 jest.mock('../../src/utils/auth.middleware', () => ({
   requireAuth: jest.fn(),
@@ -14,6 +14,10 @@ jest.mock('../../src/utils/auth.middleware', () => ({
 jest.mock('../../src/lib/inspection/access', () => ({
   verifyVehicleOwnership: jest.fn(),
   grantAccess: jest.fn(),
+}))
+
+jest.mock('../../src/lib/legal/consent-guard', () => ({
+  requireCurrentConsent: jest.fn(),
 }))
 
 jest.mock('../../src/config/prisma', () => ({
@@ -33,10 +37,12 @@ import { requireAuth } from '../../src/utils/auth.middleware'
 import { verifyVehicleOwnership, grantAccess } from '../../src/lib/inspection/access'
 import { prisma as mockPrisma } from '../../src/config/prisma'
 import { resetRateLimits } from '../../src/lib/security/rate-limit'
+import { requireCurrentConsent } from '../../src/lib/legal/consent-guard'
 
 const mockRequireAuth = requireAuth as jest.Mock
 const mockVerifyOwnership = verifyVehicleOwnership as jest.Mock
 const mockGrantAccess = grantAccess as jest.Mock
+const mockRequireCurrentConsent = requireCurrentConsent as jest.Mock
 
 // $queryRaw stands in for lockWalletForUpdate's SELECT ... FOR UPDATE —
 // spendCredit and refundCredits both read the wallet balance through it now
@@ -57,6 +63,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   resetRateLimits()
   mockRequireAuth.mockResolvedValue(AUTH_SUCCESS)
+  mockRequireCurrentConsent.mockResolvedValue(null)
   mockVerifyOwnership.mockResolvedValue(true)
   mockGrantAccess.mockResolvedValue({ id: 'report-1', status: 'ACTIVE' })
   ;(mockPrisma as any).$transaction.mockImplementation(async (fn: any) => fn(mockTx))
@@ -71,6 +78,14 @@ describe('POST /api/credits/redeem', () => {
     mockRequireAuth.mockResolvedValue({ success: false, reason: 'Missing auth cookie' })
     const res = await POST(req({ vehicleId: 'v1', productType: 'INSPECTION_REPORT' }))
     expect(res.status).toBe(401)
+  })
+
+  test('403s when the caller lacks current consent, before any wallet mutation', async () => {
+    mockRequireCurrentConsent.mockResolvedValue(NextResponse.json({ code: 'CONSENT_REQUIRED' }, { status: 403 }))
+    const res = await POST(req({ vehicleId: 'v1', productType: 'INSPECTION_REPORT' }))
+    expect(res.status).toBe(403)
+    expect(mockVerifyOwnership).not.toHaveBeenCalled()
+    expect((mockPrisma as any).$transaction).not.toHaveBeenCalled()
   })
 
   test('404s when the vehicle is not owned by the caller', async () => {

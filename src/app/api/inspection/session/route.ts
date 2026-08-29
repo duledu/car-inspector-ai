@@ -5,12 +5,16 @@ import { COMPACT_INSPECTION_CHECKLIST } from '@/lib/inspection/checklist'
 import { reconcileInspectionChecklist } from '@/lib/inspection/checklist.server'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const BodySchema = z.object({ vehicleId: z.string() })
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   let body: unknown
   try {

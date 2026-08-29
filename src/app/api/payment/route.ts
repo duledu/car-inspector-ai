@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { paymentService } from '@/modules/payments/payment.service'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const createCheckoutSchema = z.object({
   vehicleId: z.string().min(1),
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
   if (!authResult.success) {
     return apiError('Unauthorized', { status: 401, code: 'UNAUTHORIZED' })
   }
+
+  const consentBlock = await requireCurrentConsent(authResult.userId)
+  if (consentBlock) return consentBlock
 
   let body: unknown
   try {

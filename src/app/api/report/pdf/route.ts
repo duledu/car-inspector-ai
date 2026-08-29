@@ -11,6 +11,7 @@ import { apiError, logApiError } from '@/utils/api-response'
 import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { canViewInspectionReport, getInspectionAccess } from '@/lib/inspection/access'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -93,6 +94,9 @@ function filenameFor(vehicle: Vehicle): string {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   const body = await req.json().catch(() => null)
   const parsed = BodySchema.safeParse(body)

@@ -233,9 +233,9 @@ const META: Record<SeoPage, Partial<Record<SeoLang, PageMeta>>> = {
   // ── Terms ──────────────────────────────────────────────────────────────────
   terms: {
     en: {
-      title:       'Terms of Service | Used Cars Doctor',
-      description: 'Terms of Service for Used Cars Doctor. Covers AI disclaimer, user responsibility, limitation of liability, indemnification, and payment terms.',
-      keywords:    'terms of service, terms and conditions, AI disclaimer, used car inspector legal',
+      title:       'Terms of Use | Used Cars Doctor',
+      description: 'Terms of Use for Used Cars Doctor. Covers AI disclaimer, assumption of risk, no professional inspection, disclaimer of warranties, limitation of liability, and payment terms.',
+      keywords:    'terms of use, terms and conditions, AI disclaimer, used car inspector legal',
     },
     sr: {
       title:       'Uslovi Korišćenja | Used Cars Doctor',

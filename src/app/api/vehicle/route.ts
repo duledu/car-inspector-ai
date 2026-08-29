@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const CreateSchema = z.object({
   make: z.string().min(1),
@@ -41,6 +42,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   let body: unknown
   try {

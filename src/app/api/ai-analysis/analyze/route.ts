@@ -23,6 +23,7 @@ import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { checkRateLimit } from '@/lib/security/rate-limit'
 import { hasAiAnalysisAccess } from '@/lib/inspection/access'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const photoResultSchema = z.object({
   angle:          z.string().min(1),
@@ -63,6 +64,9 @@ export async function POST(req: NextRequest) {
   if (!auth.success) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   // Defense-in-depth against request storms/retries; does not replace the
   // entitlement check below. A full inspection aggregates once (plus an

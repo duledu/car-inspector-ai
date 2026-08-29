@@ -3,10 +3,14 @@ import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { carVerticalService } from '@/modules/integrations/carvertical/carvertical.service'
 import { apiError, logApiError } from '@/utils/api-response'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 export async function GET(req: NextRequest, { params }: { params: { vehicleId: string } }) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   try {
     // Verify vehicle belongs to user

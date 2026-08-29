@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/config/prisma'
 import { issueTokens } from '@/utils/auth.middleware'
 import { getCountryConfig } from '@/lib/markets/country-config'
+import { hasCurrentConsent } from '@/lib/legal/consent-guard'
 import {
   CANONICAL_GOOGLE_CALLBACK_URL,
   buildUrlForOrigin,
@@ -224,6 +225,15 @@ export async function GET(req: NextRequest) {
     console.log(`${tag} session OK. expiresAt=${new Date(expiresAt).toISOString()}`)
     const countryConfig = user.countryCode ? getCountryConfig(user.countryCode) : null
 
+    // Google OAuth shows no consent UI of its own — a brand-new account has
+    // zero ConsentRecord rows, so this is correctly false the moment the
+    // account is created. AppShell (UX) and every protected server route
+    // (authoritative) both gate on this exact flag, so a Google-authenticated
+    // user cannot reach inspection/report functionality — or accidentally
+    // trigger anything paid — until they complete the consent-required gate.
+    // Never fabricated: this is a real, fresh database read, not an assumed true.
+    const { hasCurrentConsent: consentOk } = await hasCurrentConsent(user.id)
+
     const handoffSession = {
       expiresAt,
       user: {
@@ -237,6 +247,7 @@ export async function GET(req: NextRequest) {
         countryCode: user.countryCode ?? null,
         preferredCurrency: user.preferredCurrency ?? countryConfig?.currency ?? null,
         emailVerified: true,
+        hasCurrentConsent: consentOk,
         createdAt: user.createdAt.toISOString(),
       },
     }

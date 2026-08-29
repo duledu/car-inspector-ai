@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/config/prisma'
 import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const BodySchema = z.object({
   status: z.enum(['PENDING', 'OK', 'WARNING', 'PROBLEM']),
@@ -13,6 +14,9 @@ const BodySchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { itemId: string } }) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   try {
     // Verify item belongs to a session owned by the user

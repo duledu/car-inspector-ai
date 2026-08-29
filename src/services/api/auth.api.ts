@@ -6,6 +6,16 @@
 import { apiClient } from './client'
 import type { AuthSession, LoginCredentials, RegisterPayload, AuthUser, ApiResponse } from '@/types'
 
+export interface ConsentPayload {
+  termsAccepted: true
+  riskAckAccepted: true
+  termsVersion: string
+  privacyVersion: string
+  riskAckVersion: string
+  locale: string
+  platform: 'WEB' | 'ANDROID'
+}
+
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthSession> => {
     const { data } = await apiClient.post<ApiResponse<AuthSession>>('/auth/login', credentials)
@@ -14,6 +24,12 @@ export const authApi = {
 
   register: async (payload: RegisterPayload): Promise<AuthSession> => {
     const { data } = await apiClient.post<ApiResponse<AuthSession>>('/auth/register', payload)
+    return data.data
+  },
+
+  /** Records consent for an already-authenticated user (Google OAuth's zero-consent path, or re-consent after a required version change). */
+  consent: async (payload: ConsentPayload): Promise<AuthUser> => {
+    const { data } = await apiClient.post<ApiResponse<AuthUser>>('/auth/consent', payload)
     return data.data
   },
 

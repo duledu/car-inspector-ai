@@ -59,7 +59,7 @@ export default function SeoLayout({
           {' · '}
           <Link href="/legal/privacy" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Privacy Policy</Link>
           {' · '}
-          <Link href="/legal/terms" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Terms of Service</Link>
+          <Link href="/legal/terms" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Terms of Use</Link>
         </p>
         <p style={{ margin: 0 }}>
           © {new Date().getFullYear()} Used Cars Doctor. AI-assisted inspection tool for used car buyers.

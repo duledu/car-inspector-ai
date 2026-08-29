@@ -10,6 +10,9 @@ import { SUPPORTED_LANGS, LANG_META, isSupportedLang, LANG_COOKIE } from '@/i18n
 import type { SupportedLang } from '@/i18n/shared'
 import { balanceHeadlineText } from '@/lib/typography'
 import { COUNTRY_LIST, getCountryConfig } from '@/lib/markets/country-config'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, CURRENT_RISK_ACK_VERSION } from '@/lib/legal/legal-config'
+import { isRunningInTwa } from '@/utils/platform/is-twa'
+import { ConsentCheckboxRow } from '@/components/legal/ConsentCheckboxRow'
 
 type Tab = 'login' | 'register'
 
@@ -44,8 +47,10 @@ function AuthPageContent() {
   const [showPassword,     setShowPassword]      = useState(false)
   const [countryCode,      setCountryCode]      = useState('')
   const [countryTouched,   setCountryTouched]   = useState(false)
-  const [consentAccepted,  setConsentAccepted]  = useState(false)
-  const [consentTouched,   setConsentTouched]   = useState(false)
+  const [consent1Accepted, setConsent1Accepted] = useState(false)
+  const [consent1Touched,  setConsent1Touched]  = useState(false)
+  const [consent2Accepted, setConsent2Accepted] = useState(false)
+  const [consent2Touched,  setConsent2Touched]  = useState(false)
   const [lang,         setLang]         = useState<SupportedLang>(() => {
     if (typeof document === 'undefined') return 'en'
     const cookie = document.cookie.split('; ').find(r => r.startsWith(`${LANG_COOKIE}=`))
@@ -58,8 +63,10 @@ function AuthPageContent() {
     clearError()
     setCountryCode('')
     setCountryTouched(false)
-    setConsentAccepted(false)
-    setConsentTouched(false)
+    setConsent1Accepted(false)
+    setConsent1Touched(false)
+    setConsent2Accepted(false)
+    setConsent2Touched(false)
   }, [tab])
   useEffect(() => {
     if (urlError) {
@@ -73,8 +80,12 @@ function AuthPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     clearError()
-    if (tab === 'register' && !consentAccepted) {
-      setConsentTouched(true)
+    if (tab === 'register' && !consent1Accepted) {
+      setConsent1Touched(true)
+      return
+    }
+    if (tab === 'register' && !consent2Accepted) {
+      setConsent2Touched(true)
       return
     }
     if (tab === 'register' && !countryCode) {
@@ -94,6 +105,15 @@ function AuthPageContent() {
           country: countryConfig.name,
           countryCode,
           preferredCurrency: countryConfig.currency,
+          // Server re-validates both booleans and all three versions —
+          // this payload cannot itself grant an account; see
+          // registerSchema/handleRegister in /api/auth/[action]/route.ts.
+          termsAccepted: true,
+          riskAckAccepted: true,
+          termsVersion: CURRENT_TERMS_VERSION,
+          privacyVersion: CURRENT_PRIVACY_VERSION,
+          riskAckVersion: CURRENT_RISK_ACK_VERSION,
+          platform: isRunningInTwa() ? 'ANDROID' : 'WEB',
         })
       }
       router.replace(redirect)
@@ -125,7 +145,7 @@ function AuthPageContent() {
     return t('auth.createAccount')
   }
 
-  const registerBlocked = tab === 'register' && (!countryCode || !consentAccepted)
+  const registerBlocked = tab === 'register' && (!countryCode || !consent1Accepted || !consent2Accepted)
 
   const inp: React.CSSProperties = {
     width: '100%', padding: '13px 14px', boxSizing: 'border-box',
@@ -387,90 +407,52 @@ function AuthPageContent() {
               </div>
             )}
 
-            {/* Legal consent — register tab only */}
+            {/* Legal consent — register tab only. Two separate, mandatory,
+                unchecked acknowledgements — never pre-checked, never merged
+                into one box. Both are validated again server-side; this UI
+                state cannot by itself create an account. */}
             {tab === 'register' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    cursor: 'pointer',
-                    padding: '11px 12px',
-                    borderRadius: 10,
-                    background: consentTouched && !consentAccepted ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.025)',
-                    border: `1px solid ${consentTouched && !consentAccepted ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.08)'}`,
-                    transition: 'border-color 0.15s, background 0.15s',
-                  }}
-                >
-                  <span style={{ position: 'relative', width: 22, height: 22, flexShrink: 0, marginTop: 1 }}>
-                    <input
-                      type="checkbox"
-                      id="auth-consent"
-                      checked={consentAccepted}
-                      onChange={e => {
-                        setConsentAccepted(e.target.checked)
-                        if (e.target.checked) setConsentTouched(false)
-                      }}
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        width: 22,
-                        height: 22,
-                        margin: 0,
-                        opacity: 0,
-                        cursor: 'pointer',
-                      }}
-                    />
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 7,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: consentAccepted ? '#22d3ee' : 'rgba(255,255,255,0.045)',
-                        border: `1px solid ${consentAccepted ? '#22d3ee' : 'rgba(255,255,255,0.2)'}`,
-                        boxShadow: consentAccepted ? '0 0 0 3px rgba(34,211,238,0.12)' : 'inset 0 0 0 1px rgba(0,0,0,0.2)',
-                        color: '#020617',
-                        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
-                      }}
-                    >
-                      {consentAccepted && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                      )}
-                    </span>
-                  </span>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', lineHeight: 1.6 }}>
-                    {t('auth.register.consentPre')}{' '}
-                    <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
-                      style={{ color: '#22d3ee', textDecoration: 'none' }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {t('nav.terms')}
-                    </a>
-                    {' '}{t('auth.register.consentMid')}{' '}
-                    <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
-                      style={{ color: '#22d3ee', textDecoration: 'none' }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {t('nav.privacy')}
-                    </a>
-                    .
-                  </span>
-                </label>
-                {consentTouched && !consentAccepted && (
-                  <div role="alert" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 2, fontSize: 12, color: '#f87171' }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    {t('auth.register.consentError')}
-                  </div>
-                )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Plain-language notice — supplements, does not replace, the full Terms */}
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, padding: '0 2px' }}>
+                  {t('legal.riskAck.plainNotice')}
+                </p>
+
+                <ConsentCheckboxRow
+                  id="auth-consent-terms"
+                  checked={consent1Accepted}
+                  touched={consent1Touched}
+                  onChange={checked => { setConsent1Accepted(checked); if (checked) setConsent1Touched(false) }}
+                  errorText={t('auth.register.consent1Error')}
+                  label={
+                    <>
+                      {t('auth.register.consent1Pre')}{' '}
+                      <a href="/legal/terms" target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#22d3ee', textDecoration: 'none' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {t('nav.terms')}
+                      </a>
+                      {' '}{t('auth.register.consent1Mid')}{' '}
+                      <a href="/legal/privacy" target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#22d3ee', textDecoration: 'none' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {t('nav.privacy')}
+                      </a>
+                      .
+                    </>
+                  }
+                />
+
+                <ConsentCheckboxRow
+                  id="auth-consent-risk"
+                  checked={consent2Accepted}
+                  touched={consent2Touched}
+                  onChange={checked => { setConsent2Accepted(checked); if (checked) setConsent2Touched(false) }}
+                  errorText={t('auth.register.consent2Error')}
+                  label={<span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.78)' }}>{t('legal.riskAck.checkbox2')}</span>}
+                />
               </div>
             )}
 

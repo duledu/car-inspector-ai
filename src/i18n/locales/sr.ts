@@ -70,6 +70,7 @@ const sr = {
   'auth.error.unavailable':       'Servis za autentifikaciju je privremeno nedostupan. Pokušajte ponovo.',
   'auth.error.invalidCredentials':'Nevažeći e-mail ili lozinka.',
   'auth.error.emailInUse':        'Nalog sa ovim e-mailom već postoji.',
+  'auth.error.consentVersionStale':'Naši Uslovi korišćenja su upravo ažurirani. Osvežite stranicu i pokušajte ponovo.',
   'auth.error.validationLogin':   'Unesite važeći e-mail i lozinku.',
   'auth.error.validationRegister':'Popunite sva obavezna polja ispravno.',
   'auth.error.serverError':       'Nešto nije u redu na našem kraju. Pokušajte ponovo.',
@@ -89,9 +90,10 @@ const sr = {
   'auth.orDivider':               'ili',
   'auth.forgotPasswordLink':      'Zaboravili ste lozinku?',
   'auth.backToSignIn':            'Nazad na prijavu',
-  'auth.register.consentPre':     'Razumem da ova aplikacija koristi AI analizu koja može biti netačna ili nepotpuna i slažem se sa',
-  'auth.register.consentMid':     'i',
-  'auth.register.consentError':   'Morate prihvatiti uslove da biste nastavili.',
+  'auth.register.consent1Pre':    'Potvrđujem da imam najmanje 18 godina i da sam pročitao/la i da se slažem da me pravno obavezuju',
+  'auth.register.consent1Mid':    'i da sam upoznat/a sa',
+  'auth.register.consent1Error':  'Morate potvrditi svoje godine i prihvatiti Uslove korišćenja da biste nastavili.',
+  'auth.register.consent2Error':  'Morate prihvatiti izjavu o AI i rizicima vezanim za vozilo da biste nastavili.',
 
   'auth.forgotPassword.title':     'Zaboravili ste lozinku?',
   'auth.forgotPassword.subtitle':  'Unesite svoju email adresu i poslaćemo vam link za resetovanje lozinke.',
@@ -133,9 +135,29 @@ const sr = {
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Nazad na početnu',
   'legal.lastUpdated':      'Poslednje ažuriranje:',
-  'legal.englishOnly':      'Ovaj pravni dokument dostupan je samo na engleskom jeziku. Mašinski prevedene verzije nisu pravno obavezujuće. Za pitanja kontaktirajte nas na contact@usedcarsdoctor.com.',
+  'legal.version':          'Verzija:',
+  'legal.limitedLocaleNotice': 'Potpuna, pravno obavezujuća verzija ovog dokumenta dostupna je na engleskom i srpskom jeziku. Ova stranica prikazuje automatski prevod isključivo radi lakšeg snalaženja i ne predstavlja zamenu za te verzije. Za sva pitanja kontaktirajte nas na contact@usedcarsdoctor.com.',
   'legal.privacy.title':    'Politika privatnosti',
   'legal.terms.title':      'Uslovi korišćenja',
+  'legal.riskAck.title':    'Izjava o rizicima',
+  'report.disclaimer.full': 'Ovaj izveštaj predstavlja informativne smernice zasnovane na veštačkoj inteligenciji, a ne stručni mehanički pregled, bezbednosni sertifikat, utvrđivanje tehničke ispravnosti niti garanciju. Rezultati mogu biti nepotpuni ili netačni i mogu propustiti da uoče nedostatke. Pre kupovine ili druge važne odluke, nezavisno proverite vozilo kod kvalifikovanog automehaničara. Korišćenje ovog izveštaja i dalje podleže Uslovima korišćenja.',
+
+  // ─── Izjava o rizicima (checkbox 2 pri registraciji / napomena pre pregleda) ──
+  'legal.riskAck.checkbox1':      'Potvrđujem da imam najmanje 18 godina i da sam pročitao/la i da se slažem da me pravno obavezuju Uslovi korišćenja, i da sam upoznat/a sa Politikom privatnosti.',
+  'legal.riskAck.checkbox2':      'Razumem i slažem se da je Used Cars Doctor alat zasnovan na veštačkoj inteligenciji, informativnog karaktera, a NE stručni mehanički pregled niti garancija stanja vozila. Njegovi rezultati mogu biti netačni ili mogu propustiti da uoče nedostatke, uključujući ozbiljne ili bezbednosno relevantne nedostatke. Ostajem odgovoran/na za nezavisnu proveru vozila i za svoje odluke o kupovini, vožnji i druge odluke. U najvećoj meri dozvoljenoj važećim propisima, prihvatam odredbe o preuzimanju rizika, oslobađanju od odgovornosti, odricanju od prava i ograničenju odgovornosti sadržane u Uslovima korišćenja.',
+  'legal.riskAck.plainNotice':    'Used Cars Doctor ne zamenjuje stručni pregled vozila. AI rezultati mogu biti netačni i mogu propustiti da uoče nedostatke. Vi ste odgovorni za nezavisnu proveru vozila pre donošenja odluke o kupovini ili bezbednosti.',
+  'legal.riskAck.inspectionStart':'Krećete sa AI pregledom informativnog karaktera. Ovo nije stručni mehanički pregled i može propustiti da uoči nedostatke. Nastavite samo ako razumete ova ograničenja.',
+  'legal.riskAck.inspectionStartTitle': 'Pre nego što počnete',
+  'legal.riskAck.inspectionStartContinue': 'Razumem, nastavi',
+
+  // ─── Kapija za ponovno prihvatanje uslova (nova verzija / OAuth bez saglasnosti)
+  'legal.consentRequired.title':       'Još jedan korak',
+  'legal.consentRequired.body':        'Naši Uslovi korišćenja i izjava o rizicima su ažurirani. Molimo pregledajte ih i prihvatite da biste nastavili da koristite Used Cars Doctor.',
+  'legal.consentRequired.accountNote': 'Vaš nalog, vozila i postojeći izveštaji su bezbedni i nisu izmenjeni — ovo samo otključava pokretanje ili nastavak pregleda.',
+  'legal.consentRequired.submit':      'Prihvati i nastavi',
+  'legal.consentRequired.submitting':  'Čuvanje…',
+  'legal.consentRequired.error':       'Došlo je do greške prilikom čuvanja vaše saglasnosti. Pokušajte ponovo.',
+  'legal.consentRequired.signOut':     'Odjavi se',
   'disclaimer.photoAnalysis': 'AI analiza fotografija je isključivo informativnog karaktera i ne garantuje stvarno stanje vozila. Korišćenjem napredne AI tehnologije nastojimo da korisnicima pružimo dodatni uvid i podršku u proceni vozila, ali rezultati mogu biti nepotpuni ili netačni. Na tačnost rezultata mogu uticati brojni faktori, uključujući tip i kvalitet kamere, osvetljenje, ugao snimanja i druge vizuelne uslove. Preporučujemo da sve nalaze uvek potvrdite kod kvalifikovanog stručnjaka pre donošenja konačne odluke o kupovini.',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
@@ -165,12 +187,15 @@ const sr = {
   'dashboard.yourVehicles':         'Vaša vozila',
   'dashboard.resumeBadge':          'U toku',
   'dashboard.resumeTitle':          'Nastavi pregled',
-  'dashboard.resumeComplete':       'završeno',
+  'dashboard.resumeComplete':       'popunjenosti kontrolne liste',
   'dashboard.continueInspection':   'Nastavi pregled',
   'dashboard.startInspection':      'Dalje',
   'dashboard.optionalAddOn':        'Opcioni dodatak',
   'dashboard.unlockHistory':        'Otključajte istoriju vozila',
   'dashboard.unlockHistorySub':     'Vlasništvo, nezgode i servisni zapisi.',
+  'dashboard.firstUseTip1':         'Nije potrebno mehaničarsko znanje — samo telefon i automobil koji želite da proverite.',
+  'dashboard.firstUseTip2':         'Većina pregleda traje 12–15 minuta od početka do izveštaja.',
+  'dashboard.firstUseTip3':         'Napredak se automatski čuva. Prekinite kad god želite i nastavite kasnije.',
 
   // ─── Inspection phase labels ──────────────────────────────────────────────────
   'phase.PRE_SCREENING':  'Priprema',
@@ -356,7 +381,7 @@ const sr = {
   'report.continueInspection':       'Nastavi pregled',
   'report.calculatePreliminary':     'Izracunaj preliminarnu ocenu',
   'report.generatePreliminaryReport':'Generisi preliminarni izvestaj',
-  'report.progressPercent':          '{{percent}}% zavrseno',
+  'report.progressPercent':          '{{percent}}% popunjenosti kontrolne liste',
   'report.noScoreNoInputs':          'Unesite barem jedan deo pregleda da biste dobili preliminarnu ocenu.',
   'report.notEnoughData':            'Nema dovoljno podataka za izvestaj.',
   'report.preliminaryFailed':        'Preliminarni izvestaj trenutno nije mogao da se generise.',
@@ -402,7 +427,7 @@ const sr = {
   'report.accessRequired.promoRequired': 'Unesite promo kod.',
   'report.accessRequired.retry':      'Nastavi',
   'report.accessRequired.generationInProgress': 'Generisanje izveštaja je već u toku. Sačekajte trenutak i pokušajte ponovo.',
-  'report.accessGate.badge':          'Profesionalni izveštaj o pregledu',
+  'report.accessGate.badge':          'AI izveštaj o proceni vozila',
   'report.accessGate.readyBadge':     'Kredit je spreman',
   'report.accessBadge.promoActive':   'Neograničen pristup aktivan',
   'report.accessBadge.promoLocked':   'Izveštaj je generisan',
@@ -457,11 +482,11 @@ const sr = {
   'report.aiConfidenceScore':        'AI ocena pouzdanosti',
   'report.recalculate':              'Ponovo izračunaj',
   'report.recalculating':            'Ponovo se izračunava…',
-  'report.pdf.cta':                  'Preuzmi profesionalni PDF izveštaj',
+  'report.pdf.cta':                  'Preuzmi AI izveštaj o proceni vozila (PDF)',
   'report.pdf.loading':              'Priprema PDF-a…',
   'report.pdf.error':                'Izrada izveštaja nije uspela, pokušajte ponovo',
-  'pdf.metadata.subject':            'Profesionalni izveštaj o pregledu vozila',
-  'pdf.cover.title':                 'Profesionalni izveštaj o pregledu',
+  'pdf.metadata.subject':            'AI izveštaj o proceni vozila',
+  'pdf.cover.title':                 'AI Izveštaj o Proceni Vozila',
   'pdf.cover.subtitle':              'AI procena stanja vozila i rizika za kupca',
   'pdf.engineUnavailable':           'Podaci o motoru nisu uneti',
   'pdf.notProvided':                 'Nije uneto',
@@ -773,9 +798,7 @@ const sr = {
   'inspection.aiAnalysing':         'AI analizira',
   'inspection.aiPhotoTitle':        'AI foto-provera',
   'inspection.aiPhotoDesc':         'Fotografišite svih 8 spoljašnjih uglova. AI proverava svaku fotografiju za prefarbanost, razmake panela i tragove oštećenja.',
-  'inspection.aiConsent.body':      'Ova aplikacija koristi AI za analizu slika vozila. Rezultati mogu biti netačni ili nepotpuni. Slike se mogu obrađivati putem eksternih AI servisa.',
-  'inspection.aiConsent.checkbox':  'Razumem i slažem se sa AI obradom slika',
-  'inspection.aiConsent.confirm':   'Nastavi',
+  'inspection.aiConsent.checkbox':  'Razumem ova ograničenja i želim da nastavim',
   'inspection.analysing':           'Analizira…',
   'inspection.aiVisible':           'Vidljivo',
   'inspection.analysisFailedImage': 'Slika se nije mogla učitati. Pokušajte sa jasnijim snimkom.',
@@ -790,6 +813,8 @@ const sr = {
   'inspection.aggFailed.message':     'Nismo uspeli da pripremimo sažetak foto-analize za ovaj izveštaj. Možete pokušati ponovo ili nastaviti sa ograničenim izveštajem.',
   'inspection.aggFailed.retry':       'Pokušaj ponovo',
   'inspection.savedForReportOnly':    'Sačuvano samo za izveštaj',
+  'inspection.photoGuidance':         'Dobro osvetljenje i malo veće rastojanje daju najbolje rezultate.',
+  'inspection.failedRetake':          'Nismo uspeli da analiziramo ovu fotografiju — pokušajte ponovo uz bolje osvetljenje.',
   'inspection.draftSaveFailed':       'Fotografija je snimljena, ali nismo uspeli da je sačuvamo za kasnije. Nastavite bez zatvaranja aplikacije.',
   'inspection.unusableRetake':        'Vozilo nije jasno vidljivo — molimo ponovo snimite ovaj ugao.',
   'inspection.retryAnalysis':         'Ponovi analizu',
@@ -837,9 +862,10 @@ const sr = {
   'inspection.noFlagsRaised':          'Nisu uočeni vidljivi problemi ni na jednoj fotografiji.',
   'inspection.noFlagsVeryLimited':     'Na analiziranim fotografijama nisu pronađeni problemi, ali je pokrivenost veoma ograničena. Dodajte više fotografija za pouzdane rezultate.',
   'inspection.noFlagsPartialCoverage': 'Na analiziranim fotografijama nisu detektovani problemi. Delimična pokrivenost — rezultati možda ne predstavljaju celokupno stanje vozila.',
-  'inspection.allPhasesComplete':   'Sve sekcije inspekcije su završene. Vaš izveštaj pouzdanosti je spreman.',
+  'inspection.allPhasesComplete':   'Sve sekcije kontrolne liste su popunjene. Vaš izveštaj je spreman za generisanje.',
   'inspection.viewAIReport':        'Pogledaj AI izveštaj',
   'inspection.prepReportDisclaimer':'Rezultati su generisani na osnovu dostupnih podataka i služe kao podrška pri proceni vozila.\nZa maksimalnu sigurnost, preporučuje se dodatna stručna provera pre kupovine.',
+  'inspection.preparingAssessment': 'Priprema vašeg izveštaja…',
   'inspection.finishAndScore':      'Završi i oceni',
 
   // ─── Camera capture ───────────────────────────────────────────────────────────
@@ -1207,6 +1233,9 @@ const sr = {
   'community.noPostsYet':          'Još nema objava',
   'community.noPostsDesc':         'Budite prvi koji počinje diskusiju.',
   'community.loadError':           'Učitavanje nije uspelo. Proverite konekciju i pokušajte ponovo.',
+  'community.reportPost':          'Prijavi objavu',
+  'community.blockUser':           'Blokiraj korisnika',
+  'community.reportSuccess':       'Hvala. Sadržaj je prijavljen i biće pregledan u roku od 24 sata.',
   'report.aiSummary.status':       'Problemi su otkriveni na pojedinim delovima vozila.',
   'report.aiSummary.mixedContext': 'Neki delovi izgledaju uredno, dok drugi pokazuju potencijalne nedoumice na {{count}} od {{total}} pregledanih fotografija.',
   'report.aiSummary.concern.strong': 'Prioritetna nedoumica: {{title}} oko oblasti {{area}}, uz pouzdanost od {{confidence}}%. Preporu\u010duje se hitan ru\u010dni pregled.',
@@ -1222,6 +1251,250 @@ const sr = {
   'report.accessGate.creditsAvailableOne': 'Dostupni krediti: 1',
   'report.accessGate.statusLockedLine': 'Potreban je 1 kredit',
   'report.accessGate.statusReadyLine': 'Spremno za generisanje',
+
+  // ─── Before You Buy (guide) page ───────────────────────────────────────────────
+  'beforeYouBuy.hero.eyebrow':        'Pre kupovine',
+  'beforeYouBuy.hero.headline1':      'Tržište polovnih vozila nagrađuje',
+  'beforeYouBuy.hero.headline2':      'pripremljene.',
+  'beforeYouBuy.hero.subtext':        'Strukturisan pristup pregledu polovnog vozila — pre obaveze, pre papirologije, pre nego što ključevi promene vlasnika. Doživite klinički, na podacima zasnovan pristup proveri pre kupovine. Prepoznajte rizike pre obaveze, papirologije i same transakcije.',
+  'beforeYouBuy.hero.ctaPrimary':     'Započni pregled',
+  'beforeYouBuy.hero.ctaSecondary':   'Istraži pristup',
+
+  'beforeYouBuy.reality.eyebrow':     'Dilema kupca',
+  'beforeYouBuy.reality.headline':    'Svako polovno vozilo ima svoju priču. Većina kupaca je nikada ne čuje.',
+  'beforeYouBuy.reality.p1':          'Tržište polovnih vozila je uglavnom neprozirno. Prodavci kontrolišu priču. Emocije nadjačavaju analizu. A finansijski ulog — često i do nekoliko desetina hiljada dolara — rutinski se odlučuje tokom dvadesetominutne probne vožnje.',
+  'beforeYouBuy.reality.p2':          'Used Cars Doctor je napravljen da promeni tu dinamiku — pružajući svakom kupcu pristup strukturisanom procesu pregleda zasnovanom na dokazima, koji je ranije bio dostupan samo profesionalcima.',
+  'beforeYouBuy.reality.stat1Value':  '1 od 3',
+  'beforeYouBuy.reality.stat1Label':  'polovnih vozila prodatih u SAD ima neotkriveni problem koji utiče na bezbednost ili vrednost.',
+  'beforeYouBuy.reality.stat2Value':  '$4,200',
+  'beforeYouBuy.reality.stat2Label':  'je prosečan trošak neočekivane popravke sa kojim se kupci suočavaju u prvoj godini vlasništva.',
+  'beforeYouBuy.reality.stat3Value':  '78%',
+  'beforeYouBuy.reality.stat3Label':  'kupaca izjavljuje da žali što nije temeljnije pregledalo vozilo pre kupovine.',
+
+  'beforeYouBuy.detection.eyebrow':   'Analitika pregleda',
+  'beforeYouBuy.detection.headline':  'Četiri ključne dimenzije vidljivog stanja vozila.',
+  'beforeYouBuy.detection.item1.title':   'Karoserija i strukturni integritet',
+  'beforeYouBuy.detection.item1.caption': 'Razmaci panela · Znaci prelakiranja · Deformacije od udesa',
+  'beforeYouBuy.detection.item1.body':    'Sistematski pregled poravnanja spoljašnjih panela, ujednačenosti površine i vidljivih strukturnih deformacija. Nepravilnosti u razmacima panela ili teksturi boje mogu ukazivati na neprijavljenu popravku nakon sudara.',
+  'beforeYouBuy.detection.item2.title':   'Stanje enterijera i elektronike',
+  'beforeYouBuy.detection.item2.caption': 'Znaci habanja · Kontrolne lampice · Funkcionalne provere',
+  'beforeYouBuy.detection.item2.body':    'Procena habanja kabine, prepoznavanje kontrolnih lampica na tabli i provera električnih sistema — oblasti koje prodavac obično preskoči tokom standardnog razgledanja vozila.',
+  'beforeYouBuy.detection.item3.title':   'Motorni prostor i mehanički vizuelni pregled',
+  'beforeYouBuy.detection.item3.caption': 'Curenje tečnosti · Korozija · Vidljivo habanje',
+  'beforeYouBuy.detection.item3.body':    'Vizuelni pregled ispod haube radi uočavanja curenja tečnosti, tragova korozije, nepravilnih priključaka i drugih vidljivih znakova zapuštenog održavanja ili ranijih mehaničkih problema.',
+  'beforeYouBuy.detection.item4.title':   'Sveobuhvatan profil rizika',
+  'beforeYouBuy.detection.item4.caption': 'Ocena kontrolne liste · Oznake rizika · Ukupna procena',
+  'beforeYouBuy.detection.item4.body':    'Rezultati strukturisane kontrolne liste pregleda objedinjuju se sa vizuelnim nalazima u jedinstvenu, jasnu ocenu rizika — dajući vam objektivnu osnovu za odluku o kupovini.',
+
+  'beforeYouBuy.process.eyebrow':     'Kako funkcioniše',
+  'beforeYouBuy.process.headline':    'Od prvog pogleda do konačne odluke — strukturisan put.',
+  'beforeYouBuy.process.intro':       'Naš proces je osmišljen za stvarne uslove — na placu sa polovnim vozilima ili na prilazu kući prodavca — brz za sprovođenje, nemoguć za žurbu, i napravljen prema tome kako se odluke zaista donose.',
+  'beforeYouBuy.process.step1.title': 'Dodajte vozilo',
+  'beforeYouBuy.process.step1.body':  'Unesite podatke o vozilu. Svaki pregled, fotografija i nalaz vezuju se za to konkretno vozilo — stvarajući čist i organizovan zapis od samog početka.',
+  'beforeYouBuy.process.step2.title': 'Pratite vođenu kontrolnu listu',
+  'beforeYouBuy.process.step2.body':  'Prođite kroz strukturisan redosled pregleda koji obuhvata eksterijer, enterijer, mehaničke sisteme i dokumentaciju. Nije potrebno prethodno znanje o automobilima.',
+  'beforeYouBuy.process.step3.title': 'Pošaljite fotografije na analizu',
+  'beforeYouBuy.process.step3.body':  'Otpremite fotografije sa ključnih uglova pregleda. Naš sistem analizira vidljivo stanje površina, usklađenost panela i druge pokazatelje koji doprinose ukupnoj proceni.',
+  'beforeYouBuy.process.step4.title': 'Preuzmite svoj izveštaj',
+  'beforeYouBuy.process.step4.body':  'Sveobuhvatan izveštaj donosi vašu ocenu rizika, istaknute nalaze i konkretne preporuke — dajući vam jasnoću da kupite sa poverenjem ili da odustanete sa sigurnošću.',
+  'beforeYouBuy.process.cta':         'Započni proces',
+
+  'beforeYouBuy.visual.eyebrow':      'Analiza na osnovu fotografija',
+  'beforeYouBuy.visual.headline':     'Kamera vidi ono što oko može da propusti.',
+  'beforeYouBuy.visual.body':         'Iskusni proveravači vozila znaju šta da traže — a još važnije, šta da fotografišu. Naš sistem prati tu istu disciplinu, vodeći vas da snimite uglove koji otkrivaju pravo stanje vozila.',
+  'beforeYouBuy.visual.quote':        'Kupci koji dokumentuju stanje vozila pre kupovine pregovaraju iz pozicije snage — ne nagađanja.',
+  'beforeYouBuy.visual.point1.title': 'Pokazatelji stanja površine',
+  'beforeYouBuy.visual.point1.body':  'Fotografije se analiziraju radi uočavanja oštećenja površine, korozije, tragova tečnosti i drugih signala stanja koji možda nisu vidljivi pod salonskim osvetljenjem.',
+  'beforeYouBuy.visual.point2.title': 'Znaci prelakiranja i neusklađenosti',
+  'beforeYouBuy.visual.point2.body':  'Nepravilnosti u razmacima panela, neujednačena tekstura boje, tragovi prskanja i druge spoljašnje nepravilnosti ukazuju na raniju popravku — čak i kada je vozilo netom detaljno očišćeno.',
+  'beforeYouBuy.visual.point3.title': 'Dokumentovani vizuelni dokazi',
+  'beforeYouBuy.visual.point3.body':  'Svaka otpremljena fotografija postaje deo vašeg izveštaja o pregledu — sa vremenskom oznakom, organizovana i dostupna za dalju referencu ili pregovore.',
+
+  'beforeYouBuy.confidence.eyebrow':       'Smanjite rizik',
+  'beforeYouBuy.confidence.headline':      'Pretvorite neizvesnost u odlučujuću prednost.',
+  'beforeYouBuy.confidence.intro':         'Svaka kupovina polovnog vozila nosi rizik. Pitanje je samo da li u tu transakciju ulazite informisani — ili se nadate najboljem.',
+  'beforeYouBuy.confidence.outcome1.title': 'Jasna ocena rizika',
+  'beforeYouBuy.confidence.outcome1.body':  'Jedan, trenutan uvid u ukupan rizik vozila — bez potrebe za dešifrovanjem. Znajte da li da nastavite, pregovarate ili odustanete.',
+  'beforeYouBuy.confidence.outcome2.title': 'Konkretne oznake rizika',
+  'beforeYouBuy.confidence.outcome2.body':  'Precizno određeni problemi — ne opšti utisci. Svaka oznaka ukazuje na konkretnu oblast koja zahteva dodatnu pažnju ili stručnu proveru.',
+  'beforeYouBuy.confidence.outcome3.title': 'Prednost u pregovorima',
+  'beforeYouBuy.confidence.outcome3.body':  'Dokumentovani nalazi postaju argumenti u pregovorima. Koristite proverenu procenu rizika kao osnov za sniženje cene — ili opravdanje za odustajanje.',
+  'beforeYouBuy.confidence.outcome4.title': 'Jasnoća pri odlučivanju',
+  'beforeYouBuy.confidence.outcome4.body':  'Kupite, pregovarajte ili odustanite — uz sigurnost da je vaša odluka zasnovana na dokazima, a ne na emocijama ili utisku koji ostavlja prodavac.',
+
+  'beforeYouBuy.transparency.eyebrow':        'Iskreni po dizajnu',
+  'beforeYouBuy.transparency.headline':       'Šta radimo — a šta ne.',
+  'beforeYouBuy.transparency.intro':          'Transparentnost o našim mogućnostima nije upozorenje — to je temelj poverenja. Ovu platformu smo napravili znajući da iskreno priznata ograničenja je čine vrednijom, a ne manje vrednom.',
+  'beforeYouBuy.transparency.canTitle':       'Šta pružamo',
+  'beforeYouBuy.transparency.can1':           'Prepoznajemo vidljiva oštećenja karoserije, nepravilnosti boje i neusklađenost panela na osnovu fotografija.',
+  'beforeYouBuy.transparency.can2':           'Vodimo vas kroz detaljnu kontrolnu listu eksterijera, enterijera, mehanike i dokumentacije.',
+  'beforeYouBuy.transparency.can3':           'Generišemo izveštaj koji sažima nalaze, ocenu rizika i konkretne preporuke.',
+  'beforeYouBuy.transparency.can4':           'Dokumentujemo stanje vozila u trenutku pregleda radi pregovora i buduće evidencije.',
+  'beforeYouBuy.transparency.cannotTitle':    'Šta ne možemo',
+  'beforeYouBuy.transparency.cannot1':        'Sprovodimo mehaničku dijagnostiku ili skeniranje unutrašnjih komponenti motora i menjača.',
+  'beforeYouBuy.transparency.cannot2':        'Garantujemo skriveno mehaničko stanje, dugoročnu pouzdanost ili buduću bezbednost.',
+  'beforeYouBuy.transparency.cannot3':        'Proveravamo pravni status vlasništva, neizmirene finansijske obaveze ili istoriju vlasništva.',
+  'beforeYouBuy.transparency.cannot4':        'Zamenimo procenu kvalifikovanog mehaničara koji lično obavlja pregled pre kupovine.',
+  'beforeYouBuy.transparency.disclaimerLabel':'Napomena:',
+  'beforeYouBuy.transparency.disclaimerBody': 'Used Cars Doctor je informativni alat za podršku odlučivanju. Ne predstavlja stručni mehanički pregled, sertifikovanu procenu vrednosti niti pravnu proveru vlasništva. Ključne nalaze uvek proverite kod kvalifikovanog mehaničara i kroz odgovarajuće pravne kanale pre konačne kupovine vozila.',
+
+  'beforeYouBuy.decisive.quote':      'Trenutak pre kupovine polovnog vozila je najvažniji trenutak u celoj transakciji.',
+  'beforeYouBuy.decisive.p1':         'To je trenutak kada informacija ima najveću vrednost — pre nego što novac promeni vlasnika, pre potpisivanja ugovora, pre nego što ključevi postanu vaši, a sa njima i eventualni problemi.',
+  'beforeYouBuy.decisive.p2':         'Used Cars Doctor postoji upravo u tom trenutku — pružajući vam strukturu, analizu i sigurnost da donesete pravu odluku onda kada je to najvažnije.',
+  'beforeYouBuy.decisive.cta':        'Pregledaj pre kupovine',
+
+  'beforeYouBuy.faq.eyebrow':         'Najčešća pitanja',
+  'beforeYouBuy.faq.headline':        'Najčešća pitanja o pregledu polovnih vozila.',
+  'beforeYouBuy.faq.intro':           'Ako imate pitanje koje ovde nije obuhvaćeno, naš tim vam rado pomaže.',
+  'beforeYouBuy.faq.linkCta':         'Umesto toga, započni pregled',
+  'beforeYouBuy.faq.q1':              'Šta je pregled polovnog vozila pre kupovine?',
+  'beforeYouBuy.faq.a1':              'Pregled pre kupovine je sistematska procena stanja vozila pre nego što finalizujete transakciju. Obuhvata vidljivo stanje karoserije, mehanički vizuelni pregled, stanje enterijera i dokumentaciju. Used Cars Doctor pruža strukturisan digitalni proces — vođenu kontrolnu listu i analizu fotografija — koji prati pristup koji koriste profesionalni proveravači vozila.',
+  'beforeYouBuy.faq.q2':              'Da li ovo zamenjuje pregled kod mehaničara?',
+  'beforeYouBuy.faq.a2':              'Ne — i to jasno kažemo jer je važno. Used Cars Doctor je sveobuhvatan alat za prethodnu proveru i dokumentaciju. Za ključne mehaničke komponente (motor, menjač, ovesenje, kočnice) pregled kvalifikovanog mehaničara ostaje neophodan. Našu platformu shvatite kao prvi, strukturisan sloj vaše provere — ne poslednji.',
+  'beforeYouBuy.faq.q3':              'Kako funkcioniše analiza fotografija?',
+  'beforeYouBuy.faq.a3':              'Otpremate fotografije snimljene iz vođenih uglova — spoljašnji paneli, motorni prostor, enterijer, podvozje. Naš sistem analizira ove fotografije radi uočavanja vidljivih signala stanja: nepravilnosti boje, neusklađenosti panela, oštećenja površine, tragova tečnosti i drugih pokazatelja. Rezultati se objedinjuju sa vašim odgovorima iz kontrolne liste u jedinstvenu procenu rizika.',
+  'beforeYouBuy.faq.q4':              'Da li Used Cars Doctor može da otkrije oštećenja od udesa?',
+  'beforeYouBuy.faq.a4':              'Da — na osnovu vidljivih dokaza. Naša analiza fotografija prepoznaje nepravilnosti u teksturi boje, nepravilnosti u razmacima panela i deformacije površine koje često ukazuju na raniju popravku nakon sudara. Za potpunu istoriju nezgoda, uključujući one koje pregled ne može vizuelno otkriti, preporučuje se i izveštaj o istoriji vozila nezavisnog pružaoca poput CARFAX-a, uz našu procenu.',
+  'beforeYouBuy.faq.q5':              'Koji podaci su mi potrebni pre početka?',
+  'beforeYouBuy.faq.a5':              'Osnovni podaci o vozilu: marka, model, godište i kilometraža. VIN broj je koristan, ali nije obavezan za početak. Takođe će vam trebati pristup vozilu radi fotografisanja i pregleda — naš proces je osmišljen da funkcioniše u uslovima tipične privatne prodaje ili posete placu sa polovnim vozilima.',
+  'beforeYouBuy.faq.q6':              'Koliko traje pregled?',
+  'beforeYouBuy.faq.a6':              'Temeljan pregled putem naše platforme obično traje 30–45 minuta. To uključuje prolazak kroz vođenu kontrolnu listu i fotografisanje preporučenih uglova. Analiza i izrada izveštaja završavaju se odmah nakon slanja.',
+
+  'beforeYouBuy.finalCta.eyebrow':     'Započnite',
+  'beforeYouBuy.finalCta.headline1':   'Započnite danas.',
+  'beforeYouBuy.finalCta.headline2':   'Vozite sa poverenjem.',
+  'beforeYouBuy.finalCta.body':        'Vaša sledeća kupovina vozila zaslužuje istu pažnju koju bi trebalo da primeni svaki ozbiljan kupac — a retko ko to zaista i uradi.',
+  'beforeYouBuy.finalCta.ctaPrimary':  'Započnite pregled odmah',
+  'beforeYouBuy.finalCta.ctaSecondary':'Prijavite se na nalog',
+  'beforeYouBuy.finalCta.trust1':      'Besplatno za početak',
+  'beforeYouBuy.finalCta.trust2':      'Nije potrebno stručno znanje o vozilima',
+  'beforeYouBuy.finalCta.trust3':      'Uvek preporučujemo stručnog mehaničara',
+
+  'beforeYouBuy.footer.startInspection':'Započni pregled',
+
+  // ─── Uslovi korišćenja — potpun sadržaj ────────────────────────────────────────
+  // Zvaničan izvorni tekst je engleska verzija (src/lib/legal/legal-content-manifest.ts
+  // heš-uje samo engleske vrednosti); ovaj prevod je pravno ekvivalentan, ne
+  // samo doslovan prevod reči.
+  'legal.terms.intro': 'Ovi Uslovi korišćenja ("Uslovi") uređuju pristup i korišćenje veb-sajta, Progresivne veb-aplikacije i Android aplikacije Used Cars Doctor (zajedno, "Usluga") koju pruža Used Cars Doctor ("mi," "naš," "nas," "Kompanija"). Kreiranjem naloga ili korišćenjem Usluge prihvatate da vas ovi Uslovi obavezuju, kao i naša Politika privatnosti. Ako se ne slažete, nemojte koristiti Uslugu.',
+
+  'legal.terms.s1.title': '1. Prihvatanje uslova i uslovi podobnosti',
+  'legal.terms.s1.body': 'Pristupom ili korišćenjem Usluge potvrđujete da imate najmanje 18 godina i da imate pravnu sposobnost da zaključite obavezujući ugovor. Usluga nije namenjena, i ne sme je koristiti, niko mlađi od 18 godina.\n\nOvi Uslovi se primenjuju na sve platforme na kojima je Usluga dostupna, uključujući veb-sajt, Progresivnu veb-aplikaciju i Android aplikaciju distribuiranu putem Google Play-a. Kreiranje naloga zahteva izričito prihvatanje ovih Uslova, naše Politike privatnosti i Izjave o rizicima opisane u Odeljku 7 — prihvatanje je uslov za kreiranje naloga i za dalji pristup zaštićenim funkcijama, a ne pasivna posledica pregledanja sajta.',
+
+  'legal.terms.s2.title': '2. Opis usluge',
+  'legal.terms.s2.body': 'Used Cars Doctor je informativni alat zasnovan na veštačkoj inteligenciji, namenjen da pomogne pojedincima da procene polovna vozila pre kupovine. Usluga pruža:\n- Korak-po-korak vođene kontrolne liste za procenu polovnih vozila\n- AI analizu fotografija radi isticanja vidljivih pokazatelja stanja sa slika koje korisnik otpremi\n- AI generisane sažetke pregleda, pokazatelje rizika i ocene zasnovane na podacima koje korisnik unese\n- Opcione premium izveštaje o istoriji vozila iz izvora trećih strana\n- Preuzimanje PDF izveštaja o završenim procenama\n- Upravljanje nalogom i čuvanje istorije pregleda\n\nUsluga ne obavlja, i ne tvrdi da obavlja, fizički, mehanički ili sertifikovani pregled bilo kog vozila.',
+
+  'legal.terms.s3.title': '3. Zaštićene strane',
+  'legal.terms.s3.body': 'U ovim Uslovima, "Zaštićene strane" označava, zajednički i pojedinačno, u meri u kojoj svaka od njih zaista postoji u strukturi Kompanije: Kompaniju; njene sadašnje i bivše vlasnike, osnivače, akcionare i članove; njene direktore i rukovodioce; njene zaposlene, programere, izvođače, konsultante i predstavnike; njena povezana lica, pravne sledbenike i primaoce prava; i njene davaoce licenci, provajdere hostinga, AI/model provajdere, API provajdere, provajdere podataka o vozilima, platne provajdere i druge dobavljače i pružaoce usluga uključene u rad Usluge.\n\nSvako odricanje od odgovornosti, isključenje, ograničenje, oslobađanje, odricanje od prava, obaveza nepokretanja spora i obeštećenje iz ovih Uslova namenjeno je da deluje u korist svake Zaštićene strane kao korisnika trećeg lica, u istoj meri kao da je ta Zaštićena strana neposredni potpisnik ovih Uslova, u meri dozvoljenoj važećim propisima.',
+
+  'legal.terms.s4.title': '4. Korisnički nalozi',
+  'legal.terms.s4.body': 'Nalog možete kreirati koristeći e-mail adresu i lozinku ili prijavom putem Google naloga. Odgovorni ste za čuvanje poverljivosti svojih pristupnih podataka, za svu aktivnost pod vašim nalogom i za blagovremeno obaveštavanje o neovlašćenom korišćenju.\n\nZadržavamo pravo da suspendujemo ili ukinemo naloge koji krše ove Uslove, uključuju se u prevarne aktivnosti ili su neaktivni duži period.',
+
+  'legal.terms.s5.title': '5. Prihvatljivo korišćenje',
+  'legal.terms.s5.body': 'Slažete se da nećete:\n- Koristiti Uslugu za komercijalnu delatnost pregleda vozila niti preprodavati AI generisane izveštaje bez naše pismene saglasnosti\n- Otpremati sadržaj koji ne posedujete ili za koji nemate pravo da ga dostavite\n- Vršiti obrnuti inženjering, prikupljati (scraping) ili izdvajati podatke iz Usluge automatizovanim sredstvima\n- Dostavljati lažne, obmanjujuće ili prevarne podatke o vozilu\n- Pokušavati da zaobiđete kapije plaćanja, kontrole pristupa ili provere prava korišćenja\n- Ometati ili remetiti integritet ili rad Usluge',
+
+  'legal.terms.s6.title': '6. Važna napomena o pregledu vozila — ograničenja veštačke inteligencije',
+  'legal.terms.s6.body': 'AI ANALIZA NIJE STRUČNI PREGLED. Usluga koristi automatizovane modele mašinskog učenja za analizu fotografija i podataka koje korisnik unese. Ovi rezultati su isključivo informativnog karaktera.\n\nIzričito potvrđujete da veštačka inteligencija i automatizovani sistemi mogu pogrešiti. Mogu "halucinirati", pogrešno klasifikovati ili pogrešno protumačiti fotografije; ne uočiti oštećenje, uključujući bezbednosno kritično oštećenje; identifikovati oštećenje koje ne postoji; propustiti očigledne ili skrivene nedostatke; davati nedosledne rezultate između sesija; i oslanjati se na nepotpune ili netačne podatke koje ste vi ili treće lice dostavili.\n\nNIJEDAN REZULTAT — UKLJUČUJUĆI OCENU OD 100%, STATUS "PROŠLO," "NIZAK RIZIK," "ZELENO," "ZAVRŠENO," "NEMA UOČENIH PROBLEMA" ILI SLIČNU FORMULACIJU — NE ZNAČI DA JE VOZILO BEZBEDNO, TEHNIČKI ISPRAVNO, POUZDANO ILI BEZ NEDOSTATAKA. Kad god neki deo Usluge prikazuje procenat ili status "završeno", taj podatak opisuje koliki deo kontrolne liste ili procesa ste popunili — nikada stvarno stanje vozila.',
+
+  'legal.terms.s7.title': '7. Preuzimanje rizika',
+  'legal.terms.s7.body': 'Izričito potvrđujete i dobrovoljno preuzimate rizike svojstvene proceni, kupovini, prodaji, vlasništvu, popravci i korišćenju polovnog vozila. Used Cars Doctor ne može fizički pregledati unutrašnje komponente i ne može garantovati otkrivanje bilo kog stanja, poznatog ili nepoznatog, vidljivog ili nevidljivog, skrivenog, prikrivenog, povremenog ili budućeg.\n\nOvo preuzimanje rizika izričito obuhvata, bez ograničenja: motor, turbopunjač, menjač, kvačilo, pogonski sistem, diferencijal, kočnice, upravljački sistem, ovesenje, šasiju, ram i strukturni integritet, popravke karoserije i oštećenja od udesa, koroziju, električne sisteme i elektroniku, ECU jedinice, vazdušne jastuke/SRS sistem, ADAS sisteme, gume i točkove, akumulator, EV/hibridne sisteme, sistem hlađenja, sistem za gorivo, sisteme emisije, tačnost kilometraže, VIN i podatke o istoriji, podatke o vlasništvu, oštećenja od poplave ili požara, tehničku ispravnost, bezbednosne nedostatke i bilo koju drugu komponentu ili stanje vozila.',
+
+  'legal.terms.s8.title': '8. Nije stručni pregled',
+  'legal.terms.s8.body': 'Used Cars Doctor nije mehaničar, stručni proveravač vozila, dijagnostička služba, pregled tehničke ispravnosti ili bezbednosti, inženjerska usluga, telo za sertifikaciju vozila, usluga procene vrednosti, garancija, osiguravajući proizvod, pravni savet niti finansijski savet. Izveštaj koji generiše Usluga nije sertifikat o stanju vozila.\n\nKvalifikovani mehaničar sa fizičkim pristupom vozilu i odgovarajućom dijagnostičkom opremom treba nezavisno da pregleda vozilo pre nego što ga kupite, prodate, finansirate ili nastavite da koristite.',
+
+  'legal.terms.s9.title': '9. Bez oslanjanja; nema preuzete obaveze; odgovornost korisnika',
+  'legal.terms.s9.body': 'Rezultati Usluge su isključivo informativnog karaktera i ne smeju se tretirati kao jedini osnov za odluku o kupovini, prodaji, bezbednosti, mehaničkom stanju, finansijama ili vožnji. Ostajete odgovorni za nezavisnu proveru bitnih informacija pre nego što na osnovu njih postupite.\n\nPružanje kontrolne liste, upozorenja, AI analize, ocene, preporuke ili izveštaja ne predstavlja obećanje da će Used Cars Doctor otkriti svaki nedostatak ili opasnost, niti postojanje jednog upozorenja podrazumeva da je provereno svako drugo stanje. Popunjavanje svake stavke kontrolne liste ne znači da je svaka komponenta vozila stručno pregledana.\n\nUsed Cars Doctor pruža informacije; vi ih procenjujete i samostalno odlučujete koju radnju da preduzmete. Used Cars Doctor ne donosi odluku o kupovini, prodaji, vožnji ili popravci umesto vas, nije strana u bilo kojoj transakciji između vas i kupca, prodavca, prodavnice, mehaničara, kreditora ili osiguravača, i ne kontroliše vozilo, prodavca, put niti naredne događaje. Samo vi odlučujete da li ćete kupiti, prodati, odbiti, pregovarati, finansirati, popraviti, voziti, transportovati, registrovati, osigurati ili nastaviti da koristite vozilo.',
+
+  'legal.terms.s10.title': '10. Nije stručni savet',
+  'legal.terms.s10.body': 'Ništa u Usluzi ne predstavlja mehanički, finansijski, pravni, investicioni niti drugi stručni savet. Usluga ne pruža mehaničke ili inženjerske procene, finansijske savete o vrednosti ili ceni vozila, pravne savete o vlasništvu, registraciji ili usklađenosti, niti bilo kakvu sertifikovanu stručnu procenu. Pre donošenja važne odluke u vezi sa vozilom, obratite se licenciranom mehaničaru, sertifikovanom proceniocu, pravnom ili finansijskom savetniku, prema potrebi.',
+
+  'legal.terms.s11.title': '11. Otpremanje fotografija',
+  'legal.terms.s11.body': 'Otpremanjem fotografija dajete nam ograničenu, neisključivu licencu da ih prenesemo našem AI provajderu isključivo radi generisanja rezultata analize za vašu sesiju; izjavljujete da imate pravo da ih dostavite; fotografije se ne čuvaju duže od trajanja zahteva za analizu; i ne smete otpremati sadržaj koji sadrži lične podatke van onoga što je neophodno za identifikaciju vozila. Ne polažemo pravo vlasništva na vaše fotografije, a navedena ograničena licenca prestaje po završetku zahteva za analizu.',
+
+  'legal.terms.s12.title': '12. Premium izveštaji, plaćanja i povraćaj sredstava',
+  'legal.terms.s12.body': 'Određene funkcije zahtevaju plaćanje, koje se obrađuje preko Stripe-a (veb) ili Google Play Billing-a (Android), u zavisnosti od platforme.\n\nVeb/Stripe kupovine. Sve veb kupovine su konačne i ne podležu povraćaju sredstava, osim kada to zahteva važeći propis. Izveštaji o istoriji vozila preuzimaju se u realnom vremenu od provajdera trećih strana odmah po kupovini i smatraju se isporučenim odmah.\n\nGoogle Play kupovine. Kupovine izvršene putem Google Play-a podležu važećim mehanizmima i pravilima Google Play-a za povraćaj sredstava, pored svih obaveznih prava koja proizlaze iz važećih propisa. Kada Google obradi i potvrdi povraćaj sredstava ili storniranje (chargeback) za Google Play kupovinu, mi ćemo poništiti odgovarajući kredit u novčaniku u skladu sa našim standardnim postupkom obrade povraćaja zasnovanim na dugovanju; ovo ne povlači automatski ukidanje pristupa izveštajima koji su već generisani korišćenjem tih kredita.\n\nNe garantujemo tačnost, potpunost niti ažurnost podataka o istoriji vozila trećih strana i ne odgovaramo za greške ili propuste u njima. Cene se prikazuju pre potvrde svake kupovine i podložne su promeni.',
+
+  'legal.terms.s13.title': '13. Intelektualna svojina',
+  'legal.terms.s13.body': 'Usluga, uključujući njen dizajn, softver, AI procese i originalni sadržaj, u vlasništvu je Used Cars Doctor i zaštićena je važećim propisima o intelektualnoj svojini. Zadržavate vlasništvo nad podacima i fotografijama koje dostavite i dajete nam ograničenu licencu da ih koristimo radi pružanja Usluge. Ne smete kopirati, umnožavati niti praviti izvedena dela na osnovu Usluge bez naše prethodne pismene saglasnosti.',
+
+  'legal.terms.s14.title': '14. Usluge i podaci trećih strana',
+  'legal.terms.s14.body': 'Usluga se povezuje sa provajderima trećih strana, uključujući AI/model provajdere, obrađivače plaćanja, provajdere podataka o istoriji vozila, hosting baze podataka i provajdere autentifikacije. Ne kontrolišemo, ne garantujemo niti preuzimamo odgovornost za dostupnost, tačnost ili ponašanje bilo koje usluge, API-ja, AI modela ili izvora podataka treće strane. Podaci trećih strana mogu biti nepotpuni, netačni, zakasneli ili nedostupni, a njihovo korišćenje podleže uslovima tog provajdera.',
+
+  'legal.terms.s15.title': '15. Podaci koje dostavlja korisnik',
+  'legal.terms.s15.body': 'Odgovorni ste za kvalitet, potpunost i tačnost svega što dostavite, uključujući kvalitet slike, tačnu identifikaciju vozila, istinite odgovore, relevantne fotografije i snimke, VIN i druge unete podatke, i vaše pravo da dostavite taj sadržaj. Used Cars Doctor nije odgovoran za zaključke na koje su uticali netačni, obmanjujući, nepotpuni ili loši ulazni podaci koje ste dostavili.',
+
+  'legal.terms.s16.title': '16. Odricanje od garancija',
+  'legal.terms.s16.body': 'U NAJVEĆOJ MERI DOZVOLJENOJ VAŽEĆIM PROPISIMA, USLUGA I SVI REZULTATI SE PRUŽAJU "TAKVI KAKVI JESU," "PREMA DOSTUPNOSTI" I "SA SVIM NEDOSTACIMA," BEZ IKAKVIH GARANCIJA. Odričemo se svih garancija koje se zakonski mogu isključiti, bilo izričitih, podrazumevanih ili zakonskih, uključujući u pogledu tačnosti, potpunosti, pouzdanosti, dostupnosti, blagovremenosti, podobnosti za određenu namenu, prodajnosti, nepovređivanja prava trećih lica, rada bez grešaka, rezultata, stanja vozila, tehničke ispravnosti, bezbednosti i buduće pouzdanosti.\n\nNeke nadležnosti ne dozvoljavaju isključenje određenih podrazumevanih garancija ili zakonskih garancija za potrošače; u tom slučaju, isključenja iz ovog odeljka primenjuju se samo u meri dozvoljenoj tim propisom, a svaka zakonska garancija koja se ne može zakonski isključiti zadržava se u najmanjoj meri koju taj propis zahteva.',
+
+  'legal.terms.s17.title': '17. Ograničenje odgovornosti',
+  'legal.terms.s17.body': 'U NAJVEĆOJ MERI DOZVOLJENOJ VAŽEĆIM PROPISIMA, ZAŠTIĆENE STRANE NEĆE SNOSITI ODGOVORNOST, BEZ OBZIRA NA PRAVNI OSNOV (UKLJUČUJUĆI UGOVOR, DELIKT, NEPAŽNJU, POGREŠNO PREDSTAVLJANJE, GARANCIJU, OBJEKTIVNU ODGOVORNOST, ZAKON, RESTITUCIJU ILI PRAVIČNOST), ZA BILO KAKAV GUBITAK, ŠTETU, TROŠAK, IZDATAK, ZAHTEV, POVREDU ILI POSLEDICU KOJA PROISTIČE IZ ILI SE ODNOSI NA: PRISTUP USLUZI, KORIŠĆENJE ILI NEMOGUĆNOST KORIŠĆENJA USLUGE, OSLANJANJE NA USLUGU ILI BILO KOJI REZULTAT, NETAČAN, NEPOTPUN ILI IZOSTAVLJEN REZULTAT ILI UPOZORENJE, GREŠKU VEŠTAČKE INTELIGENCIJE, PROPUŠTENE ILI POGREŠNO IDENTIFIKOVANE NEDOSTATKE, KVAR VOZILA, PODATKE TREĆIH STRANA, PREKID RADA USLUGE, GREŠKU SOFTVERA ILI PODATAKA, GREŠKU KORISNIKA, ILI ODLUKE NA KOJE JE USLUGA UTICALA — UKLJUČUJUĆI, TAMO GDE JE TO ZAKONSKI DOZVOLJENO ISKLJUČITI, DIREKTNU, INDIREKTNU, SLUČAJNU, POSLEDIČNU, POSEBNU, PRIMERNU I KAZNENU ŠTETU; GUBITKE POVEZANE SA POPRAVKOM, ZAMENOM I KUPOPRODAJNOM CENOM; SMANJENJE VREDNOSTI; TROŠKOVE ŠLEPANJA, SKLADIŠTENJA I ZAMENSKOG PREVOZA; FINANSIJSKE GUBITKE; IZGUBLJENU DOBIT, PRIHOD, ZARADU, PRILIKU ILI PODATKE; MATERIJALNU ŠTETU; I ZAHTEVE TREĆIH STRANA ILI SPOROVE IZMEĐU KUPCA I PRODAVCA.\n\nTrostepeni model. (1) Tamo gde se odgovornost zakonski može isključiti, ona je isključena kao što je gore navedeno. (2) Tamo gde se odgovornost ne može zakonski isključiti, ali se može zakonski ograničiti, ona se ograničava u najvećoj meri dozvoljenoj važećim propisom, u skladu sa ukupnim ograničenjem u nastavku. (3) Tamo gde se odgovornost ne može ni isključiti ni ograničiti, ona postoji samo u minimalnoj meri koju zahteva obavezujući važeći propis, i ništa u ovom odeljku ne umanjuje tu odgovornost ispod tog obaveznog minimuma. Ovaj odeljak ne isključuje odgovornost za smrt ili telesnu povredu prouzrokovanu dokazanom nepažnjom, prevarom, niti bilo koju drugu odgovornost koju važeći propis ne dozvoljava isključiti — one su izričito zadržane u obaveznom minimumu opisanom u Odeljku 24.\n\nUkupno ograničenje. Tamo gde odgovornost opstane nakon gore navedenih isključenja i može se zakonski ograničiti, ukupna zbirna odgovornost Zaštićenih strana za sve zahteve koji proizlaze iz istih ili povezanih okolnosti neće preći veći od sledeća dva iznosa: (a) iznos koji ste stvarno platili za konkretnu Uslugu iz koje proizlazi zahtev tokom dvanaest (12) meseci koji prethode događaju, ili (b) 10 EUR. Ovo ograničenje se primenjuje zajednički na sve Zaštićene strane zajedno, a ne pojedinačno na svaku od njih. Navođenje ovog ograničenja ne predstavlja, i ne sme se tumačiti kao, priznanje da bilo kakva odgovornost postoji.',
+
+  'legal.terms.s18.title': '18. Oslobađanje od zahteva i obaveza nepokretanja spora',
+  'legal.terms.s18.body': 'Dobrovoljno ste odlučili da koristite informativni alat za procenu vozila zasnovan na veštačkoj inteligenciji. Razumete njegova ograničenja, da njegovi rezultati mogu biti netačni, nepotpuni, zakasneli, obmanjujući ili nedostupni, i da Used Cars Doctor fizički ne pregleda vozilo i ne zamenjuje kvalifikovanog mehaničara. Stoga izričito preuzimate odgovornost za odluke donete korišćenjem Usluge.\n\nOslobađanje od zahteva. U najvećoj meri dozvoljenoj važećim propisima, oslobađate i razrešavate Zaštićene strane od zahteva, potraživanja, osnova za tužbu, štete, gubitaka, obaveza, troškova i izdataka koji proizlaze iz ili se odnose na: vaše korišćenje ili nemogućnost korišćenja Usluge; oslanjanje na Uslugu, pregled ili izveštaj; kupovinu vozila, prodaju ili odluku da ne kupite; odluke o pregovaranju ili popravci; odluku da vozite ili nastavite da koristite vozilo; propušten ili pogrešno identifikovan nedostatak; grešku veštačke inteligencije; netačnu preporuku ili nedostajuće ili netačno upozorenje; nepotpune informacije ili informacije trećih strana; kvar na vozilu; i druge posledice odluka donetih korišćenjem informacija iz Usluge — uključujući nepoznate ili neotkrivene zahteve, u meri u kojoj je unapred oslobađanje od takvih zahteva zakonski dozvoljeno.\n\nObaveza nepokretanja spora. U najvećoj meri zakonski primenljivoj, saglasni ste da nećete pokretati, održavati, finansirati niti učestvovati u zahtevu, tužbi ili postupku protiv Zaštićene strane koji se odnosi na zahtev koji ste valjano oslobodili ili se odrekli po ovim Uslovima. Ova obaveza se primenjuje samo na zahteve koje važeći propis dozvoljava da oslobodite ili se odreknete, i ne pokušava da vas spreči da ostvarite pravo koje je prema obaveznom važećem propisu neotuđivo. Ako se zahtev zakonski može osloboditi, oslobađate ga. Ako se pravo na njegovo pokretanje zakonski može odreći, odričete ga se. Ako je obaveza nepokretanja spora zakonski primenljiva za taj zahtev, saglasni ste da ga nećete pokretati. Tamo gde obavezujući propis onemogućava bilo koji od ovih mehanizama za određeni zahtev, svaka preostala odbrana, isključenje, ograničenje i gornja granica iz ovih Uslova i dalje se primenjuje na taj zahtev u najvećoj meri koja je i dalje primenljiva.',
+
+  'legal.terms.s19.title': '19. Obeštećenje',
+  'legal.terms.s19.body': 'U najvećoj primenljivoj meri, saglasni ste da obeštetite, branite i oslobodite od odgovornosti Zaštićene strane od zahteva trećih lica, štete, obaveza, presuda, poravnanja, troškova i razumnih advokatskih naknada koji proizlaze iz vaše zloupotrebe Usluge, nezakonitog korišćenja, kršenja ovih Uslova, sadržaja koji ste dostavili, povrede prava trećeg lica, ili izjava koje date kupcu, prodavcu ili drugoj strani na osnovu Usluge. Ovo obeštećenje se ne odnosi na zahteve koji proizlaze iz prevare ili namerne nepravilnosti same Zaštićene strane, niti na odgovornost koju važeći propis ne dozvoljava preneti na potrošača.',
+
+  'legal.terms.s20.title': '20. Raspodela rizika',
+  'legal.terms.s20.body': 'Odricanja od odgovornosti, preuzimanje rizika, isključenja garancija, isključenja odgovornosti, ograničenja odgovornosti, oslobađanje od zahteva, odricanje od prava i obaveza nepokretanja spora iz ovih Uslova predstavljaju osnovnu raspodelu rizika između vas i Used Cars Doctor i suštinski su osnov na kojem uopšte možemo da pružamo Uslugu.',
+
+  'legal.terms.s21.title': '21. Merodavno pravo i rešavanje sporova',
+  'legal.terms.s21.body': 'Ovi Uslovi se uređuju propisima koji važe u mestu poslovanja operatera, bez primene pravila o sukobu zakona, osim ako ste potrošač sa uobičajenim boravištem u nadležnosti čiji obavezujući propisi o zaštiti potrošača vam daju prava ili nadležni sud koje ovi Uslovi ne mogu isključiti — u tom slučaju, ta obavezna prava i taj sud vam ostaju dostupni.\n\nPre podnošenja zahteva, molimo kontaktirajte nas na e-mail iz Odeljka 26 kako bismo pokušali da rešimo stvar vansudskim putem. Rezidenti EU/EEA takođe mogu koristiti platformu Evropske komisije za onlajn rešavanje sporova na ec.europa.eu/consumers/odr.\n\nOvaj odeljak, uključujući navođenje mesta poslovanja operatera i formulaciju o izboru nadležnog suda, biće ažuriran da navede stvarnu jurisdikciju osnivanja operatera čim ti podaci budu utvrđeni; do tada se ovaj odeljak povlači pred obaveznom zaštitom potrošača vaše nadležnosti kad god bi inače došlo do sukoba sa njom.',
+
+  'legal.terms.s22.title': '22. Deljivost odredaba i preinačenje',
+  'legal.terms.s22.body': 'Ako se bilo koje odricanje od odgovornosti, odricanje od prava, oslobađanje, isključenje, ograničenje, obeštećenje ili druga odredba ovih Uslova utvrdi kao ništavna ili neprimenljiva, ona će biti sužena ili preinačena samo u meri neophodnoj da postane primenljiva, najveći zakonski dozvoljeni efekat te odredbe će inače biti sačuvan, a svaka preostala odredba nastavlja da se primenjuje nezavisno. Nijedna pojedinačna ništavna odredba ne poništava ostatak ovih Uslova.',
+
+  'legal.terms.s23.title': '23. Trajanje nakon prestanka',
+  'legal.terms.s23.body': 'Odeljci koji se odnose na intelektualnu svojinu, odricanje od odgovornosti, preuzimanje rizika, oslobađanje od zahteva i obavezu nepokretanja spora, obeštećenje, ograničenje odgovornosti, rešavanje sporova, deljivost odredaba i ovaj odeljak o trajanju nakon prestanka i dalje se primenjuju nakon brisanja ili ukidanja vašeg naloga, nakon otkazivanja ovih Uslova ili nakon što prestanete da koristite Uslugu, za svaki zahtev koji proizlazi iz korišćenja pre tog trenutka.',
+
+  'legal.terms.s24.title': '24. Neotuđiva prava',
+  'legal.terms.s24.body': 'Ništa u ovim Uslovima ne isključuje, ne ograničava niti ne menja bilo kakvu odgovornost ili pravo, osim u meri u kojoj obavezujući važeći propis zabranjuje takvo isključenje, ograničenje ili izmenu. Tamo gde se primenjuje obavezujući propis, svako isključenje i ograničenje iz ovih Uslova i dalje deluje u najvećoj meri u kojoj je to zakonski moguće.',
+
+  'legal.terms.s25.title': '25. Izmene uslova i ponovno prihvatanje',
+  'legal.terms.s25.body': 'Ove Uslove možemo izmeniti u bilo kom trenutku; svaka objavljena verzija je datirana i čuva se. Kada je izmena suštinska, zahtevaćemo izričito ponovno prihvatanje pre nego što nastavite da koristite zaštićene funkcije Usluge, umesto da samo nastavak korišćenja tretiramo kao prihvatanje. Nesuštinske izmene stupaju na snagu na navedeni datum.',
+
+  'legal.terms.s26.title': '26. Kontakt',
+  'legal.terms.s26.body': 'Za pitanja o ovim Uslovima, kontaktirajte nas na contact@usedcarsdoctor.com ili putem usedcarsdoctor.com.',
+
+  // ─── Politika privatnosti — potpun sadržaj ─────────────────────────────────────
+  'legal.privacy.s1.title': '1. Uvod',
+  'legal.privacy.s1.body': 'Used Cars Doctor ("mi," "naš," "nas") upravlja veb-aplikacijom, Progresivnom veb-aplikacijom i Android aplikacijom dostupnom na usedcarsdoctor.com. Ova Politika privatnosti objašnjava kako prikupljamo, koristimo, otkrivamo i štitimo vaše lične podatke.\n\nKorišćenjem Usluge saglasni ste sa praksama opisanim ovde; ako se ne slažete, prestanite sa korišćenjem. Usluga pruža isključivo podršku odlučivanju zasnovanu na veštačkoj inteligenciji — AI rezultati, ocene i sažeci istorije nisu garancija stanja, bezbednosti, zakonitosti, vrednosti niti istorije vozila.',
+
+  'legal.privacy.s2.title': '2. Podaci koje prikupljamo',
+  'legal.privacy.s2.body': 'Podaci o nalogu: ime, e-mail adresa i heš lozinke, ili vaše ime, e-mail i profilna fotografija ako se prijavite putem Google naloga.\n\nPodaci o vozilu i pregledu: marka, model, godište, VIN, kilometraža, tražena cena, odgovori na kontrolnu listu i beleške koje unesete.\n\nFotografije vozila: fotografije otpremljene tokom AI analize, prenete našem AI provajderu isključivo u tu svrhu (vidi Odeljak 6). Izbegavajte otpremanje fotografija koje sadrže lične ili nepovezane sadržaje koji nisu neophodni za identifikaciju vozila.\n\nAI rezultati: nalazi, ocene pouzdanosti, sažeci i ocene rizika generisani na osnovu vaših unosa.\n\nPodaci o plaćanju: ako kupite premium proizvod, plaćanje obrađuje Stripe ili Google Play Billing; ne čuvamo pune brojeve kartica i zadržavamo samo evidenciju transakcija neophodnu za naplatu i pravnu usklađenost.\n\nPodaci o korišćenju: tip pregledača/uređaja, IP adresa, posećene stranice i interakcije sa funkcijama, korišćeni za rad i unapređenje Usluge.\n\nDokazi o pravnoj saglasnosti: vidi Odeljak 3.\n\nLokalno skladištenje: vaša sesija autentifikacije čuva se u skladištu pregledača dok se ne odjavite.',
+
+  'legal.privacy.s3.title': '3. Dokazi o pravnoj saglasnosti',
+  'legal.privacy.s3.body': 'Kada prihvatite ove Uslove, Politiku privatnosti ili Izjavu o rizicima — prilikom registracije ili kada suštinska izmena zahteva ponovno prihvatanje — beležimo zapis o saglasnosti koji sadrži: koje verzije dokumenata ste prihvatili, datum i vreme, izabrani jezik, platformu koju ste koristili (veb ili Android), koja verzija forme za saglasnost vam je prikazala polja za potvrdu, i IP adresu i identifikacioni niz pregledača (user-agent) povezane sa tim konkretnim činom prihvatanja.\n\nOvi podaci se prikupljaju isključivo radi dokazivanja, ukoliko to ikada bude sporno, da vam je prikazana i da ste izričito prihvatili određenu, prepoznatljivu verziju naših pravnih dokumenata — reč je o dokazu o zaključenju ugovora, a ne o analitici, i nikada se ne koriste za praćenje, profilisanje, oglašavanje niti bilo koju svrhu izvan utvrđivanja šta ste i kada prihvatili. Čuvaju se onoliko dugo koliko je neophodno za tu dokaznu svrhu, uključujući razuman period nakon brisanja naloga, kada je čuvanje neophodno radi utvrđivanja, ostvarivanja ili odbrane pravnih zahteva, u skladu sa važećim propisima o zaštiti podataka.',
+
+  'legal.privacy.s4.title': '4. Kako koristimo vaše podatke',
+  'legal.privacy.s4.body': 'Vaše podatke koristimo za pružanje Usluge i njenih AI funkcija, generisanje rezultata pregleda i izveštaja, obradu kupovina, autentifikaciju vašeg naloga, komunikaciju sa vama o nalogu ili kupovinama, unapređenje pouzdanosti AI funkcija, usklađenost sa zakonskim obavezama i sprovođenje naših Uslova, dokazivanje šta ste prihvatili, i otkrivanje i sprečavanje prevare ili zloupotrebe. Ne prodajemo, ne iznajmljujemo niti razmenjujemo vaše lične podatke trećim stranama u marketinške svrhe.',
+
+  'legal.privacy.s5.title': '5. Deljenje podataka i provajderi trećih strana',
+  'legal.privacy.s5.body': 'Podatke delimo samo sa provajderima neophodnim za Uslugu: hosting baze podataka; naš AI provajder, radi generisanja analize na osnovu fotografija i konteksta pregleda koje dostavite; Stripe i Google Play Billing, za obradu plaćanja; provajderi podataka o istoriji vozila trećih strana, kada kupite izveštaj o istoriji; CDN/DNS/bezbednosni provajderi; i provajder za slanje e-pošte za transakcione poruke. Svaki od njih obrađuje podatke u skladu sa sopstvenom politikom privatnosti; nismo odgovorni za njihove prakse van naše razumne kontrole. Ne delimo vaše podatke sa oglašivačima, posrednicima podataka niti nepovezanim trećim stranama u druge svrhe.',
+
+  'legal.privacy.s6.title': '6. Obrada putem veštačke inteligencije',
+  'legal.privacy.s6.body': 'Otpremljene fotografije i podaci o vozilu mogu biti obrađeni od strane AI provajdera trećih strana radi generisanja nalaza, pokazatelja rizika i preporuka. Kvalitet rezultata zavisi od rezolucije i jasnoće slike, osvetljenja i ugla, potpunosti podataka koje dostavite, i inherentnih ograničenja AI modela. AI rezultati su isključivo informativnog karaktera i služe kao podrška odlučivanju — nisu stručni pregled, sertifikovana procena niti garancija stanja, bezbednosti, vrednosti ili istorije.',
+
+  'legal.privacy.s7.title': '7. Čuvanje podataka i bezbednost',
+  'legal.privacy.s7.body': 'Vaši podaci se čuvaju u PostgreSQL bazi podataka sa šifrovanjem tokom prenosa. Primenjujemo razumne tehničke i organizacione mere zaštite, uključujući kontrolu pristupa i bezbedno upravljanje ključevima, ali nijedan način elektronskog prenosa ili čuvanja podataka ne može se garantovati kao apsolutno bezbedan, i korišćenjem Usluge prihvatate taj svojstveni rizik. Obavestićemo vas i, kada je to propisano, nadležni nadzorni organ u slučaju povrede podataka koja utiče na vaša prava.',
+
+  'legal.privacy.s8.title': '8. Čuvanje podataka (retencija)',
+  'legal.privacy.s8.body': 'Podatke čuvamo onoliko dugo koliko je neophodno za funkcionisanje naloga, izradu izveštaja, bezbednost i sprečavanje zloupotreba, unapređenje usluge i zakonske i regulatorne obaveze, uključujući dokaznu retenciju opisanu u Odeljku 3. Periodi čuvanja variraju u zavisnosti od vrste podataka. Brisanje naloga možete zatražiti putem stranice za brisanje naloga ili kontaktiranjem nas (Odeljak 13); evidencija o transakcijama plaćanja može se čuvati do 7 godina u skladu sa propisima o računovodstvu i porezima, a dokazi o saglasnosti mogu se čuvati i nakon brisanja naloga radi svrhe iz Odeljka 3, čak i nakon što su vaš nalog i drugi lični podaci obrisani.',
+
+  'legal.privacy.s9.title': '9. Vaša prava (GDPR i drugi važeći propisi)',
+  'legal.privacy.s9.body': 'Ako se nalazite u nadležnosti koja dodeljuje prava na zaštitu podataka, kao što je GDPR u EEA/UK, možete imati pravo na pristup, ispravku, brisanje, ograničenje obrade, prenosivost ili prigovor na obradu vaših podataka, kao i pravo na podnošenje pritužbe nadzornom organu. Kontaktirajte nas radi ostvarivanja ovih prava (Odeljak 13); odgovaramo u roku koji zahteva važeći propis.',
+
+  'legal.privacy.s10.title': '10. Kolačići i lokalno skladištenje',
+  'legal.privacy.s10.body': 'Koristimo kolačić za autentifikaciju radi održavanja vašeg prijavljenog stanja, kolačić za jezičke postavke (ističe nakon 365 dana), i lokalno/sesijsko skladištenje za podatke autentifikacije na vašem uređaju. Ne koristimo kolačiće za oglašavanje, praćenje između sajtova niti analitiku trećih strana poput Google Analytics-a.',
+
+  'legal.privacy.s11.title': '11. Privatnost dece',
+  'legal.privacy.s11.body': 'Usluga nije namenjena, i ne sme je koristiti, niko mlađi od 18 godina. Ne prikupljamo svesno lične podatke od lica mlađih od 18 godina. Ako smatrate da nam je maloletno lice dostavilo lične podatke, kontaktirajte nas i preduzećemo korake da ih promptno obrišemo.',
+
+  'legal.privacy.s12.title': '12. Izmene ove politike',
+  'legal.privacy.s12.body': 'Ovu Politiku privatnosti možemo izmeniti; svaka objavljena verzija je datirana i čuva se. Suštinske izmene mogu zahtevati izričito ponovno prihvatanje pre nastavka korišćenja zaštićenih funkcija, kako je opisano u Uslovima korišćenja.',
+
+  'legal.privacy.s13.title': '13. Kontakt',
+  'legal.privacy.s13.body': 'Za pitanja o privatnosti, zahteve za pristup podacima ili pritužbe, kontaktirajte nas na contact@usedcarsdoctor.com ili putem usedcarsdoctor.com.',
 } as const
 
 export default sr

@@ -97,7 +97,7 @@ export function AiConsentModal({ onAccept }: AiConsentModalProps) {
             zIndex: 1,
           }}
         >
-          AI Photo Analysis
+          {t('legal.riskAck.inspectionStartTitle')}
         </h2>
 
         {/* Body */}
@@ -111,7 +111,7 @@ export function AiConsentModal({ onAccept }: AiConsentModalProps) {
           position: 'relative',
           zIndex: 1,
         }}>
-          {t('inspection.aiConsent.body')}
+          {t('legal.riskAck.inspectionStart')}
         </p>
 
         {/* Checkbox */}
@@ -226,7 +226,7 @@ export function AiConsentModal({ onAccept }: AiConsentModalProps) {
             zIndex: 1,
           }}
         >
-          {t('inspection.aiConsent.confirm')}
+          {t('legal.riskAck.inspectionStartContinue')}
           <svg
             width="15"
             height="15"

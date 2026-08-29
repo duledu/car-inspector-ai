@@ -42,7 +42,7 @@ const en = {
   'nav.myInspections':      'My Inspections',
   'nav.backToLanding':      'Back to landing',
   'nav.privacy':            'Privacy Policy',
-  'nav.terms':              'Terms of Service',
+  'nav.terms':              'Terms of Use',
   'nav.accountDeletion':    'Account Deletion',
 
   // ─── Auth page ───────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ const en = {
   'auth.hidePassword':      'Hide password',
   'auth.signingIn':         'Signing in…',
   'auth.creatingAccount':   'Creating account…',
-  'auth.termsNote':         'By signing in you agree to our Terms of Service and Privacy Policy.',
+  'auth.termsNote':         'By signing in you agree to our Terms of Use and Privacy Policy.',
   'auth.heroTitle':         'Every used car has a story.',
   'auth.heroTitleAccent':   'Know it before you buy.',
   'auth.heroSub':           'Structured vehicle checks, visible-condition review, and report guidance for used car buyers.',
@@ -70,6 +70,7 @@ const en = {
   'auth.error.unavailable':        'Authentication service temporarily unavailable. Please try again.',
   'auth.error.invalidCredentials': 'Invalid email or password',
   'auth.error.emailInUse':         'An account with this email already exists.',
+  'auth.error.consentVersionStale':'Our Terms of Use have just been updated. Please refresh this page and try again.',
   'auth.error.validationLogin':    'Please enter a valid email and password.',
   'auth.error.validationRegister': 'Please fill in all required fields correctly.',
   'auth.error.serverError':        'Something went wrong. Please try again.',
@@ -89,9 +90,10 @@ const en = {
   'auth.orDivider':                'or',
   'auth.forgotPasswordLink':       'Forgot password?',
   'auth.backToSignIn':             'Back to Sign In',
-  'auth.register.consentPre':      'I understand that this application uses AI-based analysis that may be inaccurate or incomplete, and I agree to the',
-  'auth.register.consentMid':      'and',
-  'auth.register.consentError':    'You must accept the terms to continue.',
+  'auth.register.consent1Pre':     'I confirm that I am at least 18 years old and that I have read and agree to be legally bound by the',
+  'auth.register.consent1Mid':     'and I acknowledge the',
+  'auth.register.consent1Error':   'You must confirm your age and accept the Terms of Use to continue.',
+  'auth.register.consent2Error':   'You must accept the AI and vehicle-risk acknowledgement to continue.',
 
   'auth.forgotPassword.title':     'Forgot your password?',
   'auth.forgotPassword.subtitle':  'Enter your email address and we\'ll send you a link to reset your password.',
@@ -133,10 +135,34 @@ const en = {
   // ─── Legal pages ────────────────────────────────────────────────────────────
   'legal.backToHome':       'Back to Home',
   'legal.lastUpdated':      'Last updated:',
-  'legal.englishOnly':      'This legal document is available in English only. Machine-translated versions are not legally binding. If you have questions, please contact us at contact@usedcarsdoctor.com.',
+  'legal.version':          'Version:',
+  // Shown only for locales that do not yet have a complete legal translation
+  // (currently: everything except English and Serbian). English and Serbian
+  // are both treated as fully, legally binding — this notice must not be
+  // shown for either.
+  'legal.limitedLocaleNotice': 'A complete, legally binding version of this document is available in English and Serbian. This page is showing an automatic translation for convenience only, which is not a substitute for those versions. Contact us at contact@usedcarsdoctor.com with any questions.',
   'legal.privacy.title':    'Privacy Policy',
-  'legal.terms.title':      'Terms of Service',
+  'legal.terms.title':      'Terms of Use',
+  'legal.riskAck.title':    'Risk Acknowledgement',
   'disclaimer.photoAnalysis': 'AI photo analysis is for informational purposes only and does not guarantee the actual condition of the vehicle. Using advanced AI technology, we aim to provide additional insight and support when evaluating a vehicle — but results may be incomplete or inaccurate. Accuracy can be affected by many factors including camera type and quality, lighting conditions, shooting angle, and other visual circumstances. We strongly recommend verifying all findings with a qualified professional before making any purchase decision.',
+  'report.disclaimer.full': 'This report is AI-assisted informational guidance, not a professional mechanical inspection, safety certification, roadworthiness determination, or warranty. Results may be incomplete or incorrect and may fail to identify defects. Independently verify the vehicle with a qualified automotive professional before purchase or other material decisions. Use of this report remains subject to the Terms of Use.',
+
+  // ─── Risk acknowledgement (signup checkbox 2 / inspection-start notice) ───────
+  'legal.riskAck.checkbox1':      'I confirm that I am at least 18 years old and that I have read and agree to be legally bound by the Terms of Use, and I acknowledge the Privacy Policy.',
+  'legal.riskAck.checkbox2':      'I understand and agree that Used Cars Doctor is an AI-assisted informational tool, NOT a professional mechanical inspection or guarantee of vehicle condition. Its results may be incorrect or may fail to identify defects, including serious or safety-related defects. I remain responsible for independently verifying the vehicle and for my purchase, driving, and other decisions. To the fullest extent permitted by applicable law, I accept the assumption-of-risk, release, waiver, and limitation-of-liability provisions in the Terms of Use.',
+  'legal.riskAck.plainNotice':    'Used Cars Doctor does not replace a professional vehicle inspection. AI results can be wrong and can miss defects. You are responsible for independently verifying the vehicle before making a purchase or safety decision.',
+  'legal.riskAck.inspectionStart':'You are about to use an AI-assisted informational inspection. This is not a professional mechanical inspection and may miss defects. Continue only if you understand these limitations.',
+  'legal.riskAck.inspectionStartTitle': 'Before you start',
+  'legal.riskAck.inspectionStartContinue': 'I understand, continue',
+
+  // ─── Consent-required gate (re-consent / OAuth-pending consent) ──────────────
+  'legal.consentRequired.title':       'One more step',
+  'legal.consentRequired.body':        'Our Terms of Use and risk acknowledgement have been updated. Please review and accept them to continue using Used Cars Doctor.',
+  'legal.consentRequired.accountNote': 'Your account, vehicles, and existing reports are safe and have not been changed — this only unlocks starting or continuing an inspection.',
+  'legal.consentRequired.submit':      'Accept and continue',
+  'legal.consentRequired.submitting':  'Saving…',
+  'legal.consentRequired.error':       'Something went wrong saving your acceptance. Please try again.',
+  'legal.consentRequired.signOut':     'Sign out',
 
   // ─── Dashboard ───────────────────────────────────────────────────────────────
   'dashboard.activeVehicle':        'Active Vehicle',
@@ -165,7 +191,7 @@ const en = {
   'dashboard.yourVehicles':         "Cars you're tracking",
   'dashboard.resumeBadge':          'In Progress',
   'dashboard.resumeTitle':          'Resume Your Inspection',
-  'dashboard.resumeComplete':       'complete',
+  'dashboard.resumeComplete':       'checklist complete',
   'dashboard.continueInspection':   'Continue Inspection',
   'dashboard.startInspection':      'Start Inspection',
   'dashboard.optionalAddOn':        'Optional Add-on',
@@ -307,9 +333,7 @@ const en = {
   'inspection.aiAnalysing':         'Reviewing photos',
   'inspection.aiPhotoTitle':        'Photo Review',
   'inspection.aiPhotoDesc':         'Photograph all 8 exterior angles. Each photo is reviewed for repaints, panel gaps, and damage indicators.',
-  'inspection.aiConsent.body':      'This app uses AI to analyze vehicle images. Results may be inaccurate or incomplete. Images may be processed by third-party AI services.',
-  'inspection.aiConsent.checkbox':  'I understand and agree to AI-based image processing',
-  'inspection.aiConsent.confirm':   'Continue',
+  'inspection.aiConsent.checkbox':  'I understand these limitations and choose to continue',
   'inspection.analysing':             'Analysing…',
   'inspection.aiVisible':             'Checked areas',
   'inspection.analysisFailedImage':   'Could not read this photo. Try taking a clearer, well-lit shot.',
@@ -373,7 +397,7 @@ const en = {
   'inspection.noFlagsRaised':          'No visible concerns found across all photos.',
   'inspection.noFlagsVeryLimited':     'No concerns in the photos captured, but most angles are missing. More photos improve the result.',
   'inspection.noFlagsPartialCoverage': 'No concerns found. A few more angles would strengthen the assessment.',
-  'inspection.allPhasesComplete':   'All sections complete. Your assessment is ready.',
+  'inspection.allPhasesComplete':   'All checklist sections complete. Your assessment is ready to generate.',
   'inspection.viewAIReport':        'View Your Assessment',
   'inspection.preparingAssessment': 'Preparing your assessment…',
   'inspection.finishAndScore':      'See My Results',
@@ -441,7 +465,7 @@ const en = {
   'report.continueInspection':       'Continue Inspection',
   'report.calculatePreliminary':     'Calculate Preliminary Score',
   'report.generatePreliminaryReport':'Generate Preliminary Report',
-  'report.progressPercent':          '{{percent}}% complete',
+  'report.progressPercent':          '{{percent}}% checklist complete',
   'report.noScoreNoInputs':          'Complete at least one section to see a partial result.',
   'report.notEnoughData':            'There is not enough data for a report.',
   'report.preliminaryFailed':        'The preliminary report could not be generated right now.',
@@ -487,7 +511,7 @@ const en = {
   'report.accessRequired.promoRequired': 'Enter a promo code.',
   'report.accessRequired.retry':      'Continue',
   'report.accessRequired.generationInProgress': 'Report generation is already in progress. Wait a moment and try again.',
-  'report.accessGate.badge':          'Professional inspection report',
+  'report.accessGate.badge':          'AI-assisted vehicle assessment report',
   'report.accessGate.readyBadge':     'Credit ready',
   'report.accessBadge.promoActive':   'Unlimited access active',
   'report.accessBadge.promoLocked':   'Report generated',
@@ -550,11 +574,11 @@ const en = {
   'report.aiConfidenceScore':        'Vehicle Risk Score',
   'report.recalculate':              'Recalculate',
   'report.recalculating':            'Recalculating…',
-  'report.pdf.cta':                  'Get Professional Inspection Report (PDF)',
+  'report.pdf.cta':                  'Get AI-Assisted Vehicle Assessment Report (PDF)',
   'report.pdf.loading':              'Preparing PDF…',
   'report.pdf.error':                'Report generation failed, try again',
-  'pdf.metadata.subject':            'Professional vehicle inspection report',
-  'pdf.cover.title':                 'Professional Inspection Report',
+  'pdf.metadata.subject':            'AI-assisted vehicle assessment report',
+  'pdf.cover.title':                 'AI-Assisted Vehicle Assessment Report',
   'pdf.cover.subtitle':              'AI-assisted vehicle condition and buyer risk summary',
   'pdf.engineUnavailable':           'Engine details not provided',
   'pdf.notProvided':                 'Not provided',
@@ -1058,7 +1082,7 @@ const en = {
   'landing.footer.premiumHistory': 'Report Preview',
   'landing.footer.tagline': 'Used Cars Doctor, structured automotive inspection guidance.',
   'landing.footer.privacy': 'Privacy Policy',
-  'landing.footer.terms':   'Terms of Service',
+  'landing.footer.terms':   'Terms of Use',
 
   // ─── PWA update prompt ────────────────────────────────────────────────────────
   // Premium page
@@ -1223,6 +1247,252 @@ const en = {
   'report.aiSummary.repeatConfirmed': '{{title}} appears repeatedly across {{count}} analyzed images.',
   'report.aiSummary.visibleArea':  'the visible area shown',
   'report.aiSummary.issueFallback': 'visual anomaly',
+
+  // ─── Before You Buy (guide) page ───────────────────────────────────────────────
+  'beforeYouBuy.hero.eyebrow':        'Before You Buy',
+  'beforeYouBuy.hero.headline1':      'The Used Car Market Rewards',
+  'beforeYouBuy.hero.headline2':      'the Prepared.',
+  'beforeYouBuy.hero.subtext':        'A structured approach to used car inspection — before the commitment, before the paperwork, before the keys change hands. Experience a clinical, data-driven approach to pre-purchase due diligence. Identify risks before the commitment, the paperwork, and the transaction.',
+  'beforeYouBuy.hero.ctaPrimary':     'Begin Your Inspection',
+  'beforeYouBuy.hero.ctaSecondary':   'Explore the approach',
+
+  'beforeYouBuy.reality.eyebrow':     "The Buyer's Dilemma",
+  'beforeYouBuy.reality.headline':    'Every used vehicle tells a story. Most buyers never hear it.',
+  'beforeYouBuy.reality.p1':          'The pre-owned vehicle market is largely opaque. Sellers control the narrative. Emotions override analysis. And the financial stakes — often tens of thousands of dollars — are routinely decided on a 20-minute test drive.',
+  'beforeYouBuy.reality.p2':          'Used Cars Doctor was built to change that dynamic — giving every buyer access to a structured, evidence-based inspection process that was previously reserved for professionals.',
+  'beforeYouBuy.reality.stat1Value':  '1 in 3',
+  'beforeYouBuy.reality.stat1Label':  'used vehicles sold in the US has an undisclosed issue affecting safety or value.',
+  'beforeYouBuy.reality.stat2Value':  '$4,200',
+  'beforeYouBuy.reality.stat2Label':  'is the average unexpected repair cost buyers face within the first year of ownership.',
+  'beforeYouBuy.reality.stat3Value':  '78%',
+  'beforeYouBuy.reality.stat3Label':  'of buyers report they wished they had inspected more thoroughly before purchase.',
+
+  'beforeYouBuy.detection.eyebrow':   'Inspection Intelligence',
+  'beforeYouBuy.detection.headline':  'Four critical dimensions of visible vehicle condition.',
+  'beforeYouBuy.detection.item1.title':   'Body & Structural Integrity',
+  'beforeYouBuy.detection.item1.caption': 'Panel gaps · Repaint signals · Accident deformation',
+  'beforeYouBuy.detection.item1.body':    'Systematic review of exterior panel alignment, surface consistency, and visible structural deformation. Inconsistencies in panel gaps or paint texture can indicate undisclosed collision repair.',
+  'beforeYouBuy.detection.item2.title':   'Interior Condition & Electronics',
+  'beforeYouBuy.detection.item2.caption': 'Wear indicators · Warning lights · Functional checks',
+  'beforeYouBuy.detection.item2.body':    'Cabin wear assessment, dashboard warning light identification, and verification of electronic systems — areas routinely glossed over during a standard seller walkthrough.',
+  'beforeYouBuy.detection.item3.title':   'Engine Bay & Mechanical Visuals',
+  'beforeYouBuy.detection.item3.caption': 'Fluid leaks · Corrosion · Visible wear',
+  'beforeYouBuy.detection.item3.body':    'Under-hood visual inspection for fluid contamination, corrosion patterns, irregular connections, and other visible indicators of deferred maintenance or prior mechanical issues.',
+  'beforeYouBuy.detection.item4.title':   'Comprehensive Risk Profile',
+  'beforeYouBuy.detection.item4.caption': 'Checklist scoring · Risk flags · Overall assessment',
+  'beforeYouBuy.detection.item4.body':    'Structured inspection checklist results are synthesized with visual findings into a single, clear risk score — giving you an objective basis for your buying decision.',
+
+  'beforeYouBuy.process.eyebrow':     'How It Works',
+  'beforeYouBuy.process.headline':    'From first look to final decision — a structured path.',
+  'beforeYouBuy.process.intro':       'Our workflow is designed for the real-world condition of a vehicle lot or private driveway — fast to run, impossible to rush, and built around the way decisions are actually made.',
+  'beforeYouBuy.process.step1.title': 'Add Your Vehicle',
+  'beforeYouBuy.process.step1.body':  'Enter the vehicle details. Every inspection, photo, and finding is anchored to this specific car — creating a clean, organized record from first contact.',
+  'beforeYouBuy.process.step2.title': 'Follow the Guided Checklist',
+  'beforeYouBuy.process.step2.body':  'Work through a structured inspection sequence covering exterior, interior, mechanical systems, and documentation. No automotive background required.',
+  'beforeYouBuy.process.step3.title': 'Submit Photos for Analysis',
+  'beforeYouBuy.process.step3.body':  'Upload photos from key inspection angles. Our system analyzes visible surface conditions, panel consistency, and other indicators that inform the overall assessment.',
+  'beforeYouBuy.process.step4.title': 'Receive Your Report',
+  'beforeYouBuy.process.step4.body':  'A comprehensive report delivers your risk score, flagged findings, and actionable recommendations — giving you the clarity to buy with confidence or walk away with certainty.',
+  'beforeYouBuy.process.cta':         'Begin the process',
+
+  'beforeYouBuy.visual.eyebrow':      'Photo-Based Analysis',
+  'beforeYouBuy.visual.headline':     'The camera sees what the eye can miss.',
+  'beforeYouBuy.visual.body':         "Skilled automotive inspectors know what to look for — and more importantly, what to photograph. Our system replicates that discipline, guiding you to capture the angles that reveal a vehicle's true condition.",
+  'beforeYouBuy.visual.quote':        'Buyers who document condition before purchase negotiate from strength — not speculation.',
+  'beforeYouBuy.visual.point1.title': 'Surface condition indicators',
+  'beforeYouBuy.visual.point1.body':  'Photos are reviewed for surface damage, corrosion, fluid residue, and condition signals that may not be visible under showroom lighting.',
+  'beforeYouBuy.visual.point2.title': 'Repaint and alignment signals',
+  'beforeYouBuy.visual.point2.body':  'Inconsistencies in panel gaps, uneven paint texture, overspray, and exterior irregularities suggest prior repair work — even when freshly detailed.',
+  'beforeYouBuy.visual.point3.title': 'Documented visual evidence',
+  'beforeYouBuy.visual.point3.body':  'Every uploaded photo becomes part of your inspection record — timestamped, organized, and available for reference or negotiation.',
+
+  'beforeYouBuy.confidence.eyebrow':       'Reduce Your Risk',
+  'beforeYouBuy.confidence.headline':      'Transform uncertainty into a decisive advantage.',
+  'beforeYouBuy.confidence.intro':         'Every used car purchase carries risk. The question is whether you enter that transaction informed — or hoping for the best.',
+  'beforeYouBuy.confidence.outcome1.title': 'Clear Risk Score',
+  'beforeYouBuy.confidence.outcome1.body':  'A single, immediate read on overall vehicle risk — no decoding required. Know whether to proceed, negotiate, or walk away.',
+  'beforeYouBuy.confidence.outcome2.title': 'Specific Risk Flags',
+  'beforeYouBuy.confidence.outcome2.body':  'Pinpoint issues — not general impressions. Each flag identifies a specific area requiring closer attention or professional verification.',
+  'beforeYouBuy.confidence.outcome3.title': 'Negotiation Leverage',
+  'beforeYouBuy.confidence.outcome3.body':  'Documented findings become negotiating facts. Use a verified risk profile to support a price reduction — or justify walking away.',
+  'beforeYouBuy.confidence.outcome4.title': 'Decision Clarity',
+  'beforeYouBuy.confidence.outcome4.body':  'Buy, negotiate, or walk away — with the assurance that your decision is grounded in evidence, not emotion or seller presentation.',
+
+  'beforeYouBuy.transparency.eyebrow':        'Honest By Design',
+  'beforeYouBuy.transparency.headline':       "What we do — and what we don't.",
+  'beforeYouBuy.transparency.intro':          "Transparency about our capabilities is not a caveat — it's the foundation of trust. We built this platform knowing that honest limitations make it more valuable, not less.",
+  'beforeYouBuy.transparency.canTitle':       'What we provide',
+  'beforeYouBuy.transparency.can1':           'Identify visible body damage, paint inconsistencies, and panel misalignment from photos.',
+  'beforeYouBuy.transparency.can2':           'Guide you through a thorough checklist of exterior, interior, mechanical, and documentation items.',
+  'beforeYouBuy.transparency.can3':           'Generate a report summarizing findings, risk score, and actionable recommendations.',
+  'beforeYouBuy.transparency.can4':           'Document vehicle condition at time of inspection for negotiation and record-keeping.',
+  'beforeYouBuy.transparency.cannotTitle':    'What we cannot do',
+  'beforeYouBuy.transparency.cannot1':        'Perform mechanical diagnostics or scan internal engine/transmission components.',
+  'beforeYouBuy.transparency.cannot2':        'Guarantee hidden mechanical condition, long-term reliability, or future safety.',
+  'beforeYouBuy.transparency.cannot3':        'Verify legal title status, outstanding finance obligations, or ownership history.',
+  'beforeYouBuy.transparency.cannot4':        'Replace the evaluation of a qualified, hands-on pre-purchase inspection by a mechanic.',
+  'beforeYouBuy.transparency.disclaimerLabel':'Advisory Notice:',
+  'beforeYouBuy.transparency.disclaimerBody': 'Used Cars Doctor is an informational decision-support tool. It does not constitute a professional mechanical inspection, certified appraisal, or legal verification of title or ownership. Always verify critical findings with a qualified mechanic and appropriate legal channels before finalizing any vehicle purchase.',
+
+  'beforeYouBuy.decisive.quote':      'The moment before you buy a used car is the most important moment in the entire transaction.',
+  'beforeYouBuy.decisive.p1':         'It is the moment when information has the highest value — before money changes hands, before legal agreements are signed, before the keys are yours and the problems become yours too.',
+  'beforeYouBuy.decisive.p2':         'Used Cars Doctor exists entirely within that window — giving you the structure, the analysis, and the confidence to make the right call when it matters most.',
+  'beforeYouBuy.decisive.cta':        'Inspect Before You Buy',
+
+  'beforeYouBuy.faq.eyebrow':         'Frequently Asked',
+  'beforeYouBuy.faq.headline':        'Common questions about used car inspection.',
+  'beforeYouBuy.faq.intro':           'If you have a question not covered here, our team is available to help.',
+  'beforeYouBuy.faq.linkCta':         'Start an inspection instead',
+  'beforeYouBuy.faq.q1':              'What is a pre-purchase used car inspection?',
+  'beforeYouBuy.faq.a1':              "A pre-purchase inspection is a systematic evaluation of a vehicle's condition before you finalize the transaction. It covers visible body condition, mechanical visuals, interior state, and documentation. Used Cars Doctor provides a structured digital workflow — guided checklist plus photo analysis — that replicates the approach used by professional automotive inspectors.",
+  'beforeYouBuy.faq.q2':              "Does this replace a mechanic's inspection?",
+  'beforeYouBuy.faq.a2':              "No — and we say that clearly because it matters. Used Cars Doctor is a comprehensive pre-screening and documentation tool. For critical mechanical components (engine, transmission, suspension, brakes), a qualified mechanic's hands-on inspection remains essential. Think of our platform as the first, structured layer of your due diligence — not the last.",
+  'beforeYouBuy.faq.q3':              'How does the photo analysis work?',
+  'beforeYouBuy.faq.a3':              'You upload photos taken from guided angles — exterior panels, engine bay, interior, undercarriage. Our system analyzes these photos for visible condition signals: paint inconsistencies, panel misalignment, surface damage, fluid contamination, and other indicators. Results are integrated with your checklist responses to generate a consolidated risk assessment.',
+  'beforeYouBuy.faq.q4':              'Can Used Cars Doctor detect accident damage?',
+  'beforeYouBuy.faq.a4':              'Yes — from visible evidence. Our photo analysis identifies paint texture inconsistencies, panel gap irregularities, and surface deformation that often indicate prior collision repair. For a complete accident history including incidents not visible to inspection, a third-party vehicle history report from a provider like CARFAX is recommended in addition to our assessment.',
+  'beforeYouBuy.faq.q5':              'What information do I need before starting?',
+  'beforeYouBuy.faq.a5':              "Basic vehicle information: make, model, year, and mileage. VIN is helpful but not required to begin. You'll also need access to the vehicle to photograph and inspect it — our process is designed to work in the conditions of a typical private sale or dealer lot visit.",
+  'beforeYouBuy.faq.q6':              'How long does the inspection take?',
+  'beforeYouBuy.faq.a6':              'A thorough inspection using our platform typically takes 30–45 minutes. This includes working through the guided checklist and capturing photos at the recommended angles. The analysis and report generation are completed immediately upon submission.',
+
+  'beforeYouBuy.finalCta.eyebrow':     'Get Started',
+  'beforeYouBuy.finalCta.headline1':   'Get Started Today.',
+  'beforeYouBuy.finalCta.headline2':   'Drive with Confidence.',
+  'beforeYouBuy.finalCta.body':        'Your next vehicle purchase deserves the same rigor that every serious buyer should apply — but few do.',
+  'beforeYouBuy.finalCta.ctaPrimary':  'Start Your Inspection Now',
+  'beforeYouBuy.finalCta.ctaSecondary':'Sign In to Your Account',
+  'beforeYouBuy.finalCta.trust1':      'Free to start',
+  'beforeYouBuy.finalCta.trust2':      'No automotive expertise required',
+  'beforeYouBuy.finalCta.trust3':      'Always recommend a professional mechanic',
+
+  'beforeYouBuy.footer.startInspection':'Start Inspection',
+
+  // ─── Terms of Use — full body content ─────────────────────────────────────────
+  // Canonical (English) source text hashed by src/lib/legal/legal-content-manifest.ts.
+  // Editing any value below without bumping CURRENT_TERMS_VERSION in
+  // src/lib/legal/legal-config.ts will break tests/unit/legal-content-hash.test.ts —
+  // that is intentional: it is the drift/tamper detector described in Section 15
+  // of the approved liability architecture.
+  'legal.terms.intro': 'These Terms of Use ("Terms") govern access to and use of the Used Cars Doctor website, Progressive Web Application, and Android application (together, the "Service") operated by Used Cars Doctor ("we," "our," "us," the "Company"). By creating an account or using the Service you agree to be bound by these Terms and by our Privacy Policy. If you do not agree, do not use the Service.',
+
+  'legal.terms.s1.title': '1. Acceptance of Terms and Eligibility',
+  'legal.terms.s1.body': 'By accessing or using the Service you confirm that you are at least 18 years of age and that you have the legal capacity to enter into a binding contract. The Service is not directed at, and must not be used by, anyone under 18.\n\nThese Terms apply to all platforms on which the Service is available, including the website, the Progressive Web Application, and the Android application distributed through Google Play. Creating an account requires affirmative acceptance of these Terms, our Privacy Policy, and the Risk Acknowledgement described in Section 7 — acceptance is a condition of account creation and of continued access to protected features, not a passive consequence of browsing.',
+
+  'legal.terms.s2.title': '2. Description of Service',
+  'legal.terms.s2.body': 'Used Cars Doctor is an AI-assisted informational tool designed to help individuals evaluate used vehicles before purchase. The Service provides:\n- Step-by-step guided inspection checklists for evaluating used vehicles\n- AI-assisted photo analysis to highlight visible condition signals from user-uploaded images\n- AI-generated inspection summaries, risk indicators, and scores based on user-entered data\n- Optional premium vehicle history reports sourced from third-party vehicle history data providers\n- Downloadable PDF exports of completed assessments\n- Account management and inspection history storage\n\nThe Service does not perform, and does not claim to perform, a physical, mechanical, or certified inspection of any vehicle.',
+
+  'legal.terms.s3.title': '3. Protected Parties',
+  'legal.terms.s3.body': 'In these Terms, "Protected Parties" means, collectively and individually, to the extent each actually exists in the Company\'s structure: the Company; its current and former owners, founders, shareholders, and members; its directors and officers; its employees, developers, contractors, consultants, and representatives; its affiliates, successors, and assigns; and its licensors, hosting providers, AI/model providers, API providers, vehicle-data providers, payment providers, and other suppliers and service providers engaged in operating the Service.\n\nEvery disclaimer, exclusion, limitation, release, waiver, covenant not to sue, and indemnification in these Terms is intended to operate for the benefit of each Protected Party as a third-party beneficiary, to the same extent as if that Protected Party were a direct signatory to these Terms, to the extent permitted by applicable law.',
+
+  'legal.terms.s4.title': '4. User Accounts',
+  'legal.terms.s4.body': 'You may create an account using an email address and password or by signing in with Google. You are responsible for maintaining the confidentiality of your credentials, for all activity under your account, and for notifying us promptly of any unauthorized use.\n\nWe may suspend or terminate accounts that violate these Terms, engage in fraudulent activity, or are inactive for an extended period.',
+
+  'legal.terms.s5.title': '5. Acceptable Use',
+  'legal.terms.s5.body': 'You agree not to:\n- Use the Service for a commercial vehicle-inspection business or resell AI-generated reports without our written consent\n- Upload content you do not own or do not have the right to submit\n- Reverse-engineer, scrape, or extract data from the Service by automated means\n- Submit false, misleading, or fraudulent vehicle information\n- Attempt to circumvent payment gates, access controls, or entitlement checks\n- Interfere with or disrupt the integrity or performance of the Service',
+
+  'legal.terms.s6.title': '6. Important Vehicle Inspection Disclaimer — AI Limitations',
+  'legal.terms.s6.body': 'AI ANALYSIS IS NOT A PROFESSIONAL INSPECTION. The Service uses automated machine-learning models to analyze photographs and user-entered data. These outputs are informational only.\n\nYou expressly acknowledge that AI and automated systems can be wrong. They may hallucinate, misclassify, or misunderstand photographs; fail to identify damage, including safety-critical damage; identify damage that does not exist; miss obvious or hidden defects; produce inconsistent results across sessions; and rely on incomplete or inaccurate information you or a third party supplied.\n\nNO RESULT — INCLUDING A SCORE OF 100%, A "PASS," "LOW RISK," "GREEN" STATUS, "COMPLETE," "NO ISSUES FOUND," OR SIMILAR LANGUAGE — MEANS THE VEHICLE IS SAFE, ROADWORTHY, RELIABLE, OR FREE OF DEFECTS. Where any part of the Service reports a percentage or "complete" status, that figure describes how much of the checklist or workflow you have completed — never the vehicle\'s actual condition.',
+
+  'legal.terms.s7.title': '7. Assumption of Risk',
+  'legal.terms.s7.body': 'You expressly acknowledge and voluntarily assume the risks inherent in evaluating, purchasing, selling, owning, repairing, and operating a used vehicle. Used Cars Doctor cannot physically inspect internal components and cannot guarantee detection of any condition, known or unknown, visible or invisible, latent, concealed, intermittent, or arising in the future.\n\nThis assumption of risk expressly covers, without limitation, the engine, turbocharger, transmission, clutch, drivetrain, differential, brakes, steering, suspension, chassis, frame and structural integrity, body repairs and accident damage, corrosion, electrical systems and electronics, ECUs, airbags/SRS, ADAS systems, tires and wheels, battery, EV/hybrid systems, cooling system, fuel system, emissions systems, odometer accuracy, VIN and history information, title information, flood or fire damage, roadworthiness, safety defects, and any other component or condition of the vehicle.',
+
+  'legal.terms.s8.title': '8. No Professional Inspection',
+  'legal.terms.s8.body': 'Used Cars Doctor is not a mechanic, a professional vehicle inspector, a diagnostic service, a roadworthiness or safety inspection, an engineering service, a vehicle certification body, an appraisal service, a warranty, an insurance product, legal advice, or financial advice. A report generated by the Service is not a certificate of vehicle condition.\n\nA qualified mechanic with physical access to the vehicle and appropriate diagnostic equipment should independently inspect it before you purchase, sell, finance, or continue operating it.',
+
+  'legal.terms.s9.title': '9. No Reliance; No Duty Created; User Responsibility',
+  'legal.terms.s9.body': "The Service's outputs are informational only and must not be treated as the sole basis for a purchasing, selling, safety, mechanical, financial, or driving decision. You remain responsible for independently verifying material information before acting on it.\n\nProviding a checklist, warning, AI analysis, score, recommendation, or report does not create a promise that Used Cars Doctor will detect every defect or danger, and the presence of one warning does not imply that every other condition was checked. Completing every checklist step does not mean every vehicle component was professionally examined.\n\nUsed Cars Doctor supplies information; you evaluate it and independently decide what action to take. Used Cars Doctor does not make the purchase, sale, driving, or repair decision for you, is not a party to any transaction between you and a buyer, seller, dealer, mechanic, lender, or insurer, and does not control the vehicle, the seller, the road, or subsequent events. You alone decide whether to buy, sell, reject, negotiate, finance, repair, drive, transport, register, insure, or continue operating a vehicle.",
+
+  'legal.terms.s10.title': '10. No Professional Advice',
+  'legal.terms.s10.body': 'Nothing in the Service constitutes mechanical, financial, legal, investment, or other professional advice. The Service does not provide mechanical or engineering assessments, financial advice on vehicle value or pricing, legal advice on ownership, title, or compliance, or any certified professional appraisal. Consult a licensed mechanic, certified appraiser, legal adviser, or financial adviser as appropriate before making a material vehicle-related decision.',
+
+  'legal.terms.s11.title': '11. Photo Uploads',
+  'legal.terms.s11.body': 'When you upload photos you grant us a limited, non-exclusive license to transmit them to our AI provider solely to generate analysis results for your session; you represent that you have the right to submit them; photos are not stored beyond the duration of the analysis request; and you must not upload content containing personal information beyond what is necessary for vehicle identification. We do not claim ownership of your photos, and the limited license terminates when the analysis request completes.',
+
+  'legal.terms.s12.title': '12. Premium Reports, Payments, and Refunds',
+  'legal.terms.s12.body': "Certain features require payment, processed via Stripe (web) or Google Play Billing (Android), depending on platform.\n\nWeb/Stripe purchases. All web purchases are final and non-refundable except where required by applicable law. Vehicle history reports are retrieved in real time from third-party providers upon purchase and are considered delivered immediately.\n\nGoogle Play purchases. Purchases made through Google Play are subject to Google Play's applicable refund mechanisms and policies, in addition to any mandatory rights available under applicable law. Where Google processes and confirms a refund or chargeback for a Google Play purchase, we will reverse the corresponding wallet credit in accordance with our standard debt-based refund handling; this does not automatically revoke access to reports already generated using those credits.\n\nWe do not guarantee the accuracy, completeness, or currency of third-party vehicle history data, and we are not liable for errors or omissions in it. Prices are shown before you confirm any purchase and are subject to change.",
+
+  'legal.terms.s13.title': '13. Intellectual Property',
+  'legal.terms.s13.body': 'The Service, including its design, software, AI workflows, and original content, is owned by Used Cars Doctor and protected by applicable intellectual-property laws. You retain ownership of data and photos you submit and grant us a limited license to use them to provide the Service. You may not copy, reproduce, or create derivative works from the Service without our prior written consent.',
+
+  'legal.terms.s14.title': '14. Third-Party Services and Data',
+  'legal.terms.s14.body': "The Service integrates with third-party providers, including AI/model providers, payment processors, vehicle-history data providers, database hosting, and authentication providers. We do not control, warrant, or accept responsibility for the availability, accuracy, or conduct of any third-party service, API, AI model, or data source. Third-party information can be incomplete, incorrect, delayed, or unavailable, and your use of it is subject to that provider's own terms.",
+
+  'legal.terms.s15.title': '15. User-Supplied Data',
+  'legal.terms.s15.body': 'You are responsible for the quality, completeness, and accuracy of everything you submit, including image quality, correct vehicle identification, truthful answers, relevant photographs and videos, VIN and other data entered, and your right to submit that content. Used Cars Doctor is not responsible for conclusions affected by incorrect, misleading, incomplete, or poor-quality input you provide.',
+
+  'legal.terms.s16.title': '16. Disclaimer of Warranties',
+  'legal.terms.s16.body': 'TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, THE SERVICE AND ALL OUTPUT ARE PROVIDED "AS IS," "AS AVAILABLE," AND "WITH ALL FAULTS," WITHOUT WARRANTIES OF ANY KIND. We disclaim all warranties that can lawfully be excluded, whether express, implied, or statutory, including as to accuracy, completeness, reliability, availability, timeliness, fitness for a particular purpose, merchantability, non-infringement, error-free operation, results, vehicle condition, roadworthiness, safety, and future reliability.\n\nSome jurisdictions do not allow the exclusion of certain implied warranties or consumer guarantees; where that is the case, the exclusions in this section apply only to the extent permitted by that law, and any consumer guarantee that cannot lawfully be excluded is preserved to the minimum extent that law requires.',
+
+  'legal.terms.s17.title': '17. Limitation of Liability',
+  'legal.terms.s17.body': 'TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, THE PROTECTED PARTIES SHALL HAVE NO LIABILITY, REGARDLESS OF LEGAL THEORY (INCLUDING CONTRACT, TORT, NEGLIGENCE, MISREPRESENTATION, WARRANTY, STRICT LIABILITY, STATUTE, RESTITUTION, OR EQUITY), FOR ANY LOSS, DAMAGE, COST, EXPENSE, CLAIM, INJURY, OR CONSEQUENCE ARISING FROM OR RELATING TO ACCESS TO OR USE OR INABILITY TO USE THE SERVICE, RELIANCE ON THE SERVICE OR ANY OUTPUT, INACCURATE, INCOMPLETE, OR OMITTED OUTPUT OR WARNING, AI ERROR, MISSED OR MISIDENTIFIED DEFECTS, VEHICLE FAILURE, THIRD-PARTY INFORMATION, SERVICE INTERRUPTION, SOFTWARE OR DATA ERROR, USER ERROR, OR DECISIONS INFLUENCED BY THE SERVICE — INCLUDING, WHERE LEGALLY EXCLUDABLE, DIRECT, INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, AND PUNITIVE DAMAGES; REPAIR, REPLACEMENT, AND PURCHASE-PRICE LOSSES; DIMINUTION IN VALUE; TOWING, STORAGE, AND REPLACEMENT-TRANSPORTATION COSTS; FINANCING LOSSES; LOST PROFITS, REVENUE, INCOME, OPPORTUNITY, OR DATA; PROPERTY DAMAGE; AND THIRD-PARTY OR BUYER/SELLER-DISPUTE CLAIMS.\n\nThree-tier fallback. (1) Where a liability can lawfully be excluded, it is excluded as set out above. (2) Where a liability cannot lawfully be excluded but may lawfully be limited, it is limited to the maximum extent the applicable law permits, subject to the aggregate cap below. (3) Where a liability can neither be excluded nor limited, it exists only to the minimum extent mandatory applicable law requires, and nothing in this section reduces it below that mandatory minimum. This section does not exclude liability for death or personal injury caused by proven negligence, fraud, or any other liability that applicable law does not permit to be excluded — those are expressly preserved at the mandatory minimum described in Section 24.\n\nAggregate cap. Where liability survives the exclusions above and may lawfully be capped, the Protected Parties\' total aggregate liability for all claims arising from the same or related circumstances shall not exceed the greater of (a) the amount you actually paid for the specific Service giving rise to the claim during the twelve (12) months preceding the event, or (b) EUR 10. This cap applies collectively to all Protected Parties together, not separately to each. Stating this cap is not, and must not be read as, an admission that any liability exists.',
+
+  'legal.terms.s18.title': '18. Release of Claims and Covenant Not to Sue',
+  'legal.terms.s18.body': "You voluntarily choose to use an informational, AI-assisted vehicle-evaluation tool. You understand its limitations, that its outputs can be incorrect, incomplete, delayed, misleading, or unavailable, and that Used Cars Doctor does not physically inspect the vehicle and does not replace a qualified mechanic. You therefore expressly assume responsibility for decisions made using the Service.\n\nRelease. To the fullest extent permitted by applicable law, you release and discharge the Protected Parties from claims, demands, causes of action, damages, losses, liabilities, costs, and expenses arising from or relating to your use of or inability to use the Service; reliance on the Service, an inspection, or a report; a vehicle purchase, sale, or decision not to purchase; negotiation or repair decisions; a decision to drive or continue operating a vehicle; a missed or incorrectly identified defect; AI error; an incorrect recommendation or a missing or inaccurate warning; incomplete or third-party information; mechanical failure; and other consequences of decisions made using information from the Service — including unknown or undiscovered claims, to the extent a prospective release of such claims is legally permissible.\n\nCovenant not to sue. To the fullest extent legally enforceable, you agree not to bring, maintain, finance, or participate in a claim against a Protected Party concerning a claim you have validly released or waived under these Terms. This covenant applies only to claims that applicable law permits you to release or waive, and does not purport to prevent you from exercising a right that mandatory applicable law makes non-waivable. If a claim can legally be released, you release it. If the right to bring it can legally be waived, you waive it. If a covenant not to sue is legally enforceable for it, you agree not to bring it. Where mandatory law prevents any of these mechanisms for a particular claim, every remaining defense, exclusion, limitation, and cap in these Terms continues to apply to it to the maximum extent still enforceable.",
+
+  'legal.terms.s19.title': '19. Indemnification',
+  'legal.terms.s19.body': "To the maximum extent enforceable, you agree to indemnify, defend, and hold harmless the Protected Parties from third-party claims, damages, liabilities, judgments, settlements, costs, and reasonable attorneys' fees arising from your misuse of the Service, unlawful use, breach of these Terms, content you submit, violation of a third party's rights, or representations you make to a buyer, seller, or other party based on the Service. This indemnity does not extend to claims arising from a Protected Party's own fraud, willful misconduct, or liability that applicable law does not permit to be shifted to a consumer.",
+
+  'legal.terms.s20.title': '20. Risk Allocation',
+  'legal.terms.s20.body': 'The disclaimers, assumption of risk, warranty exclusions, liability exclusions, liability limitations, release, waiver, and covenant not to sue in these Terms reflect a fundamental allocation of risk between you and Used Cars Doctor and are an essential basis on which we are able to offer the Service at all.',
+
+  'legal.terms.s21.title': '21. Governing Law and Dispute Resolution',
+  'legal.terms.s21.body': "These Terms are governed by the law applicable at the operator's place of business, without regard to conflict-of-law principles, except that if you are a consumer habitually resident in a jurisdiction whose mandatory consumer-protection law grants you rights or a competent forum that these Terms cannot override, those mandatory rights and that forum remain available to you.\n\nBefore filing a claim, please contact us at the email in Section 26 so we can attempt to resolve the matter informally. EU/EEA residents may also use the European Commission's Online Dispute Resolution platform at ec.europa.eu/consumers/odr.\n\nThis section, including the identification of the operator's place of business and any forum-selection language, will be updated to name the operator's actual jurisdiction of incorporation once that information is finalized; until then it defers to your jurisdiction's mandatory consumer protections wherever those and this clause would otherwise conflict.",
+
+  'legal.terms.s22.title': '22. Severability and Reformation',
+  'legal.terms.s22.body': 'If any disclaimer, waiver, release, exclusion, limitation, indemnification, or other provision of these Terms is found invalid or unenforceable, it will be narrowed or reformed only to the minimum extent necessary to make it enforceable, the maximum legally permissible effect of that provision will otherwise be preserved, and every remaining provision continues to apply independently. No single invalid provision invalidates the rest of these Terms.',
+
+  'legal.terms.s23.title': '23. Survival',
+  'legal.terms.s23.body': 'Sections concerning intellectual property, disclaimers, assumption of risk, release and covenant not to sue, indemnification, limitation of liability, dispute resolution, severability, and this survival clause continue to apply after your account is deleted or terminated, after these Terms are cancelled, or after you stop using the Service, for any claim arising from use that occurred before that point.',
+
+  'legal.terms.s24.title': '24. Non-Waivable Rights',
+  'legal.terms.s24.body': 'Nothing in these Terms excludes, restricts, or modifies any liability or right only to the extent that applicable mandatory law prohibits such exclusion, restriction, or modification. Where mandatory law applies, every exclusion and limitation in these Terms continues to operate to the maximum extent it still legally can.',
+
+  'legal.terms.s25.title': '25. Modifications to Terms and Re-Consent',
+  'legal.terms.s25.body': 'We may update these Terms at any time; each published version is dated and retained. Where a change is material, we will require affirmative re-acceptance before you can continue to use protected features of the Service, rather than treating continued use alone as acceptance. Non-material changes take effect on the stated date.',
+
+  'legal.terms.s26.title': '26. Contact Us',
+  'legal.terms.s26.body': 'For questions about these Terms, contact us at contact@usedcarsdoctor.com or via usedcarsdoctor.com.',
+
+  // ─── Privacy Policy — full body content ───────────────────────────────────────
+  'legal.privacy.s1.title': '1. Introduction',
+  'legal.privacy.s1.body': 'Used Cars Doctor ("we," "our," "us") operates the web application, Progressive Web Application, and Android application available at usedcarsdoctor.com. This Privacy Policy explains how we collect, use, disclose, and protect your personal information.\n\nBy using the Service you consent to the practices described here; if you do not agree, discontinue use. The Service provides AI-assisted decision support only — AI outputs, scores, and history summaries are not guarantees of a vehicle\'s condition, safety, legality, value, or history.',
+
+  'legal.privacy.s2.title': '2. Information We Collect',
+  'legal.privacy.s2.body': 'Account data: name, email address, and a hashed password, or your name, email, and profile photo if you sign in with Google.\n\nVehicle and inspection data: make, model, year, VIN, mileage, asking price, checklist responses, and notes you enter.\n\nVehicle images: photos uploaded during AI analysis, transmitted to our AI provider for that purpose only (see Section 6). Avoid uploading images containing personal or unrelated content not necessary for vehicle identification.\n\nAI results: findings, confidence scores, summaries, and risk scores generated from your inputs.\n\nPayment data: if you purchase a premium product, payment is processed by Stripe or Google Play Billing; we do not store full card numbers and retain only transaction records needed for billing and legal compliance.\n\nUsage data: browser/device type, IP address, pages visited, and feature interactions, used to operate and improve the Service.\n\nLegal consent evidence: see Section 3.\n\nLocal storage: your authentication session is stored in browser storage until you sign out.',
+
+  'legal.privacy.s3.title': '3. Legal Consent Evidence',
+  'legal.privacy.s3.body': 'When you accept these Terms, the Privacy Policy, or the Risk Acknowledgement — at registration or when a material update requires re-acceptance — we record a consent evidence entry consisting of: which document versions you accepted, the date and time, your selected locale, the platform you used (web or Android), which revision of the consent form presented the checkboxes to you, and the IP address and browser user-agent string associated with that specific acceptance event.\n\nThis information is collected solely to prove, if it is ever disputed, that you were shown and affirmatively accepted a specific, identifiable version of our legal documents — it is contract-formation evidence, not analytics, and it is never used for tracking, profiling, advertising, or any purpose beyond establishing what you agreed to and when. It is retained for as long as necessary to serve that evidentiary purpose, including for a reasonable period after account deletion where retention is necessary to establish, exercise, or defend legal claims, consistent with applicable data-protection law.',
+
+  'legal.privacy.s4.title': '4. How We Use Your Information',
+  'legal.privacy.s4.body': 'We use your information to operate the Service and its AI-assisted features, generate inspection outputs and reports, process purchases, authenticate your account, communicate with you about your account or purchases, improve the reliability of AI features, comply with legal obligations and enforce our Terms, prove what you consented to, and detect and prevent fraud or abuse. We do not sell, rent, or trade your personal data for third parties\' marketing purposes.',
+
+  'legal.privacy.s5.title': '5. Data Sharing and Third-Party Providers',
+  'legal.privacy.s5.body': 'We share data only with providers essential to the Service: database hosting; our AI provider, to generate analysis from photos and inspection context you submit; Stripe and Google Play Billing, for payment processing; third-party vehicle-history data providers, when you purchase a history report; CDN/DNS/security providers; and an email delivery provider for transactional email. Each processes data under its own privacy policy; we are not responsible for their practices beyond our reasonable control. We do not share your data with advertisers, data brokers, or unaffiliated third parties for other purposes.',
+
+  'legal.privacy.s6.title': '6. AI Processing',
+  'legal.privacy.s6.body': 'Uploaded images and vehicle data may be processed by third-party AI providers to generate findings, risk indicators, and recommendations. Result quality depends on image resolution and clarity, lighting and angle, completeness of the data you provide, and the AI model\'s inherent limitations. AI results are informational and decision-support only — not a professional inspection, certified assessment, or guarantee of condition, safety, value, or history.',
+
+  'legal.privacy.s7.title': '7. Data Storage and Security',
+  'legal.privacy.s7.body': 'Your data is stored in an encrypted-in-transit PostgreSQL database. We apply reasonable technical and organizational safeguards, including access controls and secure key management, but no method of electronic transmission or storage can be guaranteed absolutely secure, and by using the Service you accept that inherent risk. We will notify you and, where required, the relevant supervisory authority in the event of a data breach affecting your rights.',
+
+  'legal.privacy.s8.title': '8. Data Retention',
+  'legal.privacy.s8.body': 'We retain data for as long as necessary for account functionality, report generation, security and fraud prevention, service improvement, and legal and compliance obligations, including the evidentiary retention described in Section 3. Retention periods vary by data type. You may request account deletion via the Account Deletion page or by contacting us (Section 13); payment transaction records may be retained up to 7 years as required by accounting and tax law, and consent evidence may be retained past account deletion for the legal-claims purpose described in Section 3, even after your account and other personal data are deleted.',
+
+  'legal.privacy.s9.title': '9. Your Rights (GDPR and Other Applicable Law)',
+  'legal.privacy.s9.body': 'If you are located in a jurisdiction that grants data-protection rights such as the EEA/UK\'s GDPR, you may have the right to access, rectify, erase, restrict processing of, port, or object to processing of your data, and to lodge a complaint with your supervisory authority. Contact us to exercise these rights (Section 13); we respond within the timeframe applicable law requires.',
+
+  'legal.privacy.s10.title': '10. Cookies and Local Storage',
+  'legal.privacy.s10.body': 'We use an authentication cookie to maintain your signed-in state, a language-preference cookie (expires after 365 days), and local/session storage for authentication data on your device. We do not use advertising cookies, cross-site tracking, or third-party analytics such as Google Analytics.',
+
+  'legal.privacy.s11.title': '11. Children\'s Privacy',
+  'legal.privacy.s11.body': 'The Service is not directed at, and must not be used by, individuals under 18 years of age. We do not knowingly collect personal information from anyone under 18. If you believe a minor has provided us personal data, contact us and we will take steps to delete it promptly.',
+
+  'legal.privacy.s12.title': '12. Changes to This Policy',
+  'legal.privacy.s12.body': 'We may update this Privacy Policy; each published version is dated and retained. Material changes may require affirmative re-acceptance before you can continue using protected features, as described in the Terms of Use.',
+
+  'legal.privacy.s13.title': '13. Contact Us',
+  'legal.privacy.s13.body': 'For privacy questions, access requests, or complaints, contact us at contact@usedcarsdoctor.com or via usedcarsdoctor.com.',
 } as const
 
 export default en

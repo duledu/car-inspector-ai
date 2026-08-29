@@ -5,7 +5,7 @@
 // their respective module boundaries (no real network or database calls).
 // =============================================================================
 
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 jest.mock('../../src/utils/auth.middleware', () => ({
   requireAuth: jest.fn(),
@@ -26,6 +26,10 @@ jest.mock('../../src/lib/payments/google-play-auth', () => ({
   getPackageName: jest.fn(() => 'com.usedcarsdoctor.app'),
 }))
 
+jest.mock('../../src/lib/legal/consent-guard', () => ({
+  requireCurrentConsent: jest.fn(),
+}))
+
 jest.mock('../../src/config/prisma', () => ({
   prisma: {
     googlePlayPurchase: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
@@ -44,12 +48,14 @@ import {
   consumeGooglePlayPurchase,
 } from '../../src/lib/payments/google-play-verification'
 import { prisma as mockPrisma } from '../../src/config/prisma'
+import { requireCurrentConsent } from '../../src/lib/legal/consent-guard'
 import { resetRateLimits } from '../../src/lib/security/rate-limit'
 
 const mockRequireAuth = requireAuth as jest.Mock
 const mockVerify = verifyGooglePlayPurchase as jest.Mock
 const mockAcknowledge = acknowledgeGooglePlayPurchase as jest.Mock
 const mockConsume = consumeGooglePlayPurchase as jest.Mock
+const mockRequireCurrentConsent = requireCurrentConsent as jest.Mock
 
 const mockTx = {
   creditWallet: { upsert: jest.fn(), update: jest.fn() },
@@ -67,6 +73,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   resetRateLimits()
   mockRequireAuth.mockResolvedValue(AUTH_SUCCESS)
+  mockRequireCurrentConsent.mockResolvedValue(null)
   mockAcknowledge.mockResolvedValue(undefined)
   mockConsume.mockResolvedValue(undefined)
   ;(mockPrisma as any).$transaction.mockImplementation(async (fn: any) => fn(mockTx))
@@ -78,6 +85,13 @@ describe('POST /api/credits/google-play/verify', () => {
     mockRequireAuth.mockResolvedValue({ success: false, reason: 'Missing auth cookie' })
     const res = await POST(req({ productId: 'inspection_credit_1', purchaseToken: 'x'.repeat(20) }))
     expect(res.status).toBe(401)
+  })
+
+  test('403s when the caller lacks current consent, before any Google Play verification', async () => {
+    mockRequireCurrentConsent.mockResolvedValue(NextResponse.json({ code: 'CONSENT_REQUIRED' }, { status: 403 }))
+    const res = await POST(req({ productId: 'inspection_credit_1', purchaseToken: 'x'.repeat(20) }))
+    expect(res.status).toBe(403)
+    expect(mockVerify).not.toHaveBeenCalled()
   })
 
   test('400s for an unknown product ID', async () => {

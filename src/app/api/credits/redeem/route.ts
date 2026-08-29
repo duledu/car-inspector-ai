@@ -18,6 +18,7 @@ import { getCreditCost } from '@/lib/credits/product-credit-costs'
 import { spendCredit, refundCredits, WalletError } from '@/lib/credits/credit-wallet'
 import { grantPremiumAccess } from '@/lib/payments/premium-access'
 import { getProductPrice } from '@/modules/payments/pricing'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const bodySchema = z.object({
   vehicleId: z.string().min(1),
@@ -29,6 +30,13 @@ export async function POST(req: NextRequest) {
   if (!auth.success) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
+
+  // Redeeming a credit unlocks inspection-related functionality — gated the
+  // same as starting an inspection would be. Purely additive: runs before
+  // any wallet/entitlement mutation, so it cannot affect the already-verified
+  // spend/refund/debt logic below.
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   const rateLimit = checkRateLimit(`credits-redeem:${auth.userId}`, 10, 60_000)
   if (!rateLimit.allowed) {

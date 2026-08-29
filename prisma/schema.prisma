@@ -47,6 +47,7 @@ model User {
   creditWallet            CreditWallet?
   creditTransactions      CreditTransaction[]
   googlePlayPurchases     GooglePlayPurchase[]
+  consentRecords          ConsentRecord[]
 
   @@index([email])
   @@map("users")
@@ -682,4 +683,79 @@ model AppAnnouncement {
   createdAt DateTime @default(now())
 
   @@map("app_announcements")
+}
+
+// =============================================================================
+// LEGAL CONSENT
+//
+// Append-only, immutable evidence of what a user agreed to. Rows here are
+// never updated or deleted by application code — a new required version
+// means a new LegalDocumentVersion row and new ConsentRecord rows going
+// forward; nothing already written is rewritten. See src/lib/legal/ for the
+// single source of truth on which versions are currently required and for
+// the server-side guard that checks this table before protected actions.
+// =============================================================================
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+  RISK_ACKNOWLEDGEMENT
+}
+
+enum ConsentPlatform {
+  WEB
+  ANDROID
+}
+
+/// One row per published version of a legal document. Historical rows are
+/// never overwritten — this is what lets us prove, years later, exactly
+/// which wording a given ConsentRecord refers to.
+model LegalDocumentVersion {
+  id            String            @id @default(cuid())
+  documentType  LegalDocumentType
+  version       String            // e.g. "2026-08-30"
+  effectiveDate DateTime
+  contentHash   String            // sha256 of the canonical (English) source text for this version
+  createdAt     DateTime          @default(now())
+
+  @@unique([documentType, version])
+  @@index([documentType])
+  @@map("legal_document_versions")
+}
+
+/// One row per acceptance event. A user may have many rows over time (e.g.
+/// after a material Terms update requires re-consent) — every row is kept.
+///
+/// Deliberately NOT onDelete: Cascade. Contract-formation evidence (what was
+/// agreed, when) is exactly the kind of record a deleted user's own account
+/// might later need to be defended with or against — GDPR Art. 17(3)(b)/(e)
+/// recognises retaining the minimum necessary evidence for legal-claims
+/// purposes as a valid exception to erasure, and this app already retains
+/// an analogous record (payment/transaction history) past account deletion
+/// for the same class of reason (see Privacy Policy §7). So on account
+/// deletion, `userId` is nulled (SET NULL) rather than the row being
+/// removed — `userIdSnapshot` is an immutable, denormalized copy of the id
+/// captured at acceptance time that survives the user row's deletion,
+/// preserving "account X accepted version Y at time Z" without retaining
+/// any of the user's personal data (name/email/etc. were never stored here
+/// in the first place).
+model ConsentRecord {
+  id             String          @id @default(cuid())
+  userId         String?         // nulled on account deletion — see userIdSnapshot for durable evidence
+  userIdSnapshot String          // immutable copy of the user id at acceptance time; never modified
+  termsVersion   String
+  privacyVersion String
+  riskAckVersion String
+  locale         String
+  platform       ConsentPlatform
+  formVersion    String          // which signup/consent UI revision presented the checkboxes
+  ipAddress      String?         // narrowly scoped to consent evidence only — see Privacy Policy
+  userAgent      String?         // narrowly scoped to consent evidence only — see Privacy Policy
+  acceptedAt     DateTime        @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userIdSnapshot])
+  @@map("consent_records")
 }

@@ -3,7 +3,14 @@
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { LegalBody } from '../LegalBody'
+import { CURRENT_TERMS_VERSION, LEGAL_EFFECTIVE_DATE } from '@/lib/legal/legal-config'
+import { TERMS_CONTENT_KEYS } from '@/lib/legal/legal-content-manifest'
 import '@/i18n/config'
+
+// TERMS_CONTENT_KEYS is ['legal.terms.intro', ...26 x (title, body)] — derive
+// the section count from it so the manifest stays the single source of truth.
+const TERMS_SECTION_COUNT = (TERMS_CONTENT_KEYS.length - 1) / 2
 
 // ── Shared legal page shell ────────────────────────────────────────────────
 
@@ -66,7 +73,7 @@ function LegalHeader() {
 
 // ── Section component ──────────────────────────────────────────────────────
 
-function Section({ title, children }: Readonly<{ title: string; children: React.ReactNode }>) {
+function Section({ title, body }: Readonly<{ title: string; body: string }>) {
   return (
     <section style={{ marginBottom: 40 }}>
       <h2 style={{
@@ -81,40 +88,8 @@ function Section({ title, children }: Readonly<{ title: string; children: React.
       }}>
         {title}
       </h2>
-      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.62)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {children}
-      </div>
+      <LegalBody text={body} />
     </section>
-  )
-}
-
-function P({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <p style={{ margin: 0 }}>{children}</p>
-}
-
-function Ul({ items }: Readonly<{ items: string[] }>) {
-  return (
-    <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {items.map((item, i) => (
-        <li key={i} style={{ lineHeight: 1.7 }}>{item}</li>
-      ))}
-    </ul>
-  )
-}
-
-function WarningBox({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <div style={{
-      padding: '14px 18px',
-      background: 'rgba(251,191,36,0.05)',
-      border: '1px solid rgba(251,191,36,0.2)',
-      borderRadius: 10,
-      fontSize: 13,
-      color: 'rgba(255,255,255,0.65)',
-      lineHeight: 1.7,
-    }}>
-      {children}
-    </div>
   )
 }
 
@@ -122,7 +97,13 @@ function WarningBox({ children }: Readonly<{ children: React.ReactNode }>) {
 
 export default function TermsPage() {
   const { t, i18n } = useTranslation()
-  const isEnglish = i18n.language === 'en'
+  // English and Serbian are both complete, legally binding translations —
+  // the "this is an automatic translation" notice must never show for
+  // either. It shows for every other currently-supported locale, which
+  // still fall back to the English text via i18next's fallbackLng.
+  const isFullyTranslated = i18n.language === 'en' || i18n.language === 'sr'
+
+  const sections = Array.from({ length: TERMS_SECTION_COUNT }, (_, i) => i + 1)
 
   return (
     <div style={{ minHeight: '100svh', background: '#080c14', color: '#fff', fontFamily: 'var(--font-sans)' }}>
@@ -147,12 +128,12 @@ export default function TermsPage() {
             {t('legal.terms.title')}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            {t('legal.lastUpdated')} April 24, 2026
+            {t('legal.lastUpdated')} {LEGAL_EFFECTIVE_DATE} · {t('legal.version')} {CURRENT_TERMS_VERSION}
           </p>
         </div>
 
-        {/* Non-English notice */}
-        {!isEnglish && (
+        {/* Notice for locales without a complete legal translation */}
+        {!isFullyTranslated && (
           <div style={{
             marginBottom: 36, padding: '14px 18px',
             background: 'rgba(34,211,238,0.05)',
@@ -160,225 +141,22 @@ export default function TermsPage() {
             borderRadius: 10,
             fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.65,
           }}>
-            {t('legal.englishOnly')}
+            {t('legal.limitedLocaleNotice')}
           </div>
         )}
 
         {/* Divider */}
         <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 40 }} />
 
+        {/* Intro */}
+        <p style={{ margin: '0 0 32px', fontSize: 14, color: 'rgba(255,255,255,0.62)', lineHeight: 1.8 }}>
+          {t('legal.terms.intro')}
+        </p>
+
         {/* ── Sections ── */}
-
-        <Section title="1. Acceptance of Terms">
-          <P>
-            These Terms of Service ("Terms") govern your access to and use of the Used Cars Doctor web application and Progressive Web Application (the "Service") operated by Used Cars Doctor ("we," "our," "us"), available at{' '}
-            <a href="https://usedcarsdoctor.com" style={{ color: '#22d3ee', textDecoration: 'none' }}>usedcarsdoctor.com</a>.
-          </P>
-          <P>
-            By accessing or using the Service, you confirm that you are at least 13 years of age and agree to be bound by these Terms and our{' '}
-            <Link href="/legal/privacy" style={{ color: '#22d3ee', textDecoration: 'none' }}>{t('legal.privacy.title')}</Link>.
-            If you do not agree, do not use the Service.
-          </P>
-          <P>
-            These Terms apply to all platforms on which the Service is available, including the website, PWA, and any future mobile releases (e.g., Android via Google Play).
-          </P>
-        </Section>
-
-        <Section title="2. Description of Service">
-          <P>
-            Used Cars Doctor is an AI-assisted tool designed to help individuals evaluate used vehicles before purchase. The Service provides:
-          </P>
-          <Ul items={[
-            'Step-by-step guided inspection checklists for evaluating used vehicles',
-            'AI-assisted photo analysis to highlight visible defects, paint issues, and condition concerns from user-uploaded images',
-            'AI-generated inspection summaries and risk assessments based on user-entered data',
-            'Optional premium vehicle history reports sourced from third-party vehicle history data providers',
-            'PDF export of completed inspection reports',
-            'Account management and inspection history storage',
-          ]} />
-        </Section>
-
-        <Section title="3. User Accounts">
-          <P>You may create an account using an email address and password or by signing in with Google. You are responsible for:</P>
-          <Ul items={[
-            'Maintaining the confidentiality of your account credentials',
-            'All activity that occurs under your account',
-            'Notifying us immediately of any unauthorized use of your account',
-          ]} />
-          <P>We reserve the right to suspend or terminate accounts that violate these Terms, engage in fraudulent activity, or are inactive for an extended period, with or without prior notice depending on the severity of the violation.</P>
-        </Section>
-
-        <Section title="4. Acceptable Use">
-          <P>You agree to use the Service only for lawful purposes and in accordance with these Terms. You must not:</P>
-          <Ul items={[
-            'Use the Service for any commercial vehicle inspection business or resale of AI-generated reports without our written consent',
-            'Upload photos or content that you do not own or do not have the right to submit',
-            'Attempt to reverse-engineer, scrape, or extract data from the Service by automated means',
-            'Submit false, misleading, or fraudulent vehicle information',
-            'Use the Service to harass, harm, or deceive any person',
-            'Attempt to circumvent subscription limits, payment gates, or access controls',
-            'Share, resell, or publish premium reports in a way that bypasses our paid feature protections or third-party provider restrictions',
-            'Interfere with or disrupt the integrity or performance of the Service',
-          ]} />
-        </Section>
-
-        <Section title="5. AI-Based Analysis Disclaimer">
-          <WarningBox>
-            <strong style={{ color: '#fbbf24', display: 'block', marginBottom: 6 }}>
-              AI ANALYSIS IS NOT A PROFESSIONAL INSPECTION
-            </strong>
-            The Service uses AI-based image and data analysis to generate inspection summaries and risk assessments. These outputs are produced by automated machine learning models and are provided for informational and guidance purposes only. They do not constitute a professional vehicle inspection, mechanical assessment, certified appraisal, or expert opinion of any kind. They must not be used as the sole basis for any financial, purchasing, selling, or negotiation decision.
-          </WarningBox>
-          <P>
-            AI results may be inaccurate, incomplete, outdated, or misleading. AI models can and do make errors. They may miss defects not clearly visible in photos, misidentify conditions, or fail to detect issues that require physical examination by a qualified mechanic. The accuracy of AI analysis is directly dependent on the quality, resolution, lighting, angles, and completeness of the photos and data you provide.
-          </P>
-          <P>
-            Photo-based analysis is advisory only. Results generated from images may be incomplete or incorrect and are not a guaranteed diagnosis or professional mechanical inspection. The Service does not perform any physical, mechanical, or certified inspection of any vehicle.
-          </P>
-          <P>
-            The Service does not guarantee any vehicle's condition, history, mileage, value, safety, roadworthiness, legal status, ownership status, accident history, or suitability for purchase.
-          </P>
-          <P>
-            <strong style={{ color: 'rgba(255,255,255,0.82)' }}>You must independently verify vehicle condition</strong> before buying, selling, negotiating, financing, registering, or relying on any result produced by the Service. The Service is intended to supplement, not replace, a physical inspection by a licensed, qualified mechanic or automotive technician.
-          </P>
-          <P>
-            WE EXPRESSLY DISCLAIM ALL LIABILITY FOR ANY VEHICLE PURCHASE DECISION, FINANCIAL LOSS, NEGOTIATION OUTCOME, OR HARM ARISING FROM RELIANCE ON AI-GENERATED ANALYSIS, PHOTO ASSESSMENTS, OR INSPECTION SUMMARIES PROVIDED BY THE SERVICE.
-          </P>
-        </Section>
-
-        <Section title="6. Photo Uploads">
-          <P>When you upload photos through the Service:</P>
-          <Ul items={[
-            'You grant us a limited, non-exclusive license to transmit those photos to our AI provider (OpenAI) solely for the purpose of generating analysis results for your session.',
-            'You represent that you have the right to upload and submit the images.',
-            'Photos are not stored by us beyond the duration of the analysis request.',
-            'You must not upload photos containing personally identifiable information about individuals (e.g., faces, license plates visible with personal context) beyond what is necessary for vehicle identification.',
-          ]} />
-          <P>We do not claim ownership of your uploaded photos. The limited license granted above terminates upon completion of the analysis request.</P>
-        </Section>
-
-        <Section title="7. Premium Reports & Payments">
-          <P>
-            Certain features, including vehicle history reports, require a one-time payment. Payments are processed by Stripe, a third-party payment processor. By making a purchase, you also agree to Stripe's terms of service.
-          </P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Refund Policy.</strong> All purchases are final and non-refundable, except where required by applicable law. Because vehicle history reports are retrieved in real time from third-party vehicle history data providers upon purchase, the service is considered delivered immediately and refunds are not available once a report has been retrieved.</P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Report Accuracy.</strong> Vehicle history reports are sourced from third-party data partners and reflect the data available in their databases at the time of the request. We do not guarantee the accuracy, completeness, or currency of vehicle history data. We are not liable for any errors or omissions in third-party history reports.</P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Access Controls.</strong> Premium content is licensed for your personal use in connection with the specific vehicle and purchase shown in the Service. We may restrict, suspend, or revoke access if we detect abuse, fraud, chargeback misuse, account sharing, or attempts to bypass payment protections.</P>
-          <P><strong style={{ color: 'rgba(255,255,255,0.82)' }}>Pricing.</strong> Prices are displayed in EUR and are subject to change. You will always see the price before confirming any purchase.</P>
-        </Section>
-
-        <Section title="8. Intellectual Property">
-          <P>
-            The Service, including its design, software, AI models, workflows, branding, and all original content created by us, is owned by Used Cars Doctor and protected by copyright, trademark, and other intellectual property laws.
-          </P>
-          <P>
-            You retain ownership of any data, vehicle information, and photos you submit. You grant us a limited license to use that data solely to provide the Service to you as described in these Terms and our Privacy Policy.
-          </P>
-          <P>
-            You may not copy, reproduce, distribute, publish, modify, or create derivative works from the Service or its content without our prior written consent.
-          </P>
-        </Section>
-
-        <Section title="9. Third-Party Services">
-          <P>The Service integrates with third-party providers including OpenAI (AI analysis), Stripe (payments), third-party vehicle history data providers, Neon Technologies (database), and Google (authentication). Your use of the Service involves data being processed by these providers, subject to their respective terms and privacy policies.</P>
-          <P>We are not responsible for the availability, accuracy, or conduct of any third-party service. Links to or integrations with third-party services do not constitute our endorsement of those services.</P>
-        </Section>
-
-        <Section title="10. Disclaimers of Warranties">
-          <P>
-            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
-          </P>
-          <P>
-            We do not warrant that the Service will be uninterrupted, error-free, secure, or free of viruses. We do not warrant the accuracy or reliability of any AI-generated content, vehicle analysis, or history report data. We do not warrant that any defect or error will be corrected.
-          </P>
-          <P>
-            Some jurisdictions do not allow the exclusion of implied warranties; in such cases, the above exclusions apply to the fullest extent permitted by law.
-          </P>
-        </Section>
-
-        <Section title="11. Limitation of Liability">
-          <P>
-            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE." WE MAKE NO WARRANTIES OF ANY KIND — EXPRESS OR IMPLIED — REGARDING THE ACCURACY, RELIABILITY, COMPLETENESS, VEHICLE CONDITION, SAFETY, VALUE, OR PURCHASE SUITABILITY OF ANY INFORMATION, ANALYSIS, OR RESULT PROVIDED BY THE SERVICE.
-          </P>
-          <P>
-            YOUR USE OF THE SERVICE IS ENTIRELY AT YOUR OWN RISK. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL USED CAR INSPECTOR AI, ITS OPERATORS, AFFILIATES, LICENSORS, OR SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO: LOSS OF PROFITS; LOSS OF DATA; FINANCIAL LOSS; INCORRECT AI RESULTS; MISSED VEHICLE DEFECTS OR ISSUES; NEGOTIATION OUTCOMES; DECISIONS MADE BASED ON THE SERVICE; COST OF SUBSTITUTE GOODS OR SERVICES; OR DAMAGES ARISING FROM ANY VEHICLE PURCHASE, SALE, OR VALUATION DECISION MADE IN RELIANCE ON THE SERVICE.
-          </P>
-          <P>
-            IN NO EVENT SHALL OUR TOTAL AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THE SERVICE EXCEED THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR €10 EUR IF YOU HAVE MADE NO PAYMENTS.
-          </P>
-          <P>
-            Some jurisdictions do not allow limitations on liability for certain types of damages; in such cases, the above limitations apply to the fullest extent permitted by applicable law.
-          </P>
-        </Section>
-
-        <Section title="12. Indemnification">
-          <P>
-            You agree to indemnify, defend, and hold harmless Used Cars Doctor and its operators, affiliates, licensors, and service providers from and against any claims, liabilities, damages, losses, legal actions, costs, and expenses (including reasonable legal fees) arising out of or relating to: (a) your use of or reliance on the Service; (b) your violation of these Terms; (c) your violation of any applicable law or regulation; (d) any content or data you submit through the Service; or (e) your misuse of any AI-generated analysis, result, or recommendation provided by the Service.
-          </P>
-        </Section>
-
-        <Section title="13. User Responsibility">
-          <P>
-            You are solely responsible for all decisions, actions, and outcomes arising from your use of the Service. The Service provides informational assistance only and does not advise, recommend, or direct any specific course of action.
-          </P>
-          <Ul items={[
-            'No guarantee is made regarding any vehicle\'s condition, safety, value, reliability, legal status, or suitability for purchase.',
-            'The Service does not guarantee any specific negotiation outcome, purchase result, or financial benefit.',
-            'Any vehicle inspection, purchase, sale, negotiation, financing, or registration decision you make is made entirely at your own risk and on your own judgment.',
-            'You must independently verify all vehicle information, condition, and history through qualified professionals before acting on any result produced by the Service.',
-          ]} />
-          <P>
-            The Service is a tool to assist your personal evaluation process. It is not a guarantee, warranty, or professional certification of any vehicle or vehicle-related information.
-          </P>
-        </Section>
-
-        <Section title="14. No Professional Advice">
-          <P>
-            Nothing in the Service constitutes mechanical, financial, legal, investment, or any other form of professional advice. All information, analysis, summaries, risk assessments, and recommendations provided by the Service are general and informational in nature only.
-          </P>
-          <P>
-            The Service does not provide:
-          </P>
-          <Ul items={[
-            'Mechanical or engineering assessments of any kind',
-            'Financial advice regarding vehicle value, pricing, or investment suitability',
-            'Legal advice regarding vehicle ownership, title, registration, or compliance',
-            'Any form of certified or professional appraisal',
-          ]} />
-          <P>
-            Before making any vehicle-related decision, you should consult qualified professionals, including but not limited to a licensed mechanic, certified vehicle appraiser, legal adviser, or financial adviser, as appropriate to your circumstances.
-          </P>
-        </Section>
-
-        <Section title="15. Governing Law & Dispute Resolution">
-          <P>
-            These Terms shall be governed by and construed in accordance with applicable law. If you are located in the European Economic Area, EU consumer protection laws apply and you may have rights under them that these Terms cannot override.
-          </P>
-          <P>
-            Any disputes arising out of or relating to these Terms or the Service that cannot be resolved informally shall be subject to the exclusive jurisdiction of the courts of competent jurisdiction.
-          </P>
-          <P>
-            EU residents may also use the European Commission's Online Dispute Resolution platform at{' '}
-            <a href="https://ec.europa.eu/consumers/odr" style={{ color: '#22d3ee', textDecoration: 'none' }}>ec.europa.eu/consumers/odr</a>.
-          </P>
-        </Section>
-
-        <Section title="16. Modifications to Terms">
-          <P>
-            We reserve the right to modify these Terms at any time. Material changes will be communicated by updating the "Last updated" date at the top of this page and, where appropriate, by sending a notification to the email address associated with your account.
-          </P>
-          <P>
-            Your continued use of the Service after the effective date of any revised Terms constitutes your acceptance of the changes. If you do not agree to the revised Terms, you must stop using the Service.
-          </P>
-        </Section>
-
-        <Section title="17. Contact Us">
-          <P>For questions, concerns, or notices regarding these Terms, please contact us:</P>
-          <Ul items={[
-            'Email: contact@usedcarsdoctor.com',
-            'Website: https://usedcarsdoctor.com',
-          ]} />
-        </Section>
+        {sections.map((n) => (
+          <Section key={n} title={t(`legal.terms.s${n}.title`)} body={t(`legal.terms.s${n}.body`)} />
+        ))}
 
         {/* Bottom links */}
         <div style={{

@@ -23,6 +23,7 @@ import {
 } from '@/lib/payments/google-play-verification'
 import { getPackageName } from '@/lib/payments/google-play-auth'
 import { grantCredits, WalletError } from '@/lib/credits/credit-wallet'
+import { requireCurrentConsent } from '@/lib/legal/consent-guard'
 
 const bodySchema = z.object({
   productId: z.string().min(1),
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
   if (!auth.success) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
+
+  // Runs before Google Play verification / credit granting — a purchase is
+  // only recognized once the caller has current consent, matching the same
+  // gate applied to spending credits (see credits/redeem).
+  const consentBlock = await requireCurrentConsent(auth.userId)
+  if (consentBlock) return consentBlock
 
   const rateLimit = checkRateLimit(`credits-verify:${auth.userId}`, 10, 60_000)
   if (!rateLimit.allowed) {

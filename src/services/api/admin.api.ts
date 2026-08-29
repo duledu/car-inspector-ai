@@ -4,9 +4,17 @@ import type { RecipientMode } from '@/lib/admin/bulk-email-sender'
 import type { ApiResponse } from '@/types'
 
 interface UserStats {
+  /** Registered users — excludes consent-pending OAuth shells (a User row with no ConsentRecord yet). */
   total:      number
+  /** emailVerified AND has current valid consent (see src/lib/legal/consent-guard.ts). */
   verified:   number
   unverified: number
+  /** Users who have never completed the consent handshake at all (typically fresh OAuth sign-ins). */
+  noConsent:      number
+  /** Registered users whose latest consent no longer matches the current required document versions. */
+  staleConsent:   number
+  /** Registered users whose latest consent is fully current. */
+  currentConsent: number
 }
 
 interface RecentUser {
@@ -16,6 +24,10 @@ interface RecentUser {
   emailVerified: string | null
   createdAt:     string
   role:          string
+  /** True only when this user's latest ConsentRecord matches every currently-required document version. */
+  hasCurrentConsent: boolean
+  /** Derived as !hasCurrentConsent — covers both "never consented" and "stale consent" alike. */
+  isConsentPending:  boolean
 }
 
 export interface BulkSendResult {
