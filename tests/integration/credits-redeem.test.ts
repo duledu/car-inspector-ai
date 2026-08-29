@@ -139,9 +139,9 @@ describe('POST /api/credits/redeem', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.data.creditsSpent).toBe(5)
-    // Not the INSPECTION_REPORT product — access.ts's grantAccess (InspectionReport
-    // activation) is only called for INSPECTION_REPORT.
-    expect(mockGrantAccess).not.toHaveBeenCalled()
+    // The bundle includes the final Inspection Report — grantAccess (InspectionReport
+    // activation) runs for FULL_INSPECTION_BUNDLE too, not just a standalone INSPECTION_REPORT.
+    expect(mockGrantAccess).toHaveBeenCalledWith('user-1', 'v1', expect.objectContaining({ grantedVia: 'purchase' }))
   })
 
   test('refunds the spent credits if granting access fails after a successful spend', async () => {

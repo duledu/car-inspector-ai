@@ -22,8 +22,8 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, parseRequestId, pipelineLog } from '@/lib/logger'
 import { pipelineOk, pipelineErr, type PipelineResult } from '@/lib/pipeline/types'
-import { env } from '@/config/env'
-import { hasActiveAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
+import { checkRateLimit } from '@/lib/security/rate-limit'
+import { hasAiAnalysisAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
 
 type IssueSeverity = 'minor' | 'moderate' | 'serious'
 type ImageQuality = 'good' | 'medium' | 'poor' | 'unusable'
@@ -57,7 +57,7 @@ interface StructuredPhotoAnalysis {
 }
 
 const schema = z.object({
-  vehicleId:    z.string().min(1).optional(),
+  vehicleId:    z.string().min(1),
   imageBase64: z.string().min(100),
   mimeType:    z.enum(['image/jpeg', 'image/png', 'image/webp']).default('image/jpeg'),
   angle:       z.string().min(1),        // e.g. "FRONT", "LEFT_SIDE"
@@ -716,6 +716,16 @@ export async function POST(req: NextRequest) {
     return requestError(auth.reason, 401, 'UNAUTHORIZED', requestId)
   }
 
+  // Step 1b: Rate limit — bounds OpenAI Vision cost exposure per user against
+  // request storms, retry loops, or deliberate abuse. Defense-in-depth only;
+  // it does not replace the entitlement check below. A full inspection is
+  // ~20 angles plus occasional retakes, so the window is sized generously
+  // above that.
+  const rateLimit = checkRateLimit(`analyze-photo:${auth.userId}`, 60, 5 * 60_000)
+  if (!rateLimit.allowed) {
+    return requestError('Too many photo analysis requests. Please wait a moment and try again.', 429, 'RATE_LIMITED', requestId)
+  }
+
   // Step 2: JSON parse
   let body: unknown
   try {
@@ -735,15 +745,13 @@ export async function POST(req: NextRequest) {
   const { vehicleId, imageBase64, mimeType, angle, angleLabel, locale, imageMeta } = validated.data
   const requestBytes = Math.round((imageBase64.length * 3) / 4)
 
-  if (env.features.inspectionAccessGate) {
-    if (!vehicleId) {
-      return requestError('vehicleId is required', 422, 'VALIDATION_ERROR', requestId)
-    }
-    const ownsVehicle = await verifyVehicleOwnership(auth.userId, vehicleId)
-    if (!ownsVehicle) return requestError('Vehicle not found', 404, 'NOT_FOUND', requestId)
-    const allowed = await hasActiveAccess(auth.userId, vehicleId)
-    if (!allowed) return requestError('Inspection access required', 403, 'ACCESS_REQUIRED', requestId)
-  }
+  // Step 3b: Ownership + entitlement — always enforced, never feature-flagged.
+  // AI Deep Scan work must never run for a vehicle the caller doesn't own or
+  // hasn't paid for, regardless of any optional feature flag's state.
+  const ownsVehicle = await verifyVehicleOwnership(auth.userId, vehicleId)
+  if (!ownsVehicle) return requestError('Vehicle not found', 404, 'NOT_FOUND', requestId)
+  const allowed = await hasAiAnalysisAccess(auth.userId, vehicleId)
+  if (!allowed) return requestError('Inspection access required', 403, 'ACCESS_REQUIRED', requestId)
 
   // Step 4: Image size check
   const sizeCheck = stepCheckImageSize(requestBytes)

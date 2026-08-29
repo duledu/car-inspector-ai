@@ -17,20 +17,30 @@ import {
   verifyGooglePlayPurchase,
   acknowledgeGooglePlayPurchase,
   consumeGooglePlayPurchase,
+  listVoidedPurchases,
+  wasPurchaseVoided,
   GooglePlayVerificationError,
 } from '../../src/lib/payments/google-play-verification'
 
 const mockGet = jest.fn()
 const mockAcknowledge = jest.fn()
 const mockConsume = jest.fn()
+const mockVoidedList = jest.fn()
 
 beforeEach(() => {
   jest.clearAllMocks()
   getPackageName.mockReturnValue('com.usedcarsdoctor.app')
   getAndroidPublisherClient.mockReturnValue({
-    purchases: { products: { get: mockGet, acknowledge: mockAcknowledge, consume: mockConsume } },
+    purchases: {
+      products: { get: mockGet, acknowledge: mockAcknowledge, consume: mockConsume },
+      voidedpurchases: { list: mockVoidedList },
+    },
   })
 })
+
+function voidedPurchase(purchaseToken: string, orderId = `GPA.${purchaseToken}`) {
+  return { purchaseToken, orderId, voidedTimeMillis: '1700000000000', voidedReason: 0, voidedSource: 0 }
+}
 
 describe('verifyGooglePlayPurchase', () => {
   test('returns verified purchase details for a PURCHASED (state 0) token', async () => {
@@ -138,5 +148,93 @@ describe('consumeGooglePlayPurchase', () => {
   test('wraps API failures as CONSUME_FAILED', async () => {
     mockConsume.mockRejectedValue(new Error('boom'))
     await expect(consumeGooglePlayPurchase('tok', 'x', 'com.usedcarsdoctor.app')).rejects.toMatchObject({ code: 'CONSUME_FAILED' })
+  })
+})
+
+describe('wasPurchaseVoided pagination', () => {
+  test('finds the target purchase on the first page', async () => {
+    mockVoidedList.mockResolvedValueOnce({
+      data: { voidedPurchases: [voidedPurchase('tok-a'), voidedPurchase('tok-target')], tokenPagination: {} },
+    })
+
+    await expect(wasPurchaseVoided('tok-target')).resolves.toBe(true)
+    expect(mockVoidedList).toHaveBeenCalledTimes(1)
+  })
+
+  test('finds the target purchase on the second page by following nextPageToken', async () => {
+    mockVoidedList
+      .mockResolvedValueOnce({
+        data: { voidedPurchases: [voidedPurchase('tok-a')], tokenPagination: { nextPageToken: 'page-2' } },
+      })
+      .mockResolvedValueOnce({
+        data: { voidedPurchases: [voidedPurchase('tok-target')], tokenPagination: {} },
+      })
+
+    await expect(wasPurchaseVoided('tok-target')).resolves.toBe(true)
+    expect(mockVoidedList).toHaveBeenCalledTimes(2)
+    expect(mockVoidedList).toHaveBeenNthCalledWith(2, expect.objectContaining({ token: 'page-2' }))
+  })
+
+  test('finds the target purchase after several pages', async () => {
+    mockVoidedList
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-1')], tokenPagination: { nextPageToken: 'p2' } } })
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-2')], tokenPagination: { nextPageToken: 'p3' } } })
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-3')], tokenPagination: { nextPageToken: 'p4' } } })
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-target')], tokenPagination: {} } })
+
+    await expect(wasPurchaseVoided('tok-target')).resolves.toBe(true)
+    expect(mockVoidedList).toHaveBeenCalledTimes(4)
+  })
+
+  test('returns false once the final page is reached without a match', async () => {
+    mockVoidedList
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-1')], tokenPagination: { nextPageToken: 'p2' } } })
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-2')], tokenPagination: {} } })
+
+    await expect(wasPurchaseVoided('tok-target')).resolves.toBe(false)
+    expect(mockVoidedList).toHaveBeenCalledTimes(2)
+  })
+
+  test('fails closed (throws, does not return false) when the first page request fails', async () => {
+    mockVoidedList.mockRejectedValueOnce(new Error('network down'))
+
+    await expect(wasPurchaseVoided('tok-target')).rejects.toMatchObject({ code: 'VOIDED_LIST_FAILED' })
+  })
+
+  test('fails closed (throws, does not return false) when a later page request fails', async () => {
+    mockVoidedList
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-1')], tokenPagination: { nextPageToken: 'p2' } } })
+      .mockRejectedValueOnce(new Error('network down'))
+
+    await expect(wasPurchaseVoided('tok-target')).rejects.toMatchObject({ code: 'VOIDED_LIST_FAILED' })
+    expect(mockVoidedList).toHaveBeenCalledTimes(2)
+  })
+
+  test('fails closed instead of looping forever on malformed/repeating pagination tokens', async () => {
+    mockVoidedList.mockImplementation(() =>
+      Promise.resolve({ data: { voidedPurchases: [voidedPurchase('tok-none')], tokenPagination: { nextPageToken: 'same-token' } } }),
+    )
+
+    await expect(wasPurchaseVoided('tok-target')).rejects.toMatchObject({ code: 'VOIDED_LIST_PAGINATION_LIMIT' })
+    expect(mockVoidedList.mock.calls.length).toBeLessThanOrEqual(20)
+  })
+
+  test('never matches a different purchaseToken (exact match only)', async () => {
+    mockVoidedList.mockResolvedValueOnce({
+      data: { voidedPurchases: [voidedPurchase('tok-targetXYZ'), voidedPurchase('Xtok-target')], tokenPagination: {} },
+    })
+
+    await expect(wasPurchaseVoided('tok-target')).resolves.toBe(false)
+  })
+})
+
+describe('listVoidedPurchases pagination', () => {
+  test('accumulates results across all pages', async () => {
+    mockVoidedList
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-1')], tokenPagination: { nextPageToken: 'p2' } } })
+      .mockResolvedValueOnce({ data: { voidedPurchases: [voidedPurchase('tok-2')], tokenPagination: {} } })
+
+    const result = await listVoidedPurchases()
+    expect(result.map(v => v.purchaseToken)).toEqual(['tok-1', 'tok-2'])
   })
 })

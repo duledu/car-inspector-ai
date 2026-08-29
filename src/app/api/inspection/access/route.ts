@@ -4,6 +4,7 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { getInspectionAccess, grantAccess, verifyVehicleOwnership } from '@/lib/inspection/access'
 import { getPromoMeta } from '@/lib/inspection/promo-codes'
+import { checkRateLimit } from '@/lib/security/rate-limit'
 
 const PromoSchema = z.object({
   vehicleId: z.string().min(1),
@@ -34,6 +35,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (!auth.success) return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
+
+  // Promo codes are a guessable-secret entitlement path — rate limit
+  // redemption attempts so this endpoint can't be used to brute-force codes.
+  const rateLimit = checkRateLimit(`inspection-access-redeem:${auth.userId}`, 5, 60_000)
+  if (!rateLimit.allowed) {
+    return apiError('Too many promo code attempts. Please wait a moment and try again.', { status: 429, code: 'RATE_LIMITED' })
+  }
 
   let body: unknown
   try { body = await req.json() } catch {

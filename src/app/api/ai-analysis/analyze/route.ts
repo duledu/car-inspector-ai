@@ -21,8 +21,8 @@ import { requireAuth } from '@/utils/auth.middleware'
 import { apiError, logApiError } from '@/utils/api-response'
 import { clampScore } from '@/modules/scoring/scoring.logic'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
-import { env } from '@/config/env'
-import { hasActiveAccess } from '@/lib/inspection/access'
+import { checkRateLimit } from '@/lib/security/rate-limit'
+import { hasAiAnalysisAccess } from '@/lib/inspection/access'
 
 const photoResultSchema = z.object({
   angle:          z.string().min(1),
@@ -64,6 +64,14 @@ export async function POST(req: NextRequest) {
     return apiError(auth.reason, { status: 401, code: 'UNAUTHORIZED' })
   }
 
+  // Defense-in-depth against request storms/retries; does not replace the
+  // entitlement check below. A full inspection aggregates once (plus an
+  // occasional client-side retry), so this window is intentionally generous.
+  const rateLimit = checkRateLimit(`ai-analysis-analyze:${auth.userId}`, 20, 5 * 60_000)
+  if (!rateLimit.allowed) {
+    return apiError('Too many analysis requests. Please wait a moment and try again.', { status: 429, code: 'RATE_LIMITED' })
+  }
+
   let body: unknown
   try { body = await req.json() } catch {
     return apiError('Invalid JSON', { status: 400, code: 'BAD_REQUEST' })
@@ -92,12 +100,10 @@ export async function POST(req: NextRequest) {
     return apiError('Failed to verify vehicle', { status: 500, code: 'INTERNAL_ERROR' })
   }
 
-  // Step 3b: Access gate (only enforced when FEATURE_INSPECTION_ACCESS_GATE=true)
-  if (env.features.inspectionAccessGate) {
-    const allowed = await hasActiveAccess(auth.userId, vehicleId)
-    if (!allowed) {
-      return apiError('Inspection access required', { status: 403, code: 'ACCESS_REQUIRED' })
-    }
+  // Step 3b: Entitlement gate — always enforced, never feature-flagged.
+  const allowed = await hasAiAnalysisAccess(auth.userId, vehicleId)
+  if (!allowed) {
+    return apiError('Inspection access required', { status: 403, code: 'ACCESS_REQUIRED' })
   }
 
   // Step 4: Classify photos as usable vs. unusable

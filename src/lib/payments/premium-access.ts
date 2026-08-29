@@ -49,7 +49,12 @@ export async function grantPremiumAccess(
     },
   })
 
-  if (purchase.productType === 'INSPECTION_REPORT') {
+  // FULL_INSPECTION_BUNDLE includes the final Inspection Report — activate the
+  // same InspectionReport row a standalone INSPECTION_REPORT purchase would.
+  // AI Deep Scan access for the bundle comes from the AccessGrant row above
+  // (see entitlements.ts's PRODUCTS_GRANTING map), so no separate grant call
+  // is needed for that half of the bundle.
+  if (purchase.productType === 'INSPECTION_REPORT' || purchase.productType === 'FULL_INSPECTION_BUNDLE') {
     await grantAccess(purchase.userId, purchase.vehicleId, {
       grantedVia: 'purchase',
       purchaseId: purchase.id,

@@ -147,48 +147,93 @@ export interface GooglePlayVoidedPurchase {
   voidedSource: number | null
 }
 
+// Google's purchases.voidedpurchases.list is token-paginated (tokenPagination.
+// nextPageToken) with no documented bound on page count. This loop must fail
+// closed rather than spin forever if Google ever returns a malformed or
+// cyclical token, so a page beyond this count is treated as an authoritative
+// failure instead of "no more results" — 1000 results/page x 20 pages covers
+// 20,000 voided purchases in the 30-day window, far beyond any real volume.
+const MAX_VOIDED_PURCHASES_PAGES = 20
+
 /**
- * Lists purchases Google itself has recorded as voided (cancelled, refunded,
- * or charged back) within a recent time window. This is the purpose-built
- * API for confirming a void — unlike purchases.products.get (which confirms
- * a purchase is currently valid), this is what actually reflects refund
- * state. Used to independently verify an RTDN voided-purchase notification
- * before acting on it; the notification payload itself is never trusted
- * alone (see the notifications route).
+ * Pages through Google's voided-purchases record within a recent time window,
+ * yielding one page at a time so callers can stop as soon as they find what
+ * they're looking for instead of accumulating the whole window in memory.
+ * Any page request failure (including exceeding the defensive page cap)
+ * throws — callers must treat that as "unable to confirm", never as "not
+ * voided".
  */
-export async function listVoidedPurchases(withinMs = 30 * 24 * 60 * 60 * 1000): Promise<GooglePlayVoidedPurchase[]> {
+async function* iterateVoidedPurchasePages(withinMs: number): AsyncGenerator<GooglePlayVoidedPurchase[]> {
   const client = getAndroidPublisherClient()
   const packageName = getPackageName()
   const endTime = Date.now()
   const startTime = Math.max(0, endTime - withinMs)
 
-  try {
-    const response = await client.purchases.voidedpurchases.list({
-      packageName,
-      startTime: String(startTime),
-      endTime: String(endTime),
-      maxResults: 1000,
-      type: 0, // in-app product purchases only — this app has no subscriptions
-    })
-    return (response.data.voidedPurchases ?? []).map(v => ({
+  let pageToken: string | undefined
+  for (let page = 1; ; page++) {
+    if (page > MAX_VOIDED_PURCHASES_PAGES) {
+      throw new GooglePlayVerificationError(
+        `Exceeded maximum voided-purchases page count (${MAX_VOIDED_PURCHASES_PAGES}) without reaching the end of results`,
+        'VOIDED_LIST_PAGINATION_LIMIT',
+      )
+    }
+
+    let response
+    try {
+      response = await client.purchases.voidedpurchases.list({
+        packageName,
+        startTime: String(startTime),
+        endTime: String(endTime),
+        maxResults: 1000,
+        type: 0, // in-app product purchases only — this app has no subscriptions
+        ...(pageToken ? { token: pageToken } : {}),
+      })
+    } catch (err) {
+      throw new GooglePlayVerificationError('Failed to list voided purchases from Google Play', 'VOIDED_LIST_FAILED')
+    }
+
+    yield (response.data.voidedPurchases ?? []).map(v => ({
       purchaseToken: v.purchaseToken ?? '',
       orderId: v.orderId ?? '',
       voidedTimeMillis: v.voidedTimeMillis ?? '',
       voidedReason: v.voidedReason ?? null,
       voidedSource: v.voidedSource ?? null,
     }))
-  } catch (err) {
-    throw new GooglePlayVerificationError('Failed to list voided purchases from Google Play', 'VOIDED_LIST_FAILED')
+
+    const nextPageToken = response.data.tokenPagination?.nextPageToken
+    if (!nextPageToken) return
+    pageToken = nextPageToken
   }
+}
+
+/**
+ * Lists purchases Google itself has recorded as voided (cancelled, refunded,
+ * or charged back) within a recent time window, following pagination to
+ * completion. This is the purpose-built API for confirming a void — unlike
+ * purchases.products.get (which confirms a purchase is currently valid),
+ * this is what actually reflects refund state.
+ */
+export async function listVoidedPurchases(withinMs = 30 * 24 * 60 * 60 * 1000): Promise<GooglePlayVoidedPurchase[]> {
+  const all: GooglePlayVoidedPurchase[] = []
+  for await (const page of iterateVoidedPurchasePages(withinMs)) {
+    all.push(...page)
+  }
+  return all
 }
 
 /**
  * Confirms that a specific purchaseToken genuinely appears in Google's own
  * voided-purchases record within the last 30 days (Google's own lookback
  * limit for this API), before an RTDN notification claiming it was voided
- * is trusted enough to debit a wallet.
+ * is trusted enough to debit a wallet. Walks pages in order and stops as
+ * soon as a match is found rather than accumulating every voided purchase
+ * in memory; any page failure (including the defensive page-count limit)
+ * propagates so the caller fails closed instead of treating it as "not
+ * voided".
  */
 export async function wasPurchaseVoided(purchaseToken: string): Promise<boolean> {
-  const voided = await listVoidedPurchases()
-  return voided.some(v => v.purchaseToken === purchaseToken)
+  for await (const page of iterateVoidedPurchasePages(30 * 24 * 60 * 60 * 1000)) {
+    if (page.some(v => v.purchaseToken === purchaseToken)) return true
+  }
+  return false
 }

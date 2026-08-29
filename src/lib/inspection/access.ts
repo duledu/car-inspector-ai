@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma, isMissingTableOrColumnError } from '@/config/prisma'
 import { getPromoMeta } from '@/lib/inspection/promo-codes'
+import { hasEntitlement } from '@/lib/payments/entitlements'
 
 export type AccessStatus = 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'NONE'
 
@@ -73,17 +74,25 @@ export async function getInspectionAccess(
 }
 
 /**
- * Returns true if AI inspection work (photo analysis, aggregation) may run.
- * Report GENERATION is separately gated by startReportGeneration.
- * LOCKED is the only status that blocks inspection work — the credit is consumed.
+ * Returns true if AI Deep Scan work (per-photo analysis, aggregation) may
+ * run for this vehicle. This is a real payment gate, not a UI convenience:
+ *
+ *  - ACTIVE means an INSPECTION_REPORT or FULL_INSPECTION_BUNDLE purchase (or
+ *    promo grant) is in effect for this vehicle.
+ *  - DRAFT is the default status stamped on every vehicle at creation time
+ *    (see /api/vehicle's POST handler) and must NOT be treated as access —
+ *    it means "never purchased", not "in progress".
+ *  - LOCKED means a report was already generated and consumed for this
+ *    purchase cycle; a new purchase is required to run further AI work.
+ *
+ * Independently, a standalone AI_DEEP_SCAN (or FULL_INSPECTION_BUNDLE)
+ * AccessGrant also satisfies this — that product is sold separately from
+ * INSPECTION_REPORT and does not touch InspectionReport status at all.
  */
-export async function hasActiveAccess(userId: string, vehicleId: string): Promise<boolean> {
+export async function hasAiAnalysisAccess(userId: string, vehicleId: string): Promise<boolean> {
   const { status } = await getInspectionAccess(userId, vehicleId)
-  return status === 'ACTIVE' || status === 'NONE' || status === 'DRAFT'
-}
-
-export async function canRecalculate(userId: string, vehicleId: string): Promise<boolean> {
-  return hasActiveAccess(userId, vehicleId)
+  if (status === 'ACTIVE') return true
+  return hasEntitlement(userId, vehicleId, 'AI_DEEP_SCAN')
 }
 
 /**
