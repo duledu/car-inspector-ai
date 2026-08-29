@@ -7,6 +7,7 @@
 
 import Link from 'next/link'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import '@/i18n/config'
 import { balanceHeadlineText } from '@/lib/typography'
 import { LandingNav } from '@/components/layout/LandingNav'
@@ -87,8 +88,9 @@ const reveal = (on: boolean, delay = 0): React.CSSProperties => ({
 // ══════════════════════════════════════════════════════════════
 
 function PageHero() {
+  const { t } = useTranslation()
   const [mounted, setMounted] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 80); return () => clearTimeout(t) }, [])
+  useEffect(() => { const timer = setTimeout(() => setMounted(true), 80); return () => clearTimeout(timer) }, [])
 
   return (
     <section
@@ -138,7 +140,7 @@ function PageHero() {
 
           {/* Chapter label */}
           <div style={{ ...reveal(mounted), marginBottom: 4 }}>
-            <SectionEyebrow>Before You Buy</SectionEyebrow>
+            <SectionEyebrow>{t('beforeYouBuy.hero.eyebrow')}</SectionEyebrow>
           </div>
 
           {/* H1 */}
@@ -151,9 +153,9 @@ function PageHero() {
             lineHeight: 1.04,
             color: '#fff',
           }}>
-            {balanceHeadlineText('The Used Car Market Rewards')}<br />
+            {balanceHeadlineText(t('beforeYouBuy.hero.headline1'))}<br />
             <span style={{ color: 'rgba(255,255,255,0.45)' }}>
-              {balanceHeadlineText('the Prepared.')}
+              {balanceHeadlineText(t('beforeYouBuy.hero.headline2'))}
             </span>
           </h1>
 
@@ -170,10 +172,7 @@ function PageHero() {
             lineHeight: 1.8,
             maxWidth: 520,
           }}>
-            A structured approach to used car inspection — before the commitment,
-            before the paperwork, before the keys change hands.
-            Experience a clinical, data-driven approach to pre-purchase due diligence. 
-            Identify risks before the commitment, the paperwork, and the transaction.
+            {t('beforeYouBuy.hero.subtext')}
           </p>
 
           {/* CTA row */}
@@ -191,8 +190,7 @@ function PageHero() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 48px rgba(34,211,238,0.52)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(34,211,238,0.32)'; }}
             >
-              Begin Your Inspection
-              Initiate Inspection
+              {t('beforeYouBuy.hero.ctaPrimary')}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </Link>
             <a
@@ -206,7 +204,7 @@ function PageHero() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.72)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.42)'; }}
             >
-              Explore the approach
+              {t('beforeYouBuy.hero.ctaSecondary')}
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </a>
           </div>
@@ -227,7 +225,14 @@ function PageHero() {
 // ══════════════════════════════════════════════════════════════
 
 function RealitySection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal()
+
+  const STATS = [
+    { stat: t('beforeYouBuy.reality.stat1Value'), label: t('beforeYouBuy.reality.stat1Label'), delay: 100 },
+    { stat: t('beforeYouBuy.reality.stat2Value'), label: t('beforeYouBuy.reality.stat2Label'), delay: 200 },
+    { stat: t('beforeYouBuy.reality.stat3Value'), label: t('beforeYouBuy.reality.stat3Label'), delay: 300 },
+  ]
 
   return (
     <section
@@ -265,7 +270,7 @@ function RealitySection() {
         >
           {/* Left — editorial text */}
           <div style={reveal(on)}>
-            <SectionEyebrow>The Buyer&apos;s Dilemma</SectionEyebrow>
+            <SectionEyebrow>{t('beforeYouBuy.reality.eyebrow')}</SectionEyebrow>
 
             <h2 style={{
               margin: '0 0 24px',
@@ -275,35 +280,19 @@ function RealitySection() {
               lineHeight: 1.12,
               color: '#fff',
             }}>
-              Every used vehicle tells a story. Most buyers never hear it.
+              {t('beforeYouBuy.reality.headline')}
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
-              The pre-owned vehicle market is largely opaque. Sellers control the narrative. Emotions override analysis. And the financial stakes — often tens of thousands of dollars — are routinely decided on a 20-minute test drive.
+              {t('beforeYouBuy.reality.p1')}
             </p>
             <p style={{ margin: 0, fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
-              Used Cars Doctor was built to change that dynamic — giving every buyer access to a structured, evidence-based inspection process that was previously reserved for professionals.
+              {t('beforeYouBuy.reality.p2')}
             </p>
           </div>
 
           {/* Right — stat cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              {
-                stat: '1 in 3',
-                label: 'used vehicles sold in the US has an undisclosed issue affecting safety or value.',
-                delay: 100,
-              },
-              {
-                stat: '$4,200',
-                label: 'is the average unexpected repair cost buyers face within the first year of ownership.',
-                delay: 200,
-              },
-              {
-                stat: '78%',
-                label: 'of buyers report they wished they had inspected more thoroughly before purchase.',
-                delay: 300,
-              },
-            ].map(item => (
+            {STATS.map(item => (
               <div
                 key={item.stat}
                 style={{
@@ -342,47 +331,58 @@ function RealitySection() {
 // SECTION 02 — What can be detected
 // ══════════════════════════════════════════════════════════════
 
-const DETECTIONS = [
-  {
-    n: 'I',
-    title: 'Body & Structural Integrity',
-    caption: 'Panel gaps · Repaint signals · Accident deformation',
-    body: 'Systematic review of exterior panel alignment, surface consistency, and visible structural deformation. Inconsistencies in panel gaps or paint texture can indicate undisclosed collision repair.',
-    color: 'rgba(34,211,238,0.7)',
-    bg: 'rgba(34,211,238,0.04)',
-    border: 'rgba(34,211,238,0.1)',
-  },
-  {
-    n: 'II',
-    title: 'Interior Condition & Electronics',
-    caption: 'Wear indicators · Warning lights · Functional checks',
-    body: 'Cabin wear assessment, dashboard warning light identification, and verification of electronic systems — areas routinely glossed over during a standard seller walkthrough.',
-    color: 'rgba(129,140,248,0.8)',
-    bg: 'rgba(129,140,248,0.04)',
-    border: 'rgba(129,140,248,0.1)',
-  },
-  {
-    n: 'III',
-    title: 'Engine Bay & Mechanical Visuals',
-    caption: 'Fluid leaks · Corrosion · Visible wear',
-    body: 'Under-hood visual inspection for fluid contamination, corrosion patterns, irregular connections, and other visible indicators of deferred maintenance or prior mechanical issues.',
-    color: 'rgba(245,158,11,0.7)',
-    bg: 'rgba(245,158,11,0.04)',
-    border: 'rgba(245,158,11,0.1)',
-  },
-  {
-    n: 'IV',
-    title: 'Comprehensive Risk Profile',
-    caption: 'Checklist scoring · Risk flags · Overall assessment',
-    body: 'Structured inspection checklist results are synthesized with visual findings into a single, clear risk score — giving you an objective basis for your buying decision.',
-    color: 'rgba(34,197,94,0.7)',
-    bg: 'rgba(34,197,94,0.04)',
-    border: 'rgba(34,197,94,0.1)',
-  },
-]
+type DetectionItem = {
+  n: string
+  title: string
+  caption: string
+  body: string
+  color: string
+  bg: string
+  border: string
+}
 
 function DetectionSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
+
+  const DETECTIONS: DetectionItem[] = [
+    {
+      n: 'I',
+      title: t('beforeYouBuy.detection.item1.title'),
+      caption: t('beforeYouBuy.detection.item1.caption'),
+      body: t('beforeYouBuy.detection.item1.body'),
+      color: 'rgba(34,211,238,0.7)',
+      bg: 'rgba(34,211,238,0.04)',
+      border: 'rgba(34,211,238,0.1)',
+    },
+    {
+      n: 'II',
+      title: t('beforeYouBuy.detection.item2.title'),
+      caption: t('beforeYouBuy.detection.item2.caption'),
+      body: t('beforeYouBuy.detection.item2.body'),
+      color: 'rgba(129,140,248,0.8)',
+      bg: 'rgba(129,140,248,0.04)',
+      border: 'rgba(129,140,248,0.1)',
+    },
+    {
+      n: 'III',
+      title: t('beforeYouBuy.detection.item3.title'),
+      caption: t('beforeYouBuy.detection.item3.caption'),
+      body: t('beforeYouBuy.detection.item3.body'),
+      color: 'rgba(245,158,11,0.7)',
+      bg: 'rgba(245,158,11,0.04)',
+      border: 'rgba(245,158,11,0.1)',
+    },
+    {
+      n: 'IV',
+      title: t('beforeYouBuy.detection.item4.title'),
+      caption: t('beforeYouBuy.detection.item4.caption'),
+      body: t('beforeYouBuy.detection.item4.body'),
+      color: 'rgba(34,197,94,0.7)',
+      bg: 'rgba(34,197,94,0.04)',
+      border: 'rgba(34,197,94,0.1)',
+    },
+  ]
 
   return (
     <section
@@ -396,10 +396,10 @@ function DetectionSection() {
 
         {/* Header */}
         <div ref={ref} style={{ ...reveal(on), marginBottom: 'clamp(32px, 4vw, 48px)' }}>
-          <SectionEyebrow>Inspection Intelligence</SectionEyebrow>
+          <SectionEyebrow>{t('beforeYouBuy.detection.eyebrow')}</SectionEyebrow>
 
           <h2 style={{ margin: 0, fontSize: 'clamp(28px, 3.8vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff', maxWidth: 640 }}>
-            Four critical dimensions of visible vehicle condition.
+            {t('beforeYouBuy.detection.headline')}
           </h2>
         </div>
 
@@ -415,7 +415,7 @@ function DetectionSection() {
 }
 
 function DetectionCard({ item, delay, visible }: {
-  item: typeof DETECTIONS[0]
+  item: DetectionItem
   delay: number
   visible: boolean
 }) {
@@ -461,31 +461,18 @@ function DetectionCard({ item, delay, visible }: {
 // SECTION 03 — The inspection process
 // ══════════════════════════════════════════════════════════════
 
-const STEPS = [
-  {
-    n: '01',
-    title: 'Add Your Vehicle',
-    body: 'Enter the vehicle details. Every inspection, photo, and finding is anchored to this specific car — creating a clean, organized record from first contact.',
-  },
-  {
-    n: '02',
-    title: 'Follow the Guided Checklist',
-    body: 'Work through a structured inspection sequence covering exterior, interior, mechanical systems, and documentation. No automotive background required.',
-  },
-  {
-    n: '03',
-    title: 'Submit Photos for Analysis',
-    body: 'Upload photos from key inspection angles. Our system analyzes visible surface conditions, panel consistency, and other indicators that inform the overall assessment.',
-  },
-  {
-    n: '04',
-    title: 'Receive Your Report',
-    body: 'A comprehensive report delivers your risk score, flagged findings, and actionable recommendations — giving you the clarity to buy with confidence or walk away with certainty.',
-  },
-]
+type StepItem = { n: string; title: string; body: string }
 
 function ProcessSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
+
+  const STEPS: StepItem[] = [
+    { n: '01', title: t('beforeYouBuy.process.step1.title'), body: t('beforeYouBuy.process.step1.body') },
+    { n: '02', title: t('beforeYouBuy.process.step2.title'), body: t('beforeYouBuy.process.step2.body') },
+    { n: '03', title: t('beforeYouBuy.process.step3.title'), body: t('beforeYouBuy.process.step3.body') },
+    { n: '04', title: t('beforeYouBuy.process.step4.title'), body: t('beforeYouBuy.process.step4.body') },
+  ]
 
   return (
     <section
@@ -500,14 +487,14 @@ function ProcessSection() {
         {/* Header */}
         <div ref={ref} style={{ ...reveal(on), display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(36px, 4vw, 64px)', marginBottom: 'clamp(44px, 5vw, 72px)', alignItems: 'end' }}>
           <div>
-            <SectionEyebrow>How It Works</SectionEyebrow>
+            <SectionEyebrow>{t('beforeYouBuy.process.eyebrow')}</SectionEyebrow>
 
             <h2 style={{ margin: 0, fontSize: 'clamp(28px, 3.8vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff' }}>
-              From first look to final decision — a structured path.
+              {t('beforeYouBuy.process.headline')}
             </h2>
           </div>
           <p style={{ margin: 0, fontSize: 16, color: 'rgba(255,255,255,0.44)', lineHeight: 1.8, maxWidth: 440 }}>
-            Our workflow is designed for the real-world condition of a vehicle lot or private driveway — fast to run, impossible to rush, and built around the way decisions are actually made.
+            {t('beforeYouBuy.process.intro')}
           </p>
         </div>
 
@@ -530,7 +517,7 @@ function ProcessSection() {
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(34,211,238,0.06)'; el.style.border = '1px solid rgba(34,211,238,0.28)'; el.style.color = '#22d3ee'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.04)'; el.style.border = '1px solid rgba(255,255,255,0.12)'; el.style.color = 'rgba(255,255,255,0.72)'; }}
           >
-            Begin the process
+            {t('beforeYouBuy.process.cta')}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </Link>
         </div>
@@ -539,7 +526,7 @@ function ProcessSection() {
   )
 }
 
-function StepBlock({ step, delay, visible }: { step: typeof STEPS[0]; delay: number; visible: boolean }) {
+function StepBlock({ step, delay, visible }: { step: StepItem; delay: number; visible: boolean }) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
@@ -571,21 +558,13 @@ function StepBlock({ step, delay, visible }: { step: typeof STEPS[0]; delay: num
 // ══════════════════════════════════════════════════════════════
 
 function VisualInspectionSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
 
   const VISUAL_POINTS = [
-    {
-      title: 'Surface condition indicators',
-      body: 'Photos are reviewed for surface damage, corrosion, fluid residue, and condition signals that may not be visible under showroom lighting.',
-    },
-    {
-      title: 'Repaint and alignment signals',
-      body: 'Inconsistencies in panel gaps, uneven paint texture, overspray, and exterior irregularities suggest prior repair work — even when freshly detailed.',
-    },
-    {
-      title: 'Documented visual evidence',
-      body: 'Every uploaded photo becomes part of your inspection record — timestamped, organized, and available for reference or negotiation.',
-    },
+    { title: t('beforeYouBuy.visual.point1.title'), body: t('beforeYouBuy.visual.point1.body') },
+    { title: t('beforeYouBuy.visual.point2.title'), body: t('beforeYouBuy.visual.point2.body') },
+    { title: t('beforeYouBuy.visual.point3.title'), body: t('beforeYouBuy.visual.point3.body') },
   ]
 
   return (
@@ -609,19 +588,19 @@ function VisualInspectionSection() {
         >
           {/* Left: Text */}
           <div style={reveal(on)}>
-            <SectionEyebrow>Photo-Based Analysis</SectionEyebrow>
+            <SectionEyebrow>{t('beforeYouBuy.visual.eyebrow')}</SectionEyebrow>
 
             <h2 style={{ margin: '0 0 24px', fontSize: 'clamp(28px, 3.8vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff' }}>
-              The camera sees what the eye can miss.
+              {t('beforeYouBuy.visual.headline')}
             </h2>
             <p style={{ margin: '0 0 36px', fontSize: 16, color: 'rgba(255,255,255,0.48)', lineHeight: 1.8 }}>
-              Skilled automotive inspectors know what to look for — and more importantly, what to photograph. Our system replicates that discipline, guiding you to capture the angles that reveal a vehicle&apos;s true condition.
+              {t('beforeYouBuy.visual.body')}
             </p>
 
             {/* Pull quote */}
             <div style={{ borderLeft: '2px solid rgba(34,211,238,0.35)', paddingLeft: 22, marginBottom: 8 }}>
               <p style={{ margin: 0, fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(255,255,255,0.62)', lineHeight: 1.65, fontStyle: 'italic' }}>
-                &ldquo;Buyers who document condition before purchase negotiate from strength — not speculation.&rdquo;
+                &ldquo;{t('beforeYouBuy.visual.quote')}&rdquo;
               </p>
             </div>
           </div>
@@ -659,6 +638,7 @@ function VisualInspectionSection() {
 // ══════════════════════════════════════════════════════════════
 
 function ConfidenceSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
 
   const OUTCOMES = [
@@ -668,8 +648,8 @@ function ConfidenceSection() {
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
         </svg>
       ),
-      title: 'Clear Risk Score',
-      body: 'A single, immediate read on overall vehicle risk — no decoding required. Know whether to proceed, negotiate, or walk away.',
+      title: t('beforeYouBuy.confidence.outcome1.title'),
+      body: t('beforeYouBuy.confidence.outcome1.body'),
     },
     {
       icon: (
@@ -678,8 +658,8 @@ function ConfidenceSection() {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       ),
-      title: 'Specific Risk Flags',
-      body: 'Pinpoint issues — not general impressions. Each flag identifies a specific area requiring closer attention or professional verification.',
+      title: t('beforeYouBuy.confidence.outcome2.title'),
+      body: t('beforeYouBuy.confidence.outcome2.body'),
     },
     {
       icon: (
@@ -687,8 +667,8 @@ function ConfidenceSection() {
           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
         </svg>
       ),
-      title: 'Negotiation Leverage',
-      body: 'Documented findings become negotiating facts. Use a verified risk profile to support a price reduction — or justify walking away.',
+      title: t('beforeYouBuy.confidence.outcome3.title'),
+      body: t('beforeYouBuy.confidence.outcome3.body'),
     },
     {
       icon: (
@@ -697,8 +677,8 @@ function ConfidenceSection() {
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
       ),
-      title: 'Decision Clarity',
-      body: 'Buy, negotiate, or walk away — with the assurance that your decision is grounded in evidence, not emotion or seller presentation.',
+      title: t('beforeYouBuy.confidence.outcome4.title'),
+      body: t('beforeYouBuy.confidence.outcome4.body'),
     },
   ]
 
@@ -714,13 +694,13 @@ function ConfidenceSection() {
 
         {/* Header */}
         <div ref={ref} style={{ ...reveal(on), marginBottom: 'clamp(32px, 4vw, 48px)' }}>
-          <SectionEyebrow>Reduce Your Risk</SectionEyebrow>
+          <SectionEyebrow>{t('beforeYouBuy.confidence.eyebrow')}</SectionEyebrow>
 
           <h2 style={{ margin: '0 0 18px', fontSize: 'clamp(28px, 3.8vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff', maxWidth: 640 }}>
-            Transform uncertainty into a decisive advantage.
+            {t('beforeYouBuy.confidence.headline')}
           </h2>
           <p style={{ margin: 0, fontSize: 16, color: 'rgba(255,255,255,0.44)', lineHeight: 1.8, maxWidth: 540 }}>
-            Every used car purchase carries risk. The question is whether you enter that transaction informed — or hoping for the best.
+            {t('beforeYouBuy.confidence.intro')}
           </p>
         </div>
 
@@ -756,20 +736,21 @@ function ConfidenceSection() {
 // ══════════════════════════════════════════════════════════════
 
 function TransparencySection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
 
   const CAN_DO = [
-    'Identify visible body damage, paint inconsistencies, and panel misalignment from photos.',
-    'Guide you through a thorough checklist of exterior, interior, mechanical, and documentation items.',
-    'Generate a report summarizing findings, risk score, and actionable recommendations.',
-    'Document vehicle condition at time of inspection for negotiation and record-keeping.',
+    t('beforeYouBuy.transparency.can1'),
+    t('beforeYouBuy.transparency.can2'),
+    t('beforeYouBuy.transparency.can3'),
+    t('beforeYouBuy.transparency.can4'),
   ]
 
   const CANNOT_DO = [
-    'Perform mechanical diagnostics or scan internal engine/transmission components.',
-    'Guarantee hidden mechanical condition, long-term reliability, or future safety.',
-    'Verify legal title status, outstanding finance obligations, or ownership history.',
-    'Replace the evaluation of a qualified, hands-on pre-purchase inspection by a mechanic.',
+    t('beforeYouBuy.transparency.cannot1'),
+    t('beforeYouBuy.transparency.cannot2'),
+    t('beforeYouBuy.transparency.cannot3'),
+    t('beforeYouBuy.transparency.cannot4'),
   ]
 
   return (
@@ -784,13 +765,13 @@ function TransparencySection() {
 
         {/* Header */}
         <div ref={ref} style={{ ...reveal(on), marginBottom: 'clamp(32px, 4vw, 48px)' }}>
-          <SectionEyebrow>Honest By Design</SectionEyebrow>
+          <SectionEyebrow>{t('beforeYouBuy.transparency.eyebrow')}</SectionEyebrow>
 
           <h2 style={{ margin: '0 0 18px', fontSize: 'clamp(28px, 3.8vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff', maxWidth: 640 }}>
-            What we do — and what we don&apos;t.
+            {t('beforeYouBuy.transparency.headline')}
           </h2>
           <p style={{ margin: 0, fontSize: 16, color: 'rgba(255,255,255,0.44)', lineHeight: 1.8, maxWidth: 560 }}>
-            Transparency about our capabilities is not a caveat — it&apos;s the foundation of trust. We built this platform knowing that honest limitations make it more valuable, not less.
+            {t('beforeYouBuy.transparency.intro')}
           </p>
         </div>
 
@@ -802,7 +783,7 @@ function TransparencySection() {
               <div style={{ width: 34, height: 34, borderRadius: 5, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#22c55e', letterSpacing: '-0.01em' }}>What we provide</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#22c55e', letterSpacing: '-0.01em' }}>{t('beforeYouBuy.transparency.canTitle')}</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {CAN_DO.map((item, i) => (
@@ -822,7 +803,7 @@ function TransparencySection() {
               <div style={{ width: 34, height: 34, borderRadius: 5, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.01em' }}>What we cannot do</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.01em' }}>{t('beforeYouBuy.transparency.cannotTitle')}</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {CANNOT_DO.map((item, i) => (
@@ -852,8 +833,8 @@ function TransparencySection() {
               <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
             <p style={{ margin: 0, fontSize: 13.5, color: 'rgba(255,255,255,0.46)', lineHeight: 1.7 }}>
-              <strong style={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600 }}>Advisory Notice:</strong>{' '}
-              Used Cars Doctor is an informational decision-support tool. It does not constitute a professional mechanical inspection, certified appraisal, or legal verification of title or ownership. Always verify critical findings with a qualified mechanic and appropriate legal channels before finalizing any vehicle purchase.
+              <strong style={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600 }}>{t('beforeYouBuy.transparency.disclaimerLabel')}</strong>{' '}
+              {t('beforeYouBuy.transparency.disclaimerBody')}
             </p>
           </div>
         </div>
@@ -867,6 +848,7 @@ function TransparencySection() {
 // ══════════════════════════════════════════════════════════════
 
 function DecisiveSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.12)
 
   return (
@@ -913,7 +895,7 @@ function DecisiveSection() {
               color: '#fff',
               fontStyle: 'normal',
             }}>
-              The moment before you buy a used car is the most important moment in the entire transaction.
+              {t('beforeYouBuy.decisive.quote')}
             </p>
           </blockquote>
 
@@ -927,7 +909,7 @@ function DecisiveSection() {
             lineHeight: 1.8,
             maxWidth: 600,
           }}>
-            It is the moment when information has the highest value — before money changes hands, before legal agreements are signed, before the keys are yours and the problems become yours too.
+            {t('beforeYouBuy.decisive.p1')}
           </p>
 
           <p style={{
@@ -938,7 +920,7 @@ function DecisiveSection() {
             lineHeight: 1.8,
             maxWidth: 600,
           }}>
-            Used Cars Doctor exists entirely within that window — giving you the structure, the analysis, and the confidence to make the right call when it matters most.
+            {t('beforeYouBuy.decisive.p2')}
           </p>
 
           {/* CTA */}
@@ -956,7 +938,7 @@ function DecisiveSection() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 14px 44px rgba(34,211,238,0.5)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(34,211,238,0.28)'; }}
             >
-              Inspect Before You Buy
+              {t('beforeYouBuy.decisive.cta')}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </Link>
           </div>
@@ -970,34 +952,9 @@ function DecisiveSection() {
 // SECTION 08 — FAQ
 // ══════════════════════════════════════════════════════════════
 
-const FAQ_DATA = [
-  {
-    q: 'What is a pre-purchase used car inspection?',
-    a: 'A pre-purchase inspection is a systematic evaluation of a vehicle\'s condition before you finalize the transaction. It covers visible body condition, mechanical visuals, interior state, and documentation. Used Cars Doctor provides a structured digital workflow — guided checklist plus photo analysis — that replicates the approach used by professional automotive inspectors.',
-  },
-  {
-    q: 'Does this replace a mechanic\'s inspection?',
-    a: 'No — and we say that clearly because it matters. Used Cars Doctor is a comprehensive pre-screening and documentation tool. For critical mechanical components (engine, transmission, suspension, brakes), a qualified mechanic\'s hands-on inspection remains essential. Think of our platform as the first, structured layer of your due diligence — not the last.',
-  },
-  {
-    q: 'How does the photo analysis work?',
-    a: 'You upload photos taken from guided angles — exterior panels, engine bay, interior, undercarriage. Our system analyzes these photos for visible condition signals: paint inconsistencies, panel misalignment, surface damage, fluid contamination, and other indicators. Results are integrated with your checklist responses to generate a consolidated risk assessment.',
-  },
-  {
-    q: 'Can Used Cars Doctor detect accident damage?',
-    a: 'Yes — from visible evidence. Our photo analysis identifies paint texture inconsistencies, panel gap irregularities, and surface deformation that often indicate prior collision repair. For a complete accident history including incidents not visible to inspection, a third-party vehicle history report from a provider like CARFAX is recommended in addition to our assessment.',
-  },
-  {
-    q: 'What information do I need before starting?',
-    a: 'Basic vehicle information: make, model, year, and mileage. VIN is helpful but not required to begin. You\'ll also need access to the vehicle to photograph and inspect it — our process is designed to work in the conditions of a typical private sale or dealer lot visit.',
-  },
-  {
-    q: 'How long does the inspection take?',
-    a: 'A thorough inspection using our platform typically takes 30–45 minutes. This includes working through the guided checklist and capturing photos at the recommended angles. The analysis and report generation are completed immediately upon submission.',
-  },
-]
+type FaqItem = { q: string; a: string }
 
-function FAQItem({ item, index }: { item: typeof FAQ_DATA[0]; index: number }) {
+function FAQItem({ item, index }: { item: FaqItem; index: number }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -1050,7 +1007,17 @@ function FAQItem({ item, index }: { item: typeof FAQ_DATA[0]; index: number }) {
 }
 
 function FAQSection() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.08)
+
+  const FAQ_DATA: FaqItem[] = [
+    { q: t('beforeYouBuy.faq.q1'), a: t('beforeYouBuy.faq.a1') },
+    { q: t('beforeYouBuy.faq.q2'), a: t('beforeYouBuy.faq.a2') },
+    { q: t('beforeYouBuy.faq.q3'), a: t('beforeYouBuy.faq.a3') },
+    { q: t('beforeYouBuy.faq.q4'), a: t('beforeYouBuy.faq.a4') },
+    { q: t('beforeYouBuy.faq.q5'), a: t('beforeYouBuy.faq.a5') },
+    { q: t('beforeYouBuy.faq.q6'), a: t('beforeYouBuy.faq.a6') },
+  ]
 
   return (
     <section
@@ -1065,13 +1032,13 @@ function FAQSection() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(36px, 4.5vw, 58px)', alignItems: 'start' }}>
           {/* Label column */}
           <div ref={ref} style={{ ...reveal(on) }}>
-            <SectionEyebrow>Frequently Asked</SectionEyebrow>
+            <SectionEyebrow>{t('beforeYouBuy.faq.eyebrow')}</SectionEyebrow>
 
             <h2 style={{ margin: '0 0 18px', fontSize: 'clamp(28px, 3.8vw, 44px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.12, color: '#fff' }}>
-              Common questions about used car inspection.
+              {t('beforeYouBuy.faq.headline')}
             </h2>
             <p style={{ margin: '0 0 32px', fontSize: 15, color: 'rgba(255,255,255,0.42)', lineHeight: 1.78 }}>
-              If you have a question not covered here, our team is available to help.
+              {t('beforeYouBuy.faq.intro')}
             </p>
             <Link href="/inspection" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1082,7 +1049,7 @@ function FAQSection() {
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.82)'; el.style.border = '1px solid rgba(255,255,255,0.22)'; el.style.background = 'rgba(255,255,255,0.04)'; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.45)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}
             >
-              Start an inspection instead
+              {t('beforeYouBuy.faq.linkCta')}
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </Link>
           </div>
@@ -1104,6 +1071,7 @@ function FAQSection() {
 // ══════════════════════════════════════════════════════════════
 
 function FinalCTA() {
+  const { t } = useTranslation()
   const { ref, on } = useReveal(0.12)
 
   return (
@@ -1119,7 +1087,7 @@ function FinalCTA() {
       <div ref={ref} style={{ maxWidth: W, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
 
         <div style={reveal(on)}>
-          <SectionEyebrow>Get Started</SectionEyebrow>
+          <SectionEyebrow>{t('beforeYouBuy.finalCta.eyebrow')}</SectionEyebrow>
 
         </div>
 
@@ -1133,9 +1101,9 @@ function FinalCTA() {
           color: '#fff',
           maxWidth: 700,
         }}>
-          {balanceHeadlineText('Get Started Today.')}<br />
+          {balanceHeadlineText(t('beforeYouBuy.finalCta.headline1'))}<br />
           <span style={{ color: 'rgba(255,255,255,0.42)' }}>
-            {balanceHeadlineText('Drive with Confidence.')}
+            {balanceHeadlineText(t('beforeYouBuy.finalCta.headline2'))}
           </span>
         </h2>
 
@@ -1147,7 +1115,7 @@ function FinalCTA() {
           lineHeight: 1.78,
           maxWidth: 500,
         }}>
-          Your next vehicle purchase deserves the same rigor that every serious buyer should apply — but few do.
+          {t('beforeYouBuy.finalCta.body')}
         </p>
 
         <div style={{ ...reveal(on, 180), display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginBottom: 44 }}>
@@ -1164,7 +1132,7 @@ function FinalCTA() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 52px rgba(34,211,238,0.54)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 36px rgba(34,211,238,0.32)'; }}
           >
-            Start Your Inspection Now
+            {t('beforeYouBuy.finalCta.ctaPrimary')}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </Link>
           <Link href="/auth" style={{
@@ -1177,16 +1145,16 @@ function FinalCTA() {
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.border = '1px solid rgba(255,255,255,0.2)'; el.style.color = 'rgba(255,255,255,0.88)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.04)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.color = 'rgba(255,255,255,0.58)'; }}
           >
-            Sign In to Your Account
+            {t('beforeYouBuy.finalCta.ctaSecondary')}
           </Link>
         </div>
 
         {/* Trust strip */}
         <div style={{ ...reveal(on, 260), display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 'clamp(24px, 4vw, 48px)' }}>
           {[
-            'Free to start',
-            'No automotive expertise required',
-            'Always recommend a professional mechanic',
+            t('beforeYouBuy.finalCta.trust1'),
+            t('beforeYouBuy.finalCta.trust2'),
+            t('beforeYouBuy.finalCta.trust3'),
           ].map(label => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.01em' }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(34,211,238,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1204,6 +1172,7 @@ function FinalCTA() {
 // ══════════════════════════════════════════════════════════════
 
 function PageFooter() {
+  const { t } = useTranslation()
   return (
     <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#070b11' }}>
       <div style={{ maxWidth: W, margin: '0 auto', padding: 'clamp(36px, 5vw, 56px) clamp(20px, 4vw, 40px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
@@ -1215,10 +1184,10 @@ function PageFooter() {
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px, 3vw, 28px)', alignItems: 'center' }}>
           {[
-            { label: 'Home', href: '/' },
-            { label: 'Start Inspection', href: '/inspection' },
-            { label: 'Privacy Policy', href: '/legal/privacy' },
-            { label: 'Terms of Service', href: '/legal/terms' },
+            { label: t('nav.home'), href: '/' },
+            { label: t('beforeYouBuy.footer.startInspection'), href: '/inspection' },
+            { label: t('legal.privacy.title'), href: '/legal/privacy' },
+            { label: t('legal.terms.title'), href: '/legal/terms' },
           ].map(item => (
             <Link key={item.href} href={item.href} style={{
               fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', letterSpacing: '-0.1px', transition: 'color 0.15s',

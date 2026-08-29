@@ -56,13 +56,13 @@ export function LandingNav() {
       WebkitBackdropFilter: 'blur(24px)',
       transition: 'background 0.3s ease, border-color 0.3s ease',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div className="landing-nav-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <Link href="/" className="landing-nav-logo" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, overflow: 'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" alt="" style={{ width: 42, height: 49, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.1 }}>Used Cars Doctor</div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>{t('landing.aiPowered')}</div>
+          <img src="/logo-icon.svg" alt="" className="landing-nav-logo-icon" style={{ width: 42, height: 49, flexShrink: 0 }} />
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div className="landing-nav-title" style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Used Cars Doctor</div>
+            <div className="landing-nav-subtitle" style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('landing.aiPowered')}</div>
           </div>
         </Link>
 
@@ -83,8 +83,9 @@ export function LandingNav() {
           })}
         </div>
 
-        {/* Auth row */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end',
+        {/* Auth row — never shrinks: the language selector and sign-in control
+            must always stay fully visible and tappable, even on narrow screens. */}
+        <div className="landing-nav-auth" style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end',
           opacity: hydrated ? 1 : 0, transition: 'opacity 0.15s ease', flexShrink: 0 }}>
 
           <LanguageSwitcher />
@@ -159,10 +160,11 @@ export function LandingNav() {
             </div>
           ) : (
             <>
-              <Link href="/auth" style={{
+              <Link href="/auth" className="landing-nav-signin" style={{
                 padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                 color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)',
                 background: 'transparent', textDecoration: 'none', transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
               }}
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.9)'; el.style.border = '1px solid rgba(255,255,255,0.25)'; el.style.background = 'rgba(255,255,255,0.07)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'rgba(255,255,255,0.55)'; el.style.border = '1px solid rgba(255,255,255,0.1)'; el.style.background = 'transparent'; }}

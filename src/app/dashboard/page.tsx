@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useVehicleStore, useInspectionStore, usePaymentStore } from '@/store'
 import { isFeatureEnabled, type FeatureFlagName } from '@/config/features'
+import { resolveDashboardInspectionState } from '@/lib/inspection/dashboard-state'
 import AppShell from '../AppShell'
 
 type QuickAction = {
@@ -73,16 +74,32 @@ function SectionLabel({ text, action, actionHref }: Readonly<{ text: string; act
 /* ── Page ───────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { t } = useTranslation()
-  const { activeVehicle, vehicles, fetchVehicles }                        = useVehicleStore()
-  const { session, currentPhase, checklistItems, aiResults, initSession } = useInspectionStore()
-  const { fetchPurchaseHistory, purchaseHistory }                         = usePaymentStore()
+  const { activeVehicle, vehicles, fetchVehicles }                                       = useVehicleStore()
+  const { session, currentPhase, checklistItems, aiResults, initSession, resetSession }   = useInspectionStore()
+  const { fetchPurchaseHistory, purchaseHistory }                                        = usePaymentStore()
+  const [vehiclesReady, setVehiclesReady] = useState(false)
 
-  useEffect(() => { fetchVehicles(); fetchPurchaseHistory() }, [])
   useEffect(() => {
-    if (activeVehicle?.id && session === null) initSession(activeVehicle.id)
+    fetchVehicles().finally(() => setVehiclesReady(true))
+    fetchPurchaseHistory()
+  }, [])
+  useEffect(() => {
+    if (activeVehicle?.id && session?.vehicleId !== activeVehicle.id) initSession(activeVehicle.id)
   }, [activeVehicle?.id])
 
-  const hasActiveSession = !!session && currentPhase !== 'FINAL_REPORT'
+  // The server-fetched vehicle list is authoritative. A persisted session
+  // referencing a vehicle absent from it (deleted, or stale localStorage from
+  // a different account/browser state) must never be shown as the current
+  // active inspection — clear it rather than let it masquerade as one.
+  // Gated on vehiclesReady so this never fires against the pre-fetch empty
+  // array and wipes a genuinely valid session before the list has loaded.
+  const { hasActiveSession, shouldClearStaleSession } = vehiclesReady
+    ? resolveDashboardInspectionState(session, currentPhase, vehicles)
+    : { hasActiveSession: !!session && currentPhase !== 'FINAL_REPORT', shouldClearStaleSession: false }
+
+  useEffect(() => {
+    if (shouldClearStaleSession) resetSession()
+  }, [shouldClearStaleSession])
 
   const pending   = checklistItems.filter(i => i.status === 'PENDING').length
   const total     = checklistItems.length
@@ -215,7 +232,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Progress */}
-          {session && (
+          {hasActiveSession && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.52)' }}>
@@ -248,7 +265,7 @@ export default function DashboardPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              {session ? t('dashboard.continueInspection') : t('dashboard.startInspection')}
+              {hasActiveSession ? t('dashboard.continueInspection') : t('dashboard.startInspection')}
             </Link>
             <Link href="/vehicle" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -351,7 +368,7 @@ export default function DashboardPage() {
         )}{/* /stats row conditional */}
 
         {/* ══ Checklist breakdown ════════════════════════════════ */}
-        {session && total > 0 && (
+        {hasActiveSession && total > 0 && (
           <div>
             <SectionLabel text={t('dashboard.inspectionBreakdown')} action={t('dashboard.continue')} actionHref="/inspection" />
             <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>

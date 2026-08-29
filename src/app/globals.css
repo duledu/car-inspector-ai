@@ -553,6 +553,20 @@ a, button { transition: color var(--t-fast), background var(--t-fast), border-co
   .mobile-only  { display: flex !important; }
 }
 
+/* ─── LandingNav — compact mobile header ───────────────────────
+   The logo/name is the only element allowed to shrink (and, as a last-
+   resort safety net, ellipsize) on narrow screens — the language switcher
+   and sign-in control must never shrink or leave the viewport. */
+@media (max-width: 767px) {
+  .landing-nav-inner { padding: 0 14px !important; gap: 8px !important; }
+  .landing-nav-logo { gap: 8px !important; }
+  .landing-nav-logo-icon { width: 30px !important; height: 35px !important; }
+  .landing-nav-title { font-size: 15px !important; }
+  .landing-nav-subtitle { display: none !important; }
+  .landing-nav-auth { gap: 6px !important; }
+  .landing-nav-signin { padding: 7px 12px !important; font-size: 12px !important; }
+}
+
 /* ─── Mobile page content ────────────────────────────────────── */
 .mobile-page-content {
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
