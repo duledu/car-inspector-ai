@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.usedcarsdoctor.app",
       "sha256_cert_fingerprints": [
-        "41:B4:2C:76:BD:69:A1:C5:79:56:97:9C:70:8F:1B:AC:7E:C8:4B:13:0E:A1:AC:66:CA:DF:15:F7:28:7F:9E:63"
+        "41:B4:2C:76:BD:69:A1:C5:79:56:97:9C:70:8F:1B:AC:7E:C8:4B:13:0E:A1:AC:66:CA:DF:15:F7:28:7F:9E:63",
+        "32:1A:90:F3:0B:E3:29:06:B8:30:95:26:BA:1B:3D:A2:5F:E5:AF:D4:70:6F:02:36:7A:BE:16:84:47:BE:2F:4F"
       ]
     }
   }
