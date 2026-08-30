@@ -6,8 +6,17 @@
 import { prisma, isMissingTableOrColumnError } from '@/config/prisma'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
-import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS, enforceVisualCoverageCap } from './scoring.logic'
-import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
+import { parseAIResultPayload } from '@/lib/inspection/ai-result-payload'
+import {
+  calculateRiskScore,
+  clampScore,
+  AI_TOTAL_EXPECTED_PHOTOS,
+  enforceVisualCoverageCap,
+  applyVisualCoverageCap,
+  determineVerdict,
+  pickMoreCautiousVerdict,
+} from './scoring.logic'
+import type { ScoreCalculationInput, RiskScore, AIFinding, VisualCoverage, Verdict } from '@/types'
 import type { AIResult, ChecklistItem } from '@prisma/client'
 
 function sanitizeDimension(raw: any, label: string, weight: number, fallbackScore: number) {
@@ -39,7 +48,7 @@ function sanitizeDimension(raw: any, label: string, weight: number, fallbackScor
  * for any dimension that doesn't match a known legacy pair, including every
  * row created after this fix (which always sets signals.visualCoverage).
  */
-function inferLegacyVisualCoverage(aiDimension: any): 'NOT_ASSESSED' | 'LIMITED' | undefined {
+function inferLegacyVisualCoverage(aiDimension: any): Extract<VisualCoverage, 'NOT_ASSESSED' | 'LIMITED'> | undefined {
   const explanation = typeof aiDimension?.explanation === 'string' ? aiDimension.explanation : ''
   if (aiDimension?.score === 68 && explanation === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') {
     return 'NOT_ASSESSED'
@@ -86,9 +95,16 @@ export class ScoringService {
     ])
     const dbFetchMs = Date.now() - dbFetchStart
 
-    const aiFindings: AIFinding[] = aiResults.flatMap((r: AIResult) => {
-      const findings = r.findings as unknown
-      if (!Array.isArray(findings)) {
+    // AIResult is one aggregate row per analysis run — its `findings` column
+    // never was, and still isn't, a per-photo record. parseAIResultPayload
+    // reads both the current { items, usableCount, ... } shape and the
+    // legacy bare-array shape (usableCount unrecoverable -> null there).
+    // See ai-result-payload.ts for why aiResults.length or findings.length
+    // can never substitute for the real usable-photo count.
+    const parsedResults = aiResults.map((r: AIResult) => {
+      const parsed = parseAIResultPayload(r.findings as unknown)
+      if (parsed.findings.length === 0 && r.findings !== null && !Array.isArray(r.findings)
+        && !(typeof r.findings === 'object' && Array.isArray((r.findings as { items?: unknown })?.items))) {
         pipelineLog({
           step: 'score:invalid-ai-findings',
           requestId: generateRequestId(),
@@ -97,16 +113,19 @@ export class ScoringService {
           durationMs: Date.now() - dbFetchStart,
           meta: { aiResultId: r.id },
         })
-        return []
       }
-      return findings as AIFinding[]
+      return parsed
     })
-    const actionableIssuePhotos = aiResults.filter((result: AIResult) => {
-      const findings = Array.isArray(result.findings) ? (result.findings as unknown as AIFinding[]) : []
-      return findings.some((finding) => {
-        const confidence = Number(finding.confidence)
-        return finding.severity !== 'info' && Number.isFinite(confidence) && confidence >= 45
-      })
+    const aiFindings: AIFinding[] = parsedResults.flatMap((p) => p.findings)
+    // Most recent aggregate run (aiResults is ordered createdAt desc) is the
+    // authoritative one — a retry re-analyzes the SAME photo batch, it
+    // doesn't add new photos, so summing across rows would double-count.
+    // null (not 0) when the only row(s) predate this fix, so the scoring
+    // engine's own conservative fallback applies rather than a fabricated 0.
+    const authoritativeValidPhotoCount: number | null = parsedResults[0]?.usableCount ?? null
+    const actionableIssuePhotos = aiFindings.filter((finding) => {
+      const confidence = Number(finding.confidence)
+      return finding.severity !== 'info' && Number.isFinite(confidence) && confidence >= 45
     }).length
 
     const normalizedChecklist = normalizeChecklistItems((session?.checklistItems ?? []).map((item: ChecklistItem) => ({
@@ -140,7 +159,13 @@ export class ScoringService {
 
     const input: ScoreCalculationInput = {
       aiFindings,
-      photoCount: aiResults.length || null,
+      // The true valid/usable-photo count, persisted alongside findings
+      // since the AIResult-payload fix — NOT the number of AIResult rows
+      // (almost always 0 or 1 regardless of how many photos were actually
+      // analyzed). null for a row that predates the fix; calculateAIScore
+      // then falls back to actionableIssuePhotos as its own conservative
+      // floor rather than fabricating a count.
+      photoCount: authoritativeValidPhotoCount,
       issuePhotoCount: actionableIssuePhotos || null,
       totalExpectedPhotos: AI_TOTAL_EXPECTED_PHOTOS,
       checklistItems: normalizedChecklist,
@@ -317,22 +342,38 @@ export class ScoringService {
     // zero/low-photo reports stop displaying a numeric "Visual Inspection"
     // score and a STRONG_BUY/"Safe to proceed" verdict that contradicts
     // their own "no photo analysis" notice. No database write occurs.
-    let verdict = raw.verdict
-    if (!safeDimensions.ai.signals?.visualCoverage) {
-      const legacyCoverage = inferLegacyVisualCoverage(safeDimensions.ai)
-      if (legacyCoverage) {
-        safeDimensions.ai = {
-          ...safeDimensions.ai,
-          signals: { ...safeDimensions.ai.signals, visualCoverage: legacyCoverage },
-        }
-        verdict = enforceVisualCoverageCap(verdict, safeDimensions.ai.signals)
+    let verdict: Verdict = raw.verdict
+    const persistedCoverage = safeDimensions.ai.signals?.visualCoverage as VisualCoverage | undefined
+    const legacyCoverage = persistedCoverage ? undefined : inferLegacyVisualCoverage(safeDimensions.ai)
+    if (legacyCoverage) {
+      safeDimensions.ai = {
+        ...safeDimensions.ai,
+        signals: { ...safeDimensions.ai.signals, visualCoverage: legacyCoverage },
       }
+      verdict = enforceVisualCoverageCap(verdict, safeDimensions.ai.signals)
+    }
+
+    // Evidence/coverage score ceiling (see applyVisualCoverageCap), applied
+    // at read time to EVERY report whose coverage isn't FULL — not just
+    // legacy-inferred ones. A report persisted between the visualCoverage
+    // fix and this cap fix already carries a correct signal but an
+    // uncapped buyScore (e.g. a genuine "88, Buy with Caution, 0 photos"),
+    // which is exactly the same contradiction this feature closes. Never
+    // writes back to the database; never raises a score or softens a
+    // verdict a real finding already earned (pickMoreCautiousVerdict).
+    let buyScore = clampScore(raw.buyScore, 10, 96, 50)
+    const effectiveCoverage = persistedCoverage ?? legacyCoverage
+    const cap = applyVisualCoverageCap(buyScore, effectiveCoverage)
+    if (cap < buyScore) {
+      buyScore = cap
+      const cappedVerdict = enforceVisualCoverageCap(determineVerdict(buyScore), safeDimensions.ai.signals)
+      verdict = pickMoreCautiousVerdict(verdict, cappedVerdict)
     }
 
     return {
       id:          raw.id,
       vehicleId:   raw.vehicleId,
-      buyScore:    clampScore(raw.buyScore, 10, 96, 50),
+      buyScore,
       riskScore:   clampScore(raw.riskScore, 4, 90, 50),
       verdict,
       dimensions: safeDimensions,

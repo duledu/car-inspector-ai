@@ -114,6 +114,67 @@ describe('POST /api/ai-analysis/analyze — payment gate', () => {
     expect((mockPrisma as any).aIResult.create).toHaveBeenCalled()
   })
 
+  test('persists usableCount/analyzedCount/unusableCount alongside findings — computeAndPersist has no other way to recover how many photos were actually analyzed, since AIResult is one aggregate row per run, not one row per photo', async () => {
+    mockHasAiAnalysisAccess.mockResolvedValue(true)
+    await POST(req(validBody({
+      photoResults: [
+        { angle: 'FRONT', label: 'Front', signal: 'ok', severity: 'ok', detail: 'fine', confidence: 80, isUsable: true },
+        { angle: 'REAR', label: 'Rear', signal: 'ok', severity: 'ok', detail: 'fine', confidence: 80, isUsable: true },
+        { angle: 'LEFT', label: 'Left', signal: 'blurry', severity: 'warn', detail: 'unclear', confidence: 0, isUsable: false },
+      ],
+    })))
+    const call = (mockPrisma as any).aIResult.create.mock.calls[0][0]
+    expect(call.data.findings).toEqual(expect.objectContaining({
+      items: expect.any(Array),
+      analyzedCount: 3,
+      usableCount: 2,
+      unusableCount: 1,
+    }))
+  })
+
+  test('usableCount + unusableCount always equals analyzedCount — the two are a strict partition of the same validated array, never independently reconcilable numbers', async () => {
+    mockHasAiAnalysisAccess.mockResolvedValue(true)
+    await POST(req(validBody({
+      photoResults: Array.from({ length: 6 }, (_, i) => ({
+        angle: `A${i}`, label: `L${i}`, signal: 's', severity: 'ok' as const, detail: 'd',
+        confidence: i < 4 ? 80 : 0, isUsable: i < 4,
+      })),
+    })))
+    const { analyzedCount, usableCount, unusableCount } = (mockPrisma as any).aIResult.create.mock.calls[0][0].data.findings
+    expect(usableCount + unusableCount).toBe(analyzedCount)
+    expect(analyzedCount).toBe(6)
+    expect(usableCount).toBe(4)
+    expect(unusableCount).toBe(2)
+  })
+
+  test('the client cannot forge usableCount directly — the request schema has no top-level count fields, only per-photo results the server re-derives isUsable from', async () => {
+    mockHasAiAnalysisAccess.mockResolvedValue(true)
+    await POST(req(validBody({
+      // A client claiming a fabricated top-level usableCount has no effect —
+      // the schema doesn't even accept such a field; it's silently ignored
+      // by Zod's default object parsing (extra keys are stripped), and the
+      // server always recomputes from photoResults' own isUsable/confidence.
+      usableCount: 999,
+      analyzedCount: 999,
+      photoResults: [
+        { angle: 'FRONT', label: 'Front', signal: 'blurry', severity: 'flag', detail: 'unclear', confidence: 0, isUsable: false },
+      ],
+    })))
+    const persisted = (mockPrisma as any).aIResult.create.mock.calls[0][0].data.findings
+    expect(persisted.usableCount).toBe(0)
+    expect(persisted.analyzedCount).toBe(1)
+  })
+
+  test('the API response contract is unchanged — findings is still a bare array to the client, never the new persisted wrapper shape (frontend expects AIAnalysisResult.findings: AIFinding[])', async () => {
+    mockHasAiAnalysisAccess.mockResolvedValue(true)
+    const res = await POST(req(validBody()))
+    const body = await res.json()
+    expect(Array.isArray(body.data.findings)).toBe(true)
+    expect(body.data.findings).not.toHaveProperty('items')
+    expect(typeof body.data.usableCount).toBe('number')
+    expect(typeof body.data.analyzedCount).toBe('number')
+  })
+
   test('entitlement gate cannot be bypassed regardless of FEATURE_INSPECTION_ACCESS_GATE value', async () => {
     mockHasAiAnalysisAccess.mockResolvedValue(false)
 

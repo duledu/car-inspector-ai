@@ -428,6 +428,8 @@ const de = {
   'report.decision.body.highRisk':    'Schwerwiegende Mängel festgestellt. Lassen Sie das Fahrzeug vor einer Entscheidung von einem Fachmann prüfen.',
   'report.decision.headline.walkAway': 'Kauf nicht empfohlen',
   'report.decision.body.walkAway':    'Mehrere kritische Probleme gefunden. Das Risiko überwiegt den Wert des Fahrzeugs zum Angebotspreis.',
+  'report.scoreLabel.limitedEvidence': 'Bewertungspunktzahl — Eingeschränkte Nachweise',
+  'report.scoreCappedNotice': 'Die Punktzahl ist durch unvollständige visuelle Nachweise begrenzt — das bedeutet nicht, dass ein Problem gefunden wurde.',
   'report.confidenceLabel':           'Zuverlässigkeit',
   'report.confidence.high':           'Hoch – ausreichende Daten für eine zuverlässige Analyse',
   'report.confidence.medium':         'Mittel – unvollständige Daten, Ergebnis ist indikativ',

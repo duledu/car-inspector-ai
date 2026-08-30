@@ -520,6 +520,8 @@ const bg: Record<string, string> = {
   'report.decision.body.highRisk': 'Установени са сериозни проблеми. Поискайте професионална инспекция преди каквото и да е решение.',
   'report.decision.headline.walkAway': 'Покупката не се препоръчва',
   'report.decision.body.walkAway': 'Открити са множество критични проблеми. Рисковете надхвърлят стойността на автомобила при исканата цена.',
+  'report.scoreLabel.limitedEvidence': 'Оценка на прегледа — Ограничени доказателства',
+  'report.scoreCappedNotice': 'Оценката е ограничена поради непълни визуални доказателства — това не означава, че е открит проблем.',
   'report.confidenceLabel': 'Надеждност',
   'report.confidence.high': 'Висока — достатъчно данни за надеждна анализа',
   'report.confidence.medium': 'Средна — частични данни, резултатът е индикативен',

@@ -191,6 +191,15 @@ export type Verdict = 'STRONG_BUY' | 'BUY_WITH_CAUTION' | 'HIGH_RISK' | 'WALK_AW
 
 export type ServiceHistoryStatus = 'FULL' | 'PARTIAL' | 'NONE' | 'SUSPICIOUS'
 
+/**
+ * How much of the vehicle's visual condition was actually assessed —
+ * authoritative source for report/PDF display, verdict capping, the
+ * overall weighted score, AND the final-score coverage cap (see
+ * VISUAL_COVERAGE_SCORE_CAPS in scoring.logic.ts). Currently only set on
+ * the `ai` (photo) dimension's signals.
+ */
+export type VisualCoverage = 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL'
+
 export interface ScoreDimensionSignals {
   hasMeaningfulIssues?: boolean
   visualMaxScore?: number
@@ -198,15 +207,11 @@ export interface ScoreDimensionSignals {
   issueRatio?: number
   confidence?: number
   /**
-   * How much of the vehicle's visual condition was actually assessed —
-   * authoritative source for report/PDF display, verdict capping, and the
-   * overall weighted score. NOT_ASSESSED means the numeric `score` on this
-   * dimension is a neutral placeholder ONLY and MUST be excluded from any
-   * weighted-average calculation and MUST render as "Not assessed" rather
-   * than a number. Currently only set on the `ai` (photo) dimension.
-   * See src/modules/scoring/scoring.logic.ts.
+   * NOT_ASSESSED means the numeric `score` on this dimension is a neutral
+   * placeholder ONLY and MUST be excluded from any weighted-average
+   * calculation and MUST render as "Not assessed" rather than a number.
    */
-  visualCoverage?: 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL'
+  visualCoverage?: VisualCoverage
 }
 
 export interface ScoreDimension {

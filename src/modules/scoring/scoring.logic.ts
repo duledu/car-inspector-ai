@@ -9,6 +9,7 @@ import type {
   ScoreDimensionSignals,
   RiskScore,
   Verdict,
+  VisualCoverage,
   AIFinding,
   ChecklistItem,
   VehicleHistoryResult,
@@ -374,12 +375,58 @@ function getAIFindingImpactWeight(finding: AIFinding): number {
  * and callers must never average its score into an overall number or let
  * it support a confident verdict. See ScoreDimensionSignals.visualCoverage.
  */
-function getVisualCoverage(safePhotoCount: number, safeTotal: number): 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL' {
+function getVisualCoverage(safePhotoCount: number, safeTotal: number): VisualCoverage {
   if (safePhotoCount === 0) return 'NOT_ASSESSED'
   if (safePhotoCount >= safeTotal) return 'FULL'
   const coverageRatio = safePhotoCount / safeTotal
   if (coverageRatio < 0.3) return 'LIMITED'
   return 'PARTIAL'
+}
+
+// ─── Evidence / coverage cap on the FINAL displayed score ──────────────────
+//
+// Missing photos are not evidence the vehicle is bad — the underlying
+// dimensions continue to calculate normally, uncapped. But a high final
+// score implies a level of confidence the available evidence doesn't
+// support when most (or all) of the vehicle was never visually assessed.
+// This is a CEILING, never a penalty: it can only lower an unjustifiably
+// high score, never raise a low one. Single authoritative source — web
+// report, PDF, and historical-report reconciliation all call
+// applyVisualCoverageCap rather than re-deriving these numbers.
+const VISUAL_COVERAGE_SCORE_CAPS: Record<VisualCoverage, number | null> = {
+  NOT_ASSESSED: 69,
+  LIMITED: 74,
+  PARTIAL: 89,
+  FULL: null,
+}
+
+/** The maximum final assessment score the given coverage tier can support, or null when uncapped (FULL). */
+export function getVisualCoverageCap(coverage: VisualCoverage | undefined | null): number | null {
+  if (!coverage) return null
+  return VISUAL_COVERAGE_SCORE_CAPS[coverage]
+}
+
+/** finalScore = min(calculatedScore, coverageCap). Never increases a low score. */
+export function applyVisualCoverageCap(score: number, coverage: VisualCoverage | undefined | null): number {
+  const cap = getVisualCoverageCap(coverage)
+  return cap === null ? score : Math.min(score, cap)
+}
+
+const VERDICT_CAUTION_RANK: Record<Verdict, number> = {
+  STRONG_BUY: 0,
+  BUY_WITH_CAUTION: 1,
+  HIGH_RISK: 2,
+  WALK_AWAY: 3,
+}
+
+/**
+ * Picks whichever verdict is more cautious (never softens a verdict that
+ * real evidence — checklist problems, VIN damage, service history — already
+ * earned). Used when both a score-based cap and the visual-coverage verdict
+ * cap could apply: the more cautious result always wins.
+ */
+export function pickMoreCautiousVerdict(a: Verdict, b: Verdict): Verdict {
+  return VERDICT_CAUTION_RANK[a] >= VERDICT_CAUTION_RANK[b] ? a : b
 }
 
 function calculateAIScore(
@@ -999,7 +1046,7 @@ function damagePenaltyV2(
 
 // â”€â”€â”€ Verdict Determination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function determineVerdict(buyScore: number): Verdict {
+export function determineVerdict(buyScore: number): Verdict {
   const safeScore = clampScore(buyScore, 0, 100, 0)
   if (safeScore >= VERDICT_THRESHOLDS.STRONG_BUY)     return 'STRONG_BUY'
   if (safeScore >= VERDICT_THRESHOLDS.BUY_WITH_CAUTION) return 'BUY_WITH_CAUTION'
@@ -1053,7 +1100,8 @@ export function enforceVisualCoverageCap(verdict: Verdict, aiSignals: ScoreDimen
 function generateReasons(
   input: ScoreCalculationInput,
   serviceStatus: ServiceHistoryStatus,
-  riskFlags: string[]
+  riskFlags: string[],
+  visualCoverage?: VisualCoverage
 ): { reasonsFor: string[]; reasonsAgainst: string[] } {
   const for_: string[] = []
   const against: string[] = []
@@ -1074,8 +1122,12 @@ function generateReasons(
     if (ownerCount <= 2) for_.push(`Only ${ownerCount} previous owner(s)`)
   }
 
-  // Only claim "no anomalies" when there are truly no findings at all.
-  if (aiFindings.length === 0) {
+  // Only claim "no anomalies" when there are truly no findings at all AND
+  // enough photos were actually assessed to support that claim. With zero
+  // or near-zero valid photos, "no findings" means "nothing was checked",
+  // not "nothing was wrong" — the same missing-evidence-is-not-clean-bill-
+  // of-health invariant as the AI dimension's own score/verdict handling.
+  if (aiFindings.length === 0 && visualCoverage !== 'NOT_ASSESSED' && visualCoverage !== 'LIMITED') {
     for_.push('No critical AI anomalies detected in photos')
   }
 
@@ -1194,14 +1246,21 @@ export function calculateRiskScore(
   const dmgEffect = damagePenaltyV2(input.vinData, input.hasPremiumHistory, input.askingPrice)
   buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
 
-  // 4. Determine base verdict then enforce caps
+  // 3b. Evidence/coverage ceiling — never a penalty, only ever lowers an
+  // unjustifiably high score when visual evidence is incomplete.
+  buyScore = applyVisualCoverageCap(buyScore, dimensions.ai.signals?.visualCoverage)
+
+  // 4. Determine base verdict (from the CAPPED score, so the number and the
+  // verdict can never contradict each other) then enforce caps.
   let verdict = determineVerdict(buyScore)
   const riskFlags = [...svcEffect.flags, ...dmgEffect.flags]
   verdict = enforceVerdictCaps(verdict, serviceStatus, input.vinData, dmgEffect.flags)
+  // Kept as defense-in-depth even though the score cap above already keeps
+  // NOT_ASSESSED/LIMITED below the STRONG_BUY threshold today.
   verdict = enforceVisualCoverageCap(verdict, dimensions.ai.signals)
 
   // 5. Reasons + negotiation hints
-  const { reasonsFor, reasonsAgainst } = generateReasons(input, serviceStatus, riskFlags)
+  const { reasonsFor, reasonsAgainst } = generateReasons(input, serviceStatus, riskFlags, dimensions.ai.signals?.visualCoverage)
   const negotiationHints = normalizeNegotiationHints(
     [...svcEffect.hints, ...dmgEffect.hints],
     input.askingPrice
@@ -1271,6 +1330,17 @@ export function calculatePreliminaryRiskScore(
     : { delta: 0, flags: [], hints: [] }
   buyScore = clampScore(buyScore + dmgEffect.delta, 10, 96, 50)
 
+  // Evidence/coverage ceiling — same rule as the final score, but only once
+  // the AI Photos section has actually been reached (whether the user
+  // added photos or not). Before that, "not assessed" just means "not
+  // there yet" in a normal linear inspection — not a report the vehicle's
+  // final assessment will ever be measured against — so it must not cap a
+  // preview built from otherwise-excellent completed sections.
+  const hasAiInput = !!completedDimensions.ai
+  if (hasAiInput) {
+    buyScore = applyVisualCoverageCap(buyScore, dimensions.ai.signals?.visualCoverage)
+  }
+
   let verdict = determineVerdict(buyScore)
   const riskFlags = [...svcEffect.flags, ...dmgEffect.flags]
   verdict = enforceVerdictCaps(
@@ -1286,7 +1356,7 @@ export function calculatePreliminaryRiskScore(
     vinData: hasVinInput ? input.vinData : null,
     hasPremiumHistory: hasVinInput ? input.hasPremiumHistory : false,
   }
-  const { reasonsFor, reasonsAgainst } = generateReasons(reasonInput, serviceStatus, riskFlags)
+  const { reasonsFor, reasonsAgainst } = generateReasons(reasonInput, serviceStatus, riskFlags, dimensions.ai.signals?.visualCoverage)
   const negotiationHints = normalizeNegotiationHints(
     [...svcEffect.hints, ...dmgEffect.hints],
     input.askingPrice

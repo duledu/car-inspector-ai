@@ -45,10 +45,10 @@ describe('scoring engine — the neutral placeholder is always paired with NOT_A
       aiFindings: [], checklistItems: cleanChecklist, vinData: null, testDriveRatings: { accel: 1 }, hasPremiumHistory: false, askingPrice: null,
     })
     // The placeholder score of 50 is well below a clean checklist's score —
-    // if it leaked into the average even partially, buyScore would be
-    // pulled down noticeably below what the assessed dimensions alone earn.
+    // if it leaked into the average even partially, buyScore would land
+    // below the coverage ceiling (69) rather than exactly on it.
     expect(noPhotos.dimensions.ai.score).toBe(50)
-    expect(noPhotos.buyScore).toBeGreaterThanOrEqual(80)
+    expect(noPhotos.buyScore).toBe(69)
   })
 })
 

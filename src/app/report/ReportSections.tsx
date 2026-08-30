@@ -1,5 +1,7 @@
 'use client'
 
+import type { VisualCoverage } from '@/types'
+
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
 function safeT(t: Translate, key: string, fallback: string, options?: Record<string, unknown>): string {
@@ -11,8 +13,6 @@ function safeT(t: Translate, key: string, fallback: string, options?: Record<str
     fallback,
   )
 }
-
-type VisualCoverage = 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL'
 
 interface DecisionBlockProps {
   verdict: string
@@ -29,7 +29,13 @@ interface DecisionBlockProps {
   t: Translate
 }
 
-function buildDecisionContent(
+/**
+ * Exported so callers rendering a recommendation sentence elsewhere on the
+ * report (e.g. the top score card) can reuse the exact same coverage-aware
+ * copy as DecisionBlock, instead of an independent verdict-only lookup that
+ * could disagree with it. See report/page.tsx's top-card recommendation.
+ */
+export function buildDecisionContent(
   verdict: string,
   criticalCount: number,
   riskFlagCount: number,

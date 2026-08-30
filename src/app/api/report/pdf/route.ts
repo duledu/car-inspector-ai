@@ -12,6 +12,7 @@ import { generateFallbackResult } from '@/modules/research/fallback.knowledge'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { canViewInspectionReport, getInspectionAccess } from '@/lib/inspection/access'
 import { requireCurrentConsent } from '@/lib/legal/consent-guard'
+import { parseAIResultPayload } from '@/lib/inspection/ai-result-payload'
 import type { AIFinding, ChecklistItem, Vehicle } from '@/types'
 
 export const runtime = 'nodejs'
@@ -72,8 +73,12 @@ function toChecklistDto(items: Array<{
 
 function sanitizeFindings(results: Array<{ findings: unknown }>): AIFinding[] {
   return results.flatMap(result => {
-    if (!Array.isArray(result.findings)) return []
-    return result.findings.filter((finding): finding is AIFinding => {
+    // AIResult.findings may be the legacy bare-array shape or the current
+    // { items, usableCount, ... } wrapper (see ai-result-payload.ts) — go
+    // through the shared parser so rows written after that fix don't
+    // silently lose their findings here.
+    const { findings } = parseAIResultPayload(result.findings)
+    return findings.filter((finding): finding is AIFinding => {
       if (!finding || typeof finding !== 'object') return false
       const raw = finding as Partial<AIFinding>
       return (

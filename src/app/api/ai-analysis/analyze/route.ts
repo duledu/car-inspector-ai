@@ -24,6 +24,7 @@ import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { checkRateLimit } from '@/lib/security/rate-limit'
 import { hasAiAnalysisAccess } from '@/lib/inspection/access'
 import { requireCurrentConsent } from '@/lib/legal/consent-guard'
+import { buildAIResultPayload } from '@/lib/inspection/ai-result-payload'
 
 const photoResultSchema = z.object({
   angle:          z.string().min(1),
@@ -176,11 +177,16 @@ export async function POST(req: NextRequest) {
   // Step 7: Persist AIResult to DB
   try {
     const dbStart = Date.now()
+    // Persist usableCount alongside the findings — it's the ONLY point in
+    // the pipeline where "how many photos were actually analyzed/usable"
+    // is known; computeAndPersist (a later, separate request) has no other
+    // way to recover it. See ai-result-payload.ts for why the bare findings
+    // array or the AIResult row count can never substitute for this.
     const result = await prisma.aIResult.create({
       data: {
         vehicleId,
         analysisType: 'PAINT_ANALYSIS',
-        findings:     findings as object[],
+        findings:     buildAIResultPayload(findings, analyzedCount, usableCount, unusableCount) as object,
         overallScore,
         modelVersion: 'gpt-4o-v1',
       },

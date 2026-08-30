@@ -181,7 +181,7 @@ describe('calculateRiskScore', () => {
     expect(result.verdict).not.toBe('STRONG_BUY')
   })
 
-  test('excluding the not-assessed AI dimension does not punish the vehicle — the remaining evidence is scored on its own terms, not penalized for the exclusion', () => {
+  test('excluding the not-assessed AI dimension does not punish the underlying evidence — it lands exactly on the coverage ceiling, not below it', () => {
     const cleanChecklist = (['EXTERIOR', 'INTERIOR', 'MECHANICAL', 'DOCUMENTS'] as const).flatMap((category) =>
       Array.from({ length: 4 }, (_, i) => makeChecklistItem({ id: `${category}-${i}`, category, status: 'OK' }))
     )
@@ -190,16 +190,19 @@ describe('calculateRiskScore', () => {
       checklistItems: cleanChecklist,
       testDriveRatings: { accel: 1 },
     })
-    // Removing a genuinely-assessed AI dimension (findings, real photos) and
-    // replacing it with NOT_ASSESSED must not itself subtract points from
-    // the remaining dimensions' own weighted average.
     const withCleanPhotos = calculateRiskScore('with-photos-clean', {
       ...emptyInput,
       checklistItems: cleanChecklist,
       testDriveRatings: { accel: 1 },
       photoCount: 8,
     })
-    expect(withoutPhotos.buyScore).toBeGreaterThanOrEqual(withCleanPhotos.buyScore - 5)
+    // A clean checklist with zero photos would weight-average to at least as
+    // high as the full-photo version pre-cap (excluding, not penalizing, the
+    // unassessed dimension) — so the coverage ceiling (69) is exactly what
+    // caps it, not some additional, arbitrary "missing photos" penalty on
+    // top. It must never land below the cap.
+    expect(withoutPhotos.buyScore).toBe(69)
+    expect(withCleanPhotos.buyScore).toBeGreaterThan(69)
   })
 
   test('1-2 valid photos (LIMITED coverage) still contribute a real, heavily-capped score and also cap the verdict below STRONG_BUY', () => {

@@ -427,6 +427,8 @@ const sq = {
   'report.decision.body.highRisk':    'U zbuluan probleme serioze. Kërkoni inspektim profesional para çdo vendimi.',
   'report.decision.headline.walkAway': 'Blerja nuk rekomandohet',
   'report.decision.body.walkAway':    'U gjetën disa probleme kritike. Rreziqet tejkalojnë vlerën e automjetit me çmimin e kërkuar.',
+  'report.scoreLabel.limitedEvidence': 'Rezultati i vlerësimit — Dëshmi të kufizuara',
+  'report.scoreCappedNotice': 'Rezultati është i kufizuar për shkak të dëshmive vizuale të paplota — kjo nuk do të thotë që u gjet një problem.',
   'report.confidenceLabel':           'Besueshmëria',
   'report.confidence.high':           'E lartë — të dhëna të mjaftueshme për analizë të besueshme',
   'report.confidence.medium':         'Mesatare — të dhëna të pjesshme, rezultati është indikativ',

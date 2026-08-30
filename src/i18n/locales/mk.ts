@@ -427,6 +427,8 @@ const mk = {
   'report.decision.body.highRisk':    'Забележани се сериозни проблеми. Побарајте стручна инспекција пред каква и да е одлука.',
   'report.decision.headline.walkAway': 'Не се препорачува купување',
   'report.decision.body.walkAway':    'Пронајдени се повеќе критични проблеми. Ризикот е поголем од вредноста на возилото по бараната цена.',
+  'report.scoreLabel.limitedEvidence': 'Оценка за проценка — ограничени докази',
+  'report.scoreCappedNotice': 'Оценката е ограничена поради нецелосни визуелни докази — ова не значи дека е пронајден проблем.',
   'report.confidenceLabel':           'Доверливост',
   'report.confidence.high':           'Висока — доволно податоци за сигурна анализа',
   'report.confidence.medium':         'Средна — делумни податоци, резултатот е индикативен',

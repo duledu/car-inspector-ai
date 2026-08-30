@@ -642,6 +642,12 @@ const en = {
   'report.decision.body.limitedAssessmentNoPhotos': 'The available checklist information did not identify major concerns, but no AI photo assessment was performed. The vehicle’s visual condition has therefore not been assessed. Add the recommended photos or verify the vehicle visually before making a purchase decision.',
   'report.decision.body.limitedAssessmentFewPhotos': 'Too few photos were analyzed to reliably assess the vehicle’s visual condition. Add more photos or verify the vehicle visually before making a purchase decision.',
   'report.visualNotAssessed': 'Not assessed',
+  // Shown in place of the normal score label/caption whenever visual
+  // coverage is NOT_ASSESSED/LIMITED/PARTIAL — the final score is a
+  // ceiling on confidence, not a claim that a defect was found. Reused
+  // verbatim by the PDF (see src/lib/report/pdf.ts) for parity.
+  'report.scoreLabel.limitedEvidence': 'Assessment Score — Limited Evidence',
+  'report.scoreCappedNotice': 'Score limited by incomplete visual evidence — this does not mean a problem was found.',
   'report.confidenceLabel':           'Confidence',
   'report.confidence.high':           'High - sufficient data for reliable analysis',
   'report.confidence.medium':         'Moderate - partial data, results are indicative',

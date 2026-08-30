@@ -1,13 +1,16 @@
 // =============================================================================
 // Legacy report read-time reconciliation
 //
-// Reports persisted BEFORE the visualCoverage fix never stored that signal
-// in their `breakdown` JSON — their AI dimension is just the old hardcoded
-// score/explanation pair (e.g. score 68 + "No photo analysis data
-// available..."). Without correction, re-opening one of those old reports
-// would still show the exact contradiction a real tester reported: a
-// numeric "Visual Inspection" score plus a STRONG_BUY / "Safe to proceed"
-// verdict, sitting right next to a "no photos were analyzed" notice.
+// Two generations of historical rows need reconciling at read time, never
+// by mutating the database:
+//   1. Rows from BEFORE the visualCoverage fix — no signal in `breakdown`
+//      at all, inferred from the old hardcoded score/explanation pair.
+//   2. Rows from AFTER the visualCoverage fix but BEFORE the evidence/
+//      coverage score-cap fix — the signal is correct and the verdict was
+//      already capped, but buyScore itself was never capped (e.g. a
+//      genuine "88/100, Buy with Caution, 0 photos" — the exact
+//      contradiction this cap fix closes).
+// Both must end up rendering the same as a report generated today.
 //
 // This is a pure, DB-free transform (ScoringService.mapToDto has no I/O),
 // so it's tested directly like scoring.logic.ts rather than through a
@@ -52,19 +55,18 @@ function legacyRow(overrides: Partial<{ buyScore: number; verdict: string; aiSco
 }
 
 describe('legacy report reconciliation — the exact tester-reported contradiction', () => {
-  it('a pre-fix zero-photo STRONG_BUY report is inferred as NOT_ASSESSED and its verdict is capped, without touching the stored buyScore number', () => {
+  it('a pre-fix zero-photo STRONG_BUY report is inferred as NOT_ASSESSED, its score capped to the coverage ceiling, and its verdict corrected — never displaying 85/STRONG_BUY again', () => {
     const dto = mapToDto(legacyRow())
 
     expect(dto.dimensions.ai.signals.visualCoverage).toBe('NOT_ASSESSED')
     expect(dto.verdict).not.toBe('STRONG_BUY')
-    // Only the verdict is corrected here — the historical numeric buyScore
-    // is left as persisted; the fix targets the contradictory copy, not a
-    // full DB-free score recomputation this session was not authorized to
-    // design.
-    expect(dto.buyScore).toBe(85)
+    // The evidence/coverage ceiling (see applyVisualCoverageCap) is also
+    // reconciled at read time — an old 88/STRONG_BUY zero-photo report must
+    // never keep showing a number the ceiling would no longer allow.
+    expect(dto.buyScore).toBe(69)
   })
 
-  it('a pre-fix LIMITED-coverage (1-2 photos) STRONG_BUY report is also capped', () => {
+  it('a pre-fix LIMITED-coverage (1-2 photos) STRONG_BUY report has its score capped to 74 and its verdict corrected', () => {
     const dto = mapToDto(legacyRow({
       aiScore: 58,
       aiExplanation: 'No issues detected in 1 of 8 analyzed photos. Very limited coverage — most of the vehicle was not inspected.',
@@ -72,6 +74,7 @@ describe('legacy report reconciliation — the exact tester-reported contradicti
 
     expect(dto.dimensions.ai.signals.visualCoverage).toBe('LIMITED')
     expect(dto.verdict).not.toBe('STRONG_BUY')
+    expect(dto.buyScore).toBe(74)
   })
 
   it('a legacy report already at HIGH_RISK is left at HIGH_RISK, never "helped" by the cap', () => {
@@ -90,13 +93,16 @@ describe('legacy report reconciliation — the exact tester-reported contradicti
     expect(dto.buyScore).toBe(85)
   })
 
-  it('a post-fix row (verdict already capped at write time by calculateRiskScore) passes through untouched, with no re-inference or double-capping', () => {
-    // Rows written after the fix already went through enforceVisualCoverageCap
-    // inside calculateRiskScore before being persisted, so a NOT_ASSESSED row
-    // is never actually stored as STRONG_BUY — it arrives here already
-    // BUY_WITH_CAUTION. mapToDto must leave that alone, not re-derive it.
+  it('a row persisted between the visualCoverage fix and the score-cap fix (correct signal, verdict already capped, but score never capped) has its score reconciled too — not just legacy-inferred rows', () => {
+    // Rows written after the visualCoverage/verdict fix but before this
+    // score-cap fix went through enforceVisualCoverageCap at write time, so
+    // the verdict was already correct (BUY_WITH_CAUTION, never STRONG_BUY) —
+    // but buyScore itself (88) was never capped, since that feature didn't
+    // exist yet. This is exactly the "88/100, Buy with Caution" contradiction
+    // this task closes: the cap must apply here too, not only to fully
+    // legacy (signal-missing) rows.
     const row = legacyRow({
-      buyScore: 78,
+      buyScore: 88,
       verdict: 'BUY_WITH_CAUTION',
       aiScore: 50,
       aiExplanation: 'No photo analysis data available. Upload photos for a visual assessment.',
@@ -106,6 +112,29 @@ describe('legacy report reconciliation — the exact tester-reported contradicti
 
     expect(dto.dimensions.ai.signals.visualCoverage).toBe('NOT_ASSESSED')
     expect(dto.verdict).toBe('BUY_WITH_CAUTION')
-    expect(dto.buyScore).toBe(78)
+    expect(dto.buyScore).toBe(69)
+  })
+
+  it('a row already at or below its coverage cap is left completely unchanged — no double-capping, no accidental score drift', () => {
+    const row = legacyRow({
+      buyScore: 65,
+      verdict: 'BUY_WITH_CAUTION',
+      aiScore: 50,
+      aiExplanation: 'No photo analysis data available. Upload photos for a visual assessment.',
+    })
+    row.breakdown.ai = { ...row.breakdown.ai, signals: { hasMeaningfulIssues: false, visualCoverage: 'NOT_ASSESSED' } }
+    const dto = mapToDto(row)
+
+    expect(dto.buyScore).toBe(65)
+    expect(dto.verdict).toBe('BUY_WITH_CAUTION')
+  })
+
+  it('a fully FULL-coverage row is never capped, regardless of how it was persisted', () => {
+    const row = legacyRow({ buyScore: 95, verdict: 'STRONG_BUY', aiScore: 92, aiExplanation: 'clean' })
+    row.breakdown.ai = { ...row.breakdown.ai, signals: { visualCoverage: 'FULL' } }
+    const dto = mapToDto(row)
+
+    expect(dto.buyScore).toBe(95)
+    expect(dto.verdict).toBe('STRONG_BUY')
   })
 })

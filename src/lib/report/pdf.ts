@@ -510,7 +510,13 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
             width: 120,
             stack: [
               { text: String(score.buyScore), style: 'score', alignment: 'center' },
-              { text: t('pdf.overallScore'), style: 'caption', alignment: 'center' },
+              {
+                text: visualCoverage && visualCoverage !== 'FULL'
+                  ? t('report.scoreLabel.limitedEvidence')
+                  : t('pdf.overallScore'),
+                style: 'caption',
+                alignment: 'center',
+              },
             ],
           },
           {
@@ -519,6 +525,13 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
               { text: t(`pdf.risk.${verdict}`), fontSize: 17, bold: true, color: verdictColor[verdict] },
               { text: summary.join(' '), style: 'body', margin: [0, 7, 0, 0] },
               { stack: [scoreGauge(score.buyScore, verdictColor[verdict])], margin: [0, 13, 0, 0] },
+              // Explains WHY the score is capped when evidence is incomplete —
+              // same authoritative wording as the web report (see
+              // applyVisualCoverageCap in scoring.logic.ts). Missing evidence,
+              // not a detected defect.
+              ...(visualCoverage && visualCoverage !== 'FULL'
+                ? [{ text: t('report.scoreCappedNotice'), style: 'caption', color: BRAND.amber, margin: [0, 4, 0, 0] } as Content]
+                : []),
               // Missing/critically limited visual evidence must never read
               // as a confident recommendation — same authoritative copy and
               // trigger condition as the on-screen report's DecisionBlock

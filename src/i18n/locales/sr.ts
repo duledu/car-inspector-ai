@@ -538,6 +538,8 @@ const sr = {
   'report.decision.body.limitedAssessmentNoPhotos': 'Dostupne informacije sa kontrolne liste nisu ukazale na veće probleme, ali AI foto-procena nije izvršena. Vizuelno stanje vozila stoga nije procenjeno. Dodajte preporučene fotografije ili lično proverite vozilo pre donošenja odluke o kupovini.',
   'report.decision.body.limitedAssessmentFewPhotos': 'Analizirano je premalo fotografija da bi se pouzdano procenilo vizuelno stanje vozila. Dodajte još fotografija ili lično proverite vozilo pre donošenja odluke o kupovini.',
   'report.visualNotAssessed': 'Nije procenjeno',
+  'report.scoreLabel.limitedEvidence': 'Ocena procene — ograničeni dokazi',
+  'report.scoreCappedNotice': 'Ocena je ograničena zbog nepotpunih vizuelnih dokaza — ovo ne znači da je pronađen problem.',
   'report.confidenceLabel':           'Pouzdanost',
   'report.confidence.high':           'Visoka - dovoljno podataka za pouzdanu analizu',
   'report.confidence.medium':         'Srednja - podaci su delimični, rezultat je indikativan',

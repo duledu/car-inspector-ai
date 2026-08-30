@@ -18,7 +18,7 @@ import { calculatePreliminaryRiskScore, AI_TOTAL_EXPECTED_PHOTOS } from '@/modul
 import { getPhotoCoverageTier, isUsablePhotoResult, type AIResultLike } from '@/lib/inspection/photo-coverage'
 import type { RiskScore, ScoreCalculationInput, ScoreDimension } from '@/types'
 import AppShell from '../AppShell'
-import { DecisionBlock, ConfidenceIndicator } from './ReportSections'
+import { DecisionBlock, ConfidenceIndicator, buildDecisionContent } from './ReportSections'
 
 // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Verdict config (colours only ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â labels resolved via t()) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
 const VERDICT_CFG: Record<string, { labelKey: string; color: string; bg: string; border: string; glow: string }> = {
@@ -150,10 +150,6 @@ function extractNegotiationLeverage(hints: string[], locale: string): Negotiatio
 
 function translateNegotiationHint(text: string, t: Translate, locale: string): string {
   return translateNegotiationHintV2(text, t, locale)
-}
-
-function recommendationKey(verdict: string): string {
-  return `report.recommendation.${verdict}`
 }
 
 function normalizeReportTextV2(text: string): string {
@@ -1356,6 +1352,13 @@ export default function ReportPage() {
   const verdict  = riskScore ? VERDICT_CFG[riskScore.verdict] : null
   const svcLabel = riskScore ? (SVC_HISTORY_CFG[riskScore.serviceHistoryStatus] ?? SVC_HISTORY_CFG.PARTIAL) : null
   const safeBuyScore = riskScore && Number.isFinite(riskScore.buyScore) ? riskScore.buyScore : null
+  // Single authoritative signal for "is the displayed score confidence-
+  // limited by incomplete visual evidence" — drives the score label, the
+  // capped-score caption, and the top-card recommendation text below, so
+  // all three can never disagree with each other or with the coverage-cap
+  // already baked into riskScore.buyScore by the scoring engine.
+  const visualCoverage = riskScore?.dimensions?.ai?.signals?.visualCoverage
+  const isCoverageLimited = Boolean(visualCoverage && visualCoverage !== 'FULL')
   const showPreliminaryMode = isPreliminaryScore || (preliminaryMode && !riskScore)
   const reportLocale = i18n.resolvedLanguage ?? i18n.language ?? 'en'
   const negotiationLeverage = riskScore
@@ -1711,21 +1714,39 @@ export default function ReportPage() {
                 <ScoreRing score={safeBuyScore ?? 0} color={verdict.color} />
 
                 <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.42)', letterSpacing: '0.03em', marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.42)', letterSpacing: '0.03em', marginBottom: isCoverageLimited ? 4 : 12 }}>
                     {isPreliminaryScore
                       ? safeReportT(t, 'report.preliminaryBadge', 'Preliminary score')
-                      : t('report.aiConfidenceScore')}
+                      : isCoverageLimited
+                        ? safeReportT(t, 'report.scoreLabel.limitedEvidence', 'Assessment Score — Limited Evidence')
+                        : t('report.aiConfidenceScore')}
                   </div>
+                  {/* Explains WHY the score is capped when evidence is incomplete —
+                      missing evidence, not a detected defect. See applyVisualCoverageCap. */}
+                  {!isPreliminaryScore && isCoverageLimited && (
+                    <div style={{ fontSize: 11.5, color: 'rgba(245,158,11,0.8)', lineHeight: 1.5, marginBottom: 12, maxWidth: 320 }}>
+                      {safeReportT(t, 'report.scoreCappedNotice', 'Score limited by incomplete visual evidence — this does not mean a problem was found.')}
+                    </div>
+                  )}
                   {/* Verdict pill */}
                   <div style={{ display: 'inline-flex', padding: '8px 20px', background: verdict.bg, border: `1px solid ${verdict.border}`, borderRadius: 24, fontSize: 17, fontWeight: 800, color: verdict.color, marginBottom: 12, letterSpacing: '-0.2px' }}>
                     {t(verdict.labelKey)}
                   </div>
-                  {/* Recommendation text — the most important sentence */}
+                  {/* Recommendation text — the most important sentence. Reuses
+                      DecisionBlock's exact coverage-aware copy (not a separate
+                      verdict-only lookup) so this card and the "Final
+                      recommendation" card further down can never disagree. */}
                   {(() => {
-                    const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
-                    return rec && !rec.startsWith('report.') ? (
+                    const content = buildDecisionContent(
+                      riskScore.verdict,
+                      (latestAI?.findings as Array<{ severity: string }> | undefined ?? []).filter(f => f.severity === 'critical').length,
+                      riskScore.riskFlags.length,
+                      t,
+                      visualCoverage,
+                    )
+                    return content?.body ? (
                       <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.72, marginBottom: 14 }}>
-                        {rec}
+                        {content.body}
                       </div>
                     ) : null
                   })()}
@@ -1998,12 +2019,20 @@ export default function ReportPage() {
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(245,158,11,0.16)', fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7 }}>
                     {safeReportT(t, 'report.negotiationDisclaimer', 'This is advisory negotiation guidance. It is not guaranteed savings, a formal appraisal, or proof of repair cost. Use it as a structured talking point and verify issues before purchase.')}
                   </div>
-                  {/* Overall recommendation */}
+                  {/* Overall recommendation — same coverage-aware copy as the
+                      top score card and DecisionBlock, never an independent
+                      verdict-only lookup (see buildDecisionContent). */}
                   {(() => {
-                    const rec = safeReportT(t, recommendationKey(riskScore.verdict), '')
-                    return rec && !rec.startsWith('report.') ? (
+                    const content = buildDecisionContent(
+                      riskScore.verdict,
+                      (latestAI?.findings as Array<{ severity: string }> | undefined ?? []).filter(f => f.severity === 'critical').length,
+                      riskScore.riskFlags.length,
+                      t,
+                      visualCoverage,
+                    )
+                    return content?.body ? (
                       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(245,158,11,0.18)', fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.68)', lineHeight: 1.6 }}>
-                        {rec}
+                        {content.body}
                       </div>
                     ) : null
                   })()}
