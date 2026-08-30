@@ -8,11 +8,22 @@ import { useVehicleStore, useInspectionStore } from '@/store'
 import type { ChecklistCategory, InspectionPhase, ItemStatus } from '@/types'
 import { CameraCapture } from '@/components/inspection/CameraCapture'
 import { AiConsentModal } from '@/components/inspection/AiConsentModal'
+import { PhotoCoverageWarningModal } from '@/components/inspection/PhotoCoverageWarningModal'
 import { ModelResearchGuide } from '@/components/inspection/ModelResearchGuide'
 import { PhotoAnalysisDisclaimer } from '@/components/legal/PhotoAnalysisDisclaimer'
 import { getChecklistDiagnostics, getInspectionCompletion } from '@/lib/inspection/checklist'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
 import { CURRENT_INSPECTION_START_ACK_VERSION } from '@/lib/legal/legal-config'
+import {
+  deriveUsability,
+  getPhotoCoverageTier,
+  requiresLowCoverageConfirmation,
+  countValidPhotos,
+  readLowPhotoCoverageAck,
+  writeLowPhotoCoverageAck,
+  PHOTO_COVERAGE_COLOR,
+  type AIResultLike,
+} from '@/lib/inspection/photo-coverage'
 import AppShell from '../AppShell'
 
 // ─── AI photo slots — 8 exterior angles ──────────────────────────────────────
@@ -91,37 +102,6 @@ const AI_PRIORITY_ANGLES = new Set([
 ])
 
 let aiAnalysisQueue: Promise<unknown> = Promise.resolve()
-
-/**
- * Derives usability from the AI result.
- * Trusts the server-supplied `isUsable` field when present (new responses);
- * falls back to local inference for photos restored from localStorage cache.
- */
-function deriveUsability(result: MockAIResult): { isUsable: boolean; usabilityReason: string } {
-  if (result.isUsable !== undefined) {
-    return { isUsable: result.isUsable, usabilityReason: result.usabilityReason ?? 'OK' }
-  }
-  if (result.failureReason) return { isUsable: false, usabilityReason: 'LOW_QUALITY' }
-  if (result.imageQuality === 'unusable') {
-    const sig = (result.signal ?? '').toLowerCase()
-    // Only classify as NOT_VEHICLE when the signal unambiguously describes absence
-    // of a vehicle — not merely mentions the car ("no car issues", "the car's ...").
-    const isVehicleAbsent =
-      sig.includes('not inspectable') ||
-      sig.includes('no vehicle') ||
-      sig.includes('not a vehicle') ||
-      /\bno\s+car\s+(?:visible|in\b|is\b|detected|present|found)\b/.test(sig) ||
-      /\bcar\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found)\b/.test(sig) ||
-      /\bvehicle\s+(?:is\s+)?(?:not|isn't|isnt)\s+(?:visible|present|detected|found|clearly)\b/.test(sig)
-    return {
-      isUsable: false,
-      usabilityReason: isVehicleAbsent ? 'NOT_VEHICLE' : 'LOW_QUALITY',
-    }
-  }
-  const conf = result.confidenceScore ?? 100
-  if (conf < 40) return { isUsable: false, usabilityReason: 'UNCERTAIN' }
-  return { isUsable: true, usabilityReason: 'OK' }
-}
 
 function logPhotoFlow(step: string, details?: Record<string, unknown>, success = true, requestId?: string) {
   const durationMs = typeof details?.durationMs === 'number' ? details.durationMs : 0
@@ -877,24 +857,31 @@ function CompactPhotoCard({ angle, photo, onAdd }: Readonly<{
 }
 
 // ─── Photo Grid ───────────────────────────────────────────────────────────────
-function PhotoGrid({ photos, onAdd, onRetry }: Readonly<{
+function PhotoGrid({ photos, validPhotoCount, onAdd, onRetry }: Readonly<{
   photos: PhotoEntry[]
+  /** Authoritative usable-photo count — the same value driving the Photos
+   * tab color and the coverage warnings. The progress bar must show this,
+   * not raw capture/analysis-attempt counts, so the UI can't disagree with
+   * itself about how much of the vehicle is actually covered. */
+  validPhotoCount: number
   onAdd: (key: string, label: string) => void
   onRetry: (key: string) => void
 }>) {
   const { t } = useTranslation()
   const captured = photos.length
   const total    = PHOTO_ANGLES.length
-  const analyzed = photos.filter(p => p.aiResult && !p.aiPending).length
   const needsRetake = photos.filter(photoNeedsRetake).length
+  const coverageTier = getPhotoCoverageTier(validPhotoCount)
+  const coverageColor = PHOTO_COVERAGE_COLOR[coverageTier]
 
   return (
     <div>
-      {/* Progress summary */}
+      {/* Progress summary — reflects VALID (usable) photos only, never raw
+          capture/analysis-attempt counts. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>
-            {t('inspection.photosAnalyzedCount', { count: analyzed, total, defaultValue: '{{count}} / {{total}} photos reviewed' })}
+            {t('inspection.photosAnalyzedCount', { count: validPhotoCount, total, defaultValue: '{{count}} / {{total}} photos reviewed' })}
           </div>
           <div style={{ fontSize: 11, color: needsRetake > 0 ? '#f59e0b' : 'rgba(255,255,255,0.38)', marginTop: 2, lineHeight: 1.35 }}>
             {needsRetake > 0
@@ -904,10 +891,10 @@ function PhotoGrid({ photos, onAdd, onRetry }: Readonly<{
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 80, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(analyzed / total) * 100}%`, background: needsRetake > 0 ? '#f59e0b' : '#22d3ee', borderRadius: 2, transition: 'width 0.3s ease' }} />
+            <div style={{ height: '100%', width: `${(validPhotoCount / total) * 100}%`, background: coverageColor, borderRadius: 2, transition: 'width 0.3s ease' }} />
           </div>
-          <span style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, minWidth: 28, textAlign: 'right' }}>
-            {Math.round((analyzed / total) * 100)}%
+          <span style={{ fontSize: 11, color: coverageColor, fontWeight: 600, minWidth: 28, textAlign: 'right' }}>
+            {Math.round((validPhotoCount / total) * 100)}%
           </span>
         </div>
       </div>
@@ -1216,6 +1203,7 @@ function ChecklistPhase({ items, isLoading, sectionCategory, onStatus, onNotes }
 // ─── Risk Analysis ─────────────────────────────────────────────────────────────
 function RiskAnalysisPhase({
   photos,
+  validPhotoCount,
   inspectionComplete,
   answeredCount,
   totalCount,
@@ -1225,6 +1213,10 @@ function RiskAnalysisPhase({
   onRetryAgg,
 }: Readonly<{
   photos: PhotoEntry[]
+  /** Same authoritative valid-photo count driving the tab color and the
+   * Photos-phase progress bar — read here rather than re-derived, so this
+   * summary can never disagree with the rest of the UI about coverage. */
+  validPhotoCount: number
   inspectionComplete: boolean
   answeredCount: number
   totalCount: number
@@ -1247,9 +1239,11 @@ function RiskAnalysisPhase({
   const unusable     = analyzed.filter(p => photoNeedsRetake(p) && !p.aiResult?.failureReason)
   const flagged      = analyzed.filter(p => p.aiResult && !photoNeedsRetake(p) && p.aiResult.severity !== 'ok')
   const clean        = analyzed.filter(p => p.aiResult && !photoNeedsRetake(p) && p.aiResult.severity === 'ok')
+  // successCount previously re-derived the same thing analyzed/failed/unusable
+  // already imply — now reads the shared, authoritative value directly.
   const missing      = total - analyzed.length
   const isPartial    = failed.length > 0 || unusable.length > 0 || missing > 0
-  const successCount = analyzed.length - failed.length - unusable.length
+  const successCount = validPhotoCount
   // Thresholds scaled for 8-image set: 7+ = high, 5+ = medium, <5 = low
   const confidenceLevel: 'high' | 'medium' | 'low' = successCount >= 7 ? 'high' : successCount >= 5 ? 'medium' : 'low'
   const confidenceColor = successCount >= 7 ? '#22c55e' : successCount >= 5 ? '#f59e0b' : 'rgba(255,255,255,0.32)'
@@ -1284,10 +1278,12 @@ function RiskAnalysisPhase({
             <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.04em' }}>
               {t('inspection.photoAnalysisSummary')}
             </div>
-            {/* Analyzed count + confidence badge */}
+            {/* Valid-photo count + confidence badge — both driven by the same
+                authoritative validPhotoCount, so this header can never claim
+                a higher/lower count than the badge's own basis. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ fontSize: 10.5, color: isPartial ? '#f59e0b' : 'rgba(255,255,255,0.38)', fontWeight: 600 }}>
-                {t('inspection.analyzedCount', { count: analyzed.length, total })}
+                {t('inspection.analyzedCount', { count: successCount, total })}
               </div>
               {analyzed.length > 0 && (
                 <span style={{
@@ -1321,28 +1317,31 @@ function RiskAnalysisPhase({
           )}
 
           {flagged.length === 0 && failed.length === 0 && analyzed.length > 0 ? (() => {
-            const coverageRatio = analyzed.length / total
-            if (coverageRatio < 0.3) {
-              // Very limited coverage — never show a green "no issues" box.
+            // Tier is driven by valid (successfully analyzed and usable)
+            // photos, not raw analyzed count — a failed/unusable photo must
+            // never inflate coverage, and low coverage must never be shown
+            // as a plain green "no issues" result (see photo-coverage.ts).
+            const tier = getPhotoCoverageTier(successCount)
+            if (tier === 'INSUFFICIENT') {
               return (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 9 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', background: `${PHOTO_COVERAGE_COLOR.INSUFFICIENT}0d`, border: `1px solid ${PHOTO_COVERAGE_COLOR.INSUFFICIENT}33`, borderRadius: 9 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PHOTO_COVERAGE_COLOR.INSUFFICIENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
-                  <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                    {t('inspection.noFlagsVeryLimited', { defaultValue: 'No issues in the analyzed photos, but most of the vehicle was not covered. Upload more photos for reliable results.' })}
+                  <span style={{ fontSize: 11.5, color: PHOTO_COVERAGE_COLOR.INSUFFICIENT, lineHeight: 1.5, fontWeight: 600 }}>
+                    {t('inspection.noFlagsVeryLimited', { defaultValue: 'No issues in the analyzed photos, but coverage is insufficient to draw a reliable conclusion. Add more photos.', count: successCount })}
                   </span>
                 </div>
               )
             }
-            if (coverageRatio < 0.5) {
+            if (tier === 'PARTIAL') {
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: `${PHOTO_COVERAGE_COLOR.PARTIAL}0d`, border: `1px solid ${PHOTO_COVERAGE_COLOR.PARTIAL}33`, borderRadius: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PHOTO_COVERAGE_COLOR.PARTIAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <div>
-                    <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsPartialCoverage', { defaultValue: 'No issues detected in the analyzed photos. Partial coverage — results may not represent the full vehicle condition.' })}</div>
+                    <div style={{ fontSize: 13, color: PHOTO_COVERAGE_COLOR.PARTIAL, fontWeight: 600 }}>{t('inspection.noFlagsPartialCoverage', { defaultValue: 'No issues detected in the analyzed photos. Partial coverage — results may not represent the full vehicle condition.', count: successCount })}</div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                      {t('inspection.analyzedCount', { count: analyzed.length, total })}
+                      {t('inspection.analyzedCount', { count: successCount, total })}
                     </div>
                   </div>
                 </div>
@@ -1354,7 +1353,7 @@ function RiskAnalysisPhase({
                 <div>
                   <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>{t('inspection.noFlagsRaised')}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                    {!isPartial && analyzed.length === total
+                    {!isPartial && successCount === total
                       ? t('inspection.analysisFull', { total })
                       : t('inspection.analyzedCount', { count: clean.length, total })}
                   </div>
@@ -1542,7 +1541,9 @@ export default function InspectionPage() {
   const [draftSaveFailed, setDraftSaveFailed] = useState(false)
   const [aiConsentAccepted, setAiConsentAccepted] = useState<boolean>(readAiConsent)
   const [showConsentModal,  setShowConsentModal]  = useState(false)
+  const [showLowPhotoCoverageModal, setShowLowPhotoCoverageModal] = useState(false)
   const pendingCameraRef = useRef<{ key: string; label: string } | null>(null)
+  const pendingPhaseRef  = useRef<InspectionPhase | null>(null)
   const phaseCardRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef<InspectionPhase | null>(null)
   const previousVehicleIdRef = useRef<string | null>(null)
@@ -1741,7 +1742,57 @@ export default function InspectionPage() {
     pipelineLog({ step: 'inspection/checklist:diagnostics', requestId: generateRequestId(), success: diagnosticsOk, durationMs: 0, meta: checklistDiagnostics as unknown as Record<string, unknown> })
   }, [checklistDiagnostics])
 
-  const goNext = () => { const n = PHASES[phaseIdx + 1]; if (n) setPhase(n.phase) }
+  // ── Photo coverage — count valid photos for the active vehicle/inspection ──
+  // Excludes placeholders (no result yet), in-flight analysis, failed
+  // uploads, and unusable images — see countValidPhotos(). The vehicleId
+  // guard is redundant with photos state already being cleared on vehicle
+  // switch, but keeps this function correct even if that invariant ever
+  // changes, and matches what the report page needs when reading persisted
+  // drafts directly from localStorage (which does span vehicles).
+  const validPhotoCount = useMemo(() => {
+    const vehicleId = session?.vehicleId ?? ''
+    return countValidPhotos(
+      photos.map((p): { vehicleId: string; isPending: boolean; aiResult?: AIResultLike | null } => ({
+        vehicleId,
+        isPending: p.aiPending,
+        aiResult: p.aiResult,
+      })),
+      vehicleId,
+    )
+  }, [photos, session?.vehicleId])
+  const photoCoverageTier = getPhotoCoverageTier(validPhotoCount)
+
+  // ── Phase navigation — gated when leaving Photos with insufficient coverage ─
+  const attemptPhaseChange = useCallback((targetPhase: InspectionPhase) => {
+    const targetIdx = PHASES.findIndex(p => p.phase === targetPhase)
+    const isLeavingPhotosForward = currentPhase === 'AI_PHOTOS' && targetIdx > phaseIdx
+    if (isLeavingPhotosForward && requiresLowCoverageConfirmation(validPhotoCount)) {
+      const vehicleId = session?.vehicleId
+      const alreadyAcknowledged = !!vehicleId && !!readLowPhotoCoverageAck(vehicleId)
+      if (!alreadyAcknowledged) {
+        pendingPhaseRef.current = targetPhase
+        setShowLowPhotoCoverageModal(true)
+        return
+      }
+    }
+    setPhase(targetPhase)
+  }, [currentPhase, phaseIdx, validPhotoCount, session?.vehicleId, setPhase])
+
+  const handleAddMorePhotos = useCallback(() => {
+    setShowLowPhotoCoverageModal(false)
+    pendingPhaseRef.current = null
+  }, [])
+
+  const handleContinueWithLowCoverage = useCallback(() => {
+    const vehicleId = session?.vehicleId
+    if (vehicleId) writeLowPhotoCoverageAck(vehicleId, validPhotoCount)
+    setShowLowPhotoCoverageModal(false)
+    const target = pendingPhaseRef.current
+    pendingPhaseRef.current = null
+    if (target) setPhase(target)
+  }, [session?.vehicleId, validPhotoCount, setPhase])
+
+  const goNext = () => { const n = PHASES[phaseIdx + 1]; if (n) attemptPhaseChange(n.phase) }
   const goPrev = () => { const p = PHASES[phaseIdx - 1]; if (p) setPhase(p.phase) }
 
   // ── Autosave indicator ────────────────────────────────────────────────────
@@ -1909,6 +1960,14 @@ export default function InspectionPage() {
     <AppShell>
       {showConsentModal && <AiConsentModal onAccept={handleConsentAccept} />}
 
+      {showLowPhotoCoverageModal && (
+        <PhotoCoverageWarningModal
+          validPhotoCount={validPhotoCount}
+          onAddMorePhotos={handleAddMorePhotos}
+          onContinueAnyway={handleContinueWithLowCoverage}
+        />
+      )}
+
       {cameraTarget && (
         <CameraCapture
           label={cameraTarget.label}
@@ -2007,18 +2066,26 @@ export default function InspectionPage() {
           {PHASES.map((p, idx) => {
             const isActive  = p.phase === currentPhase
             const isDone    = idx < phaseIdx
+            // The Photos tab's color reflects coverage quality, not workflow
+            // position — visiting/passing it must never turn it green on its
+            // own, and low coverage must stay visibly red even after moving on.
+            const isPhotosTab = p.phase === 'AI_PHOTOS'
+            const tierColor = isPhotosTab ? PHOTO_COVERAGE_COLOR[photoCoverageTier] : null
+            const isTierComplete = photoCoverageTier === 'COMPLETE'
             return (
               <button
                 key={p.phase}
-                onClick={() => setPhase(p.phase)}
+                onClick={() => attemptPhaseChange(p.phase)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 10px', borderRadius: 10, flexShrink: 0,
-                  border: `1px solid ${isActive ? 'rgba(34,211,238,0.32)' : isDone ? 'rgba(34,197,94,0.18)' : 'transparent'}`,
-                  background: isActive
-                    ? 'rgba(34,211,238,0.13)'
-                    : isDone ? 'rgba(34,197,94,0.05)' : 'transparent',
-                  color: isActive ? '#22d3ee' : isDone ? '#22c55e' : 'rgba(255,255,255,0.3)',
+                  border: `1px solid ${
+                    isPhotosTab ? `${tierColor}55` : isActive ? 'rgba(34,211,238,0.32)' : isDone ? 'rgba(34,197,94,0.18)' : 'transparent'
+                  }`,
+                  background: isPhotosTab
+                    ? `${tierColor}14`
+                    : isActive ? 'rgba(34,211,238,0.13)' : isDone ? 'rgba(34,197,94,0.05)' : 'transparent',
+                  color: isPhotosTab ? tierColor! : isActive ? '#22d3ee' : isDone ? '#22c55e' : 'rgba(255,255,255,0.3)',
                   fontSize: 11.5, fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
                   transition: 'all 0.18s ease',
@@ -2031,13 +2098,17 @@ export default function InspectionPage() {
                   width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 9, fontWeight: 700,
-                  background: isActive ? '#22d3ee' : isDone ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
-                  color: isActive ? '#050810' : isDone ? '#22c55e' : 'rgba(255,255,255,0.28)',
+                  background: isPhotosTab ? `${tierColor}33` : isActive ? '#22d3ee' : isDone ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
+                  color: isPhotosTab ? tierColor! : isActive ? '#050810' : isDone ? '#22c55e' : 'rgba(255,255,255,0.28)',
                   transition: 'all 0.18s ease',
                 }}>
-                  {isDone
-                    ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    : idx + 1
+                  {isPhotosTab
+                    ? (isTierComplete
+                      ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : '!')
+                    : isDone
+                      ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : idx + 1
                   }
                 </span>
                 {t(p.shortKey)}
@@ -2133,7 +2204,24 @@ export default function InspectionPage() {
                   </div>
                 </div>
               </div>
-              <PhotoGrid photos={photos} onAdd={handleOpenCamera} onRetry={handleRetryAnalysis} />
+              {photoCoverageTier !== 'COMPLETE' && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  padding: '10px 13px', marginBottom: 14, borderRadius: 12,
+                  background: `${PHOTO_COVERAGE_COLOR[photoCoverageTier]}0d`,
+                  border: `1px solid ${PHOTO_COVERAGE_COLOR[photoCoverageTier]}33`,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PHOTO_COVERAGE_COLOR[photoCoverageTier]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span style={{ fontSize: 12, color: PHOTO_COVERAGE_COLOR[photoCoverageTier], lineHeight: 1.55, fontWeight: 600 }}>
+                    {photoCoverageTier === 'INSUFFICIENT'
+                      ? t('inspection.insufficientCoverageNotice', { count: validPhotoCount })
+                      : t('inspection.partialCoverageNotice', { count: validPhotoCount })}
+                  </span>
+                </div>
+              )}
+              <PhotoGrid photos={photos} validPhotoCount={validPhotoCount} onAdd={handleOpenCamera} onRetry={handleRetryAnalysis} />
               <PhotoAnalysisDisclaimer style={{ marginTop: 14 }} />
             </div>
           )}
@@ -2142,6 +2230,7 @@ export default function InspectionPage() {
           {currentPhase === 'RISK_ANALYSIS' && (
             <RiskAnalysisPhase
               photos={photos}
+              validPhotoCount={validPhotoCount}
               inspectionComplete={inspectionCompletion.isComplete}
               answeredCount={inspectionCompletion.answeredCount}
               totalCount={inspectionCompletion.totalCount}

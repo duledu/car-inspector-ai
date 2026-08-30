@@ -1,6 +1,7 @@
 import pdfMake from 'pdfmake'
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces'
 import { createPdfTranslator, normalizePdfLocale, type PdfTranslate } from '@/lib/report/i18n'
+import { getPhotoCoverageTier } from '@/lib/inspection/photo-coverage'
 import type {
   AIFinding,
   ChecklistItem,
@@ -22,6 +23,8 @@ type PdfReportInput = {
   findings: AIFinding[]
   checklistItems: ChecklistItem[]
   photos: PdfPhotoDraft[]
+  /** How many analyzed photos were actually usable — drives the photo-coverage status line. Defaults to 0 (never performed) when omitted. */
+  validPhotoCount?: number
   generatedAt: Date
   locale: string
 }
@@ -366,6 +369,8 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
   const findings = meaningfulFindings(input.findings)
   const mainPhoto = safePhotoImages(photos)[0] ?? null
   const embeddedPhotoGrid = photoGrid(photos)
+  const validPhotoCount = input.validPhotoCount ?? 0
+  const photoCoverageTier = getPhotoCoverageTier(validPhotoCount)
 
   // Guard verdict — legacy data or null in DB would otherwise make verdictColor[verdict] undefined
   const verdict = VALID_VERDICTS.has(score.verdict) ? score.verdict : 'HIGH_RISK' as const
@@ -519,6 +524,30 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
         },
       ]),
       section(t('pdf.section.photoAnalysis'), [
+        // Prominent, coverage-aware status — must never read as a pass/fail
+        // result when little or no photo data actually exists. See
+        // src/lib/inspection/photo-coverage.ts for the shared tier logic.
+        {
+          text:
+            validPhotoCount === 0 ? t('report.photoCoverage.notPerformed.title')
+            : photoCoverageTier === 'INSUFFICIENT' ? t('report.photoCoverage.limited.title')
+            : photoCoverageTier === 'PARTIAL' ? t('report.photoCoverage.partial.title')
+            : t('report.photoCoverage.full.title'),
+          style: 'itemTitle',
+          color: validPhotoCount === 0 || photoCoverageTier === 'INSUFFICIENT' ? severityColor.critical
+            : photoCoverageTier === 'PARTIAL' ? severityColor.warning
+            : BRAND.ink,
+          margin: [0, 0, 0, 4],
+        },
+        {
+          text:
+            validPhotoCount === 0 ? t('report.photoCoverage.notPerformed.body')
+            : photoCoverageTier === 'INSUFFICIENT' ? t('report.photoCoverage.limited.body', { count: validPhotoCount })
+            : photoCoverageTier === 'PARTIAL' ? t('report.photoCoverage.partial.body')
+            : '',
+          style: 'body',
+          margin: [0, 0, 0, 8],
+        },
         severityDistribution(findings, t),
         embeddedPhotoGrid
           ? embeddedPhotoGrid

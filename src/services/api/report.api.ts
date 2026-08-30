@@ -22,11 +22,12 @@ export const reportApi = {
   downloadPdfReport: async (
     vehicleId: string,
     locale: string,
-    photos: ReportPhotoDraft[]
+    photos: ReportPhotoDraft[],
+    validPhotoCount: number
   ): Promise<PdfReportDownload> => {
     const response = await apiClient.post<Blob>(
       '/report/pdf',
-      { vehicleId, locale, photos },
+      { vehicleId, locale, photos, validPhotoCount },
       {
         responseType: 'blob',
         timeout: 45_000,

@@ -15,6 +15,7 @@ import { getCreditCost } from '@/lib/credits/product-credit-costs'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { buildInspectionReturnHref, detectPreliminaryMissingData } from '@/lib/report/preliminary'
 import { calculatePreliminaryRiskScore, AI_TOTAL_EXPECTED_PHOTOS } from '@/modules/scoring'
+import { getPhotoCoverageTier, isUsablePhotoResult, type AIResultLike } from '@/lib/inspection/photo-coverage'
 import type { RiskScore, ScoreCalculationInput, ScoreDimension } from '@/types'
 import AppShell from '../AppShell'
 import { DecisionBlock, ConfidenceIndicator } from './ReportSections'
@@ -79,6 +80,29 @@ function loadReportPhotoDrafts(vehicleId: string): ReportPhotoDraft[] {
     console.warn('[photo-drafts] failed to read photo drafts — clearing corrupted key', err)
     try { localStorage.removeItem(PHOTO_DRAFT_KEY) } catch { /* ignore */ }
     return []
+  }
+}
+
+/**
+ * Counts photos that are actually usable for this vehicle — unlike
+ * loadReportPhotoDrafts() (which counts any captured thumbnail, including
+ * failed/unusable ones, for embedding in the PDF), this drives the
+ * coverage-tier banner and must never inflate on a failed upload. Reads the
+ * same raw drafts but keeps aiResult (loadReportPhotoDrafts strips it)
+ * purely to classify usability via the same deriveUsability() the live
+ * inspection page uses — one definition of "valid", read from two places.
+ */
+function countValidReportPhotos(vehicleId: string): number {
+  try {
+    const raw = localStorage.getItem(PHOTO_DRAFT_KEY)
+    if (!raw) return 0
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return 0
+    return parsed.filter((d): d is { vehicleId: string; aiResult?: AIResultLike } =>
+      !!d && typeof d === 'object' && d.vehicleId === vehicleId && !!d.aiResult && isUsablePhotoResult(d.aiResult),
+    ).length
+  } catch {
+    return 0
   }
 }
 
@@ -740,6 +764,7 @@ export default function ReportPage() {
   const [pdfError,    setPdfError]    = useState<string | null>(null)
   const [isPreliminaryScore, setIsPreliminaryScore] = useState(false)
   const [reportPhotoCount, setReportPhotoCount] = useState(0)
+  const [reportValidPhotoCount, setReportValidPhotoCount] = useState(0)
   const [accessRequired, setAccessRequired] = useState(false)
   // Start false on the server (document.referrer is unavailable during SSR);
   // the effect below reads the real value once mounted on the client, same
@@ -1004,6 +1029,7 @@ export default function ReportPage() {
   useEffect(() => {
     if (!storesHydrated || !vehicleId) {
       setReportPhotoCount(0)
+      setReportValidPhotoCount(0)
       return
     }
 
@@ -1014,9 +1040,11 @@ export default function ReportPage() {
       // previous inspection of the same vehicle persist in localStorage but do
       // not represent photos uploaded in the current inspection session.
       setReportPhotoCount(drafts.length)
+      setReportValidPhotoCount(countValidReportPhotos(vehicleId))
     } catch (err) {
       console.error('[report] failed to read saved report photos', err, { vehicleId })
       setReportPhotoCount(0)
+      setReportValidPhotoCount(0)
     }
   }, [storesHydrated, vehicleId])
 
@@ -1227,7 +1255,7 @@ export default function ReportPage() {
     try {
       const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0]
       const photos = loadReportPhotoDrafts(vehicleId)
-      const { blob, filename } = await reportApi.downloadPdfReport(vehicleId, locale, photos)
+      const { blob, filename } = await reportApi.downloadPdfReport(vehicleId, locale, photos, reportValidPhotoCount)
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -1987,10 +2015,43 @@ export default function ReportPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginBottom: 4 }}>
-                          {safeReportT(t, 'report.noPhotosAnalysis.title', 'No photo analysis')}
+                          {safeReportT(t, 'report.noPhotosAnalysis.title', 'Photo analysis not performed')}
                         </div>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
                           {safeReportT(t, 'report.noPhotosAnalysis.body', 'Report generated without AI photo analysis, which may affect accuracy. Add photos for a more precise result.')}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Always-visible coverage status for 1–7 valid photos — shown
+                      regardless of whether findings exist, so a clean result on
+                      a handful of photos can never read as a full assessment. */}
+                  {hasCurrentPhotoAnalysis && getPhotoCoverageTier(reportValidPhotoCount) !== 'COMPLETE' && (
+                    <div style={{
+                      padding: '13px 16px',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      background: getPhotoCoverageTier(reportValidPhotoCount) === 'INSUFFICIENT'
+                        ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)',
+                      display: 'flex', gap: 10, alignItems: 'flex-start',
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke={getPhotoCoverageTier(reportValidPhotoCount) === 'INSUFFICIENT' ? '#ef4444' : '#f59e0b'}
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <div>
+                        <div style={{
+                          fontSize: 12.5, fontWeight: 700, marginBottom: 2,
+                          color: getPhotoCoverageTier(reportValidPhotoCount) === 'INSUFFICIENT' ? '#f87171' : '#fbbf24',
+                        }}>
+                          {getPhotoCoverageTier(reportValidPhotoCount) === 'INSUFFICIENT'
+                            ? safeReportT(t, 'report.photoCoverage.limited.title', 'Limited photo analysis')
+                            : safeReportT(t, 'report.photoCoverage.partial.title', 'Partial photo coverage')}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)', lineHeight: 1.55 }}>
+                          {getPhotoCoverageTier(reportValidPhotoCount) === 'INSUFFICIENT'
+                            ? safeReportT(t, 'report.photoCoverage.limited.body', 'Only {{count}} photo(s) were analyzed. The assessment may be incomplete or inaccurate because photo coverage was insufficient.', { count: reportValidPhotoCount })
+                            : safeReportT(t, 'report.photoCoverage.partial.body', 'Additional recommended angles could improve confidence in this result.')}
                         </div>
                       </div>
                     </div>
@@ -2073,10 +2134,12 @@ export default function ReportPage() {
                       )
                     }
                     // Coverage-aware "no issues" message — never say "all good" when coverage is low.
-                    const aiCoverageRatio = reportPhotoCount > 0 ? reportPhotoCount / AI_TOTAL_EXPECTED_PHOTOS : 0
+                    // Driven by validated photo count (same tiers as the live
+                    // inspection page and the PDF), not a raw capture-count ratio.
+                    const noIssuesCoverageTier = getPhotoCoverageTier(reportValidPhotoCount)
                     const noIssuesHeadline =
-                      aiCoverageRatio < 0.3 ? t('inspection.noFlagsVeryLimited') :
-                      aiCoverageRatio < 0.5 ? t('inspection.noFlagsPartialCoverage') :
+                      noIssuesCoverageTier === 'INSUFFICIENT' ? t('inspection.noFlagsVeryLimited') :
+                      noIssuesCoverageTier === 'PARTIAL' ? t('inspection.noFlagsPartialCoverage') :
                       t('inspection.noFlagsRaised')
                     const noIssuesDetail = riskScore?.dimensions?.ai?.explanation
                       ? (translateDimensionExplanationV2('ai', riskScore.dimensions.ai.explanation, t) ?? t('report.dimExplanation.ai.clean'))

@@ -26,6 +26,13 @@ const BodySchema = z.object({
   vehicleId: z.string().min(1),
   locale: z.string().min(2).max(10).optional().default('en'),
   photos: z.array(PhotoDraftSchema).max(8).optional().default([]),
+  // How many of the client's captured photos were actually analyzed and
+  // usable (excludes failed/unusable ones) — drives the PDF's photo-coverage
+  // status line. Computed client-side by the same logic the on-screen report
+  // uses (src/lib/inspection/photo-coverage.ts); not independently trusted
+  // for anything beyond display text, so a client under/over-reporting it
+  // has no security or entitlement consequence.
+  validPhotoCount: z.number().int().min(0).max(8).optional().default(0),
 })
 
 function toVehicleDto(vehicle: NonNullable<Awaited<ReturnType<typeof prisma.vehicle.findFirst>>>): Vehicle {
@@ -108,7 +115,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const { vehicleId, photos } = parsed.data
+  const { vehicleId, photos, validPhotoCount } = parsed.data
   const locale = normalizePdfLocale(parsed.data.locale)
   const requestId          = generateRequestId()
   const reqStart           = Date.now()
@@ -237,6 +244,7 @@ export async function POST(req: NextRequest) {
         findings,
         checklistItems,
         photos,
+        validPhotoCount,
         generatedAt: new Date(),
         locale,
       })
