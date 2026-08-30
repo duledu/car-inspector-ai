@@ -146,11 +146,21 @@ export function AiConsentModal({ onAccept }: AiConsentModalProps) {
             onFocus={() => setCheckboxFocused(true)}
             onBlur={() => setCheckboxFocused(false)}
             style={{
+              // Covers the ENTIRE row (not a 1x1px dot) and is the real tap
+              // target — tapping the glyph, the label text, or empty space
+              // in the row all land directly on this native input. Earlier
+              // this relied on label[for]-forwarded activation to a
+              // pointer-events:none, near-zero-size input, which some
+              // Android WebView builds do not reliably deliver — real-device
+              // testing found the checkbox could not be checked at all.
               position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              margin: 0,
               opacity: 0,
-              pointerEvents: 'none',
-              width: 1,
-              height: 1,
+              cursor: 'pointer',
+              touchAction: 'manipulation',
             }}
           />
           <span
