@@ -153,14 +153,87 @@ describe('calculateRiskScore', () => {
     )
   })
 
-  test('no uploaded photos lowers AI confidence instead of showing a high safe score', () => {
+  test('no uploaded photos marks the AI dimension NOT_ASSESSED and excludes it from the overall score, never a passing number', () => {
     const result = calculateRiskScore('no-photos', emptyInput)
 
-    expect(result.dimensions.ai.score).toBe(68)
-    expect(result.dimensions.ai.explanation).toBe(
-      'No photo analysis data available. Upload more clear photos for a reliable AI assessment.'
+    // The 68 this used to return was the actual bug real-device testers
+    // found: zero photos scoring as weak-but-positive evidence, dragging a
+    // "Strong Buy" verdict along with it. It must never be a number a human
+    // could read as a real assessment result.
+    expect(result.dimensions.ai.signals?.visualCoverage).toBe('NOT_ASSESSED')
+    expect(result.dimensions.ai.explanation).toContain('No photo analysis data available')
+    expect(result.dimensions.ai.explanation).not.toMatch(/no issues|no obvious issues|clean|passed/i)
+  })
+
+  test('zero valid photos cannot produce a STRONG_BUY verdict even when every other dimension is excellent', () => {
+    const allOkChecklist = (['EXTERIOR', 'INTERIOR', 'MECHANICAL', 'DOCUMENTS'] as const).flatMap((category) =>
+      Array.from({ length: 4 }, (_, i) => makeChecklistItem({ id: `${category}-${i}`, category, status: 'OK' }))
     )
-    expect(result.dimensions.ai.signals?.visualMaxScore).toBe(74)
+    const result = calculateRiskScore('no-photos-otherwise-clean', {
+      ...emptyInput,
+      checklistItems: allOkChecklist,
+      testDriveRatings: { accel: 1, brakes: 1, steering: 1 },
+      vinData: makeVinHistory(),
+      hasPremiumHistory: true,
+    })
+
+    expect(result.dimensions.ai.signals?.visualCoverage).toBe('NOT_ASSESSED')
+    expect(result.verdict).not.toBe('STRONG_BUY')
+  })
+
+  test('excluding the not-assessed AI dimension does not punish the vehicle — the remaining evidence is scored on its own terms, not penalized for the exclusion', () => {
+    const cleanChecklist = (['EXTERIOR', 'INTERIOR', 'MECHANICAL', 'DOCUMENTS'] as const).flatMap((category) =>
+      Array.from({ length: 4 }, (_, i) => makeChecklistItem({ id: `${category}-${i}`, category, status: 'OK' }))
+    )
+    const withoutPhotos = calculateRiskScore('no-photos-clean', {
+      ...emptyInput,
+      checklistItems: cleanChecklist,
+      testDriveRatings: { accel: 1 },
+    })
+    // Removing a genuinely-assessed AI dimension (findings, real photos) and
+    // replacing it with NOT_ASSESSED must not itself subtract points from
+    // the remaining dimensions' own weighted average.
+    const withCleanPhotos = calculateRiskScore('with-photos-clean', {
+      ...emptyInput,
+      checklistItems: cleanChecklist,
+      testDriveRatings: { accel: 1 },
+      photoCount: 8,
+    })
+    expect(withoutPhotos.buyScore).toBeGreaterThanOrEqual(withCleanPhotos.buyScore - 5)
+  })
+
+  test('1-2 valid photos (LIMITED coverage) still contribute a real, heavily-capped score and also cap the verdict below STRONG_BUY', () => {
+    const result = calculateRiskScore('limited-photos', { ...emptyInput, photoCount: 2 })
+
+    expect(result.dimensions.ai.signals?.visualCoverage).toBe('LIMITED')
+    expect(result.dimensions.ai.score).toBeLessThanOrEqual(65)
+    expect(result.verdict).not.toBe('STRONG_BUY')
+  })
+
+  test('3-7 valid photos (PARTIAL coverage) are tagged PARTIAL and do not force the same hard verdict cap as 0-2', () => {
+    const threePhotos = calculateRiskScore('partial-3', { ...emptyInput, photoCount: 3 })
+    const sevenPhotos = calculateRiskScore('partial-7', { ...emptyInput, photoCount: 7 })
+
+    expect(threePhotos.dimensions.ai.signals?.visualCoverage).toBe('PARTIAL')
+    expect(sevenPhotos.dimensions.ai.signals?.visualCoverage).toBe('PARTIAL')
+  })
+
+  test('a full 8-photo set is tagged FULL coverage', () => {
+    const result = calculateRiskScore('full-photos', { ...emptyInput, photoCount: 8 })
+    expect(result.dimensions.ai.signals?.visualCoverage).toBe('FULL')
+  })
+
+  test('a real actionable finding is never excluded from the overall score merely because the caller omitted photoCount', () => {
+    // Regression guard: a finding proves at least one photo was assessed —
+    // visualCoverage must not read as NOT_ASSESSED just because an upstream
+    // caller forgot to also pass a photo count alongside real findings.
+    const findings = Array.from({ length: 5 }, (_, i) =>
+      makeAIFinding({ id: `f${i}`, severity: 'critical', confidence: 85 })
+    )
+    const result = calculateRiskScore('findings-no-count', { ...emptyInput, aiFindings: findings })
+
+    expect(result.dimensions.ai.signals?.visualCoverage).not.toBe('NOT_ASSESSED')
+    expect(result.verdict).toBe('HIGH_RISK')
   })
 
   test('problem checklist items reduce score', () => {

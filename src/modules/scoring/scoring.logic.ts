@@ -6,6 +6,7 @@
 import type {
   ScoreCalculationInput,
   ScoreDimension,
+  ScoreDimensionSignals,
   RiskScore,
   Verdict,
   AIFinding,
@@ -366,6 +367,21 @@ function getAIFindingImpactWeight(finding: AIFinding): number {
 
 // â”€â”€â”€ AI Score Calculation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+/**
+ * How much of the vehicle's visual condition this photo set actually
+ * covers. NOT_ASSESSED (0 photos) is categorically different from the
+ * others — it means no visual evidence exists at all, not "weak" evidence,
+ * and callers must never average its score into an overall number or let
+ * it support a confident verdict. See ScoreDimensionSignals.visualCoverage.
+ */
+function getVisualCoverage(safePhotoCount: number, safeTotal: number): 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL' {
+  if (safePhotoCount === 0) return 'NOT_ASSESSED'
+  if (safePhotoCount >= safeTotal) return 'FULL'
+  const coverageRatio = safePhotoCount / safeTotal
+  if (coverageRatio < 0.3) return 'LIMITED'
+  return 'PARTIAL'
+}
+
 function calculateAIScore(
   findings: AIFinding[],
   photoCount?: number | null,
@@ -382,54 +398,66 @@ function calculateAIScore(
     const confidence = clampScore(finding.confidence, 0, 100, 55)
     return finding.severity !== 'info' && confidence >= 45
   })
+  // A real finding proves at least one photo was actually assessed, even if
+  // the caller didn't separately report a photo count — visual evidence
+  // must never be excluded from the overall score just because an upstream
+  // count was left unset while genuine findings exist.
+  const coveragePhotoCount = Math.max(safePhotoCount, actionableFindings.length)
+  const safeTotal = Math.max(coveragePhotoCount, coercePositiveCount(totalExpectedPhotos) ?? AI_TOTAL_EXPECTED_PHOTOS)
+  const visualCoverage = getVisualCoverage(coveragePhotoCount, safeTotal)
 
   if (actionableFindings.length === 0) {
     if (safePhotoCount === 0) {
+      // No photos were analyzed at all — this is an absence of evidence,
+      // not weak-but-real evidence. The numeric score here is a neutral
+      // placeholder that MUST be excluded from the weighted overall score
+      // (see calculateRiskScore) and MUST render as "Not assessed", never
+      // as a passing/positive number.
       return {
         label: 'AI Photo Analysis',
-        score: 68,
+        score: 50,
         weight: SCORE_WEIGHTS.ai,
-        explanation: 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.',
-        signals: { hasMeaningfulIssues: true, visualMaxScore: 74 },
+        explanation: 'No photo analysis data available. Upload photos for a visual assessment.',
+        signals: { hasMeaningfulIssues: false, visualCoverage },
       }
     }
 
     // Coverage ratio — how many of the expected angles were actually analyzed.
     // Prevents "no issues detected" from being treated as a clean bill of health
     // when only a fraction of the vehicle was inspected.
-    const safeTotal = Math.max(safePhotoCount, coercePositiveCount(totalExpectedPhotos) ?? AI_TOTAL_EXPECTED_PHOTOS)
-    const coverageRatio = safePhotoCount / safeTotal
-
-    if (coverageRatio < 0.3) {
-      // 1–2 of 8 photos analyzed — nearly nothing inspected.
+    if (visualCoverage === 'LIMITED') {
+      // 1–2 of 8 photos analyzed — nearly nothing inspected. Real but very
+      // weak evidence: still contributes to the overall score (unlike the
+      // zero-photo case), but capped low and the verdict is separately
+      // capped away from STRONG_BUY (see enforceVisualCoverageCap).
       return {
         label: 'AI Photo Analysis',
         score: 58,
         weight: SCORE_WEIGHTS.ai,
         explanation: `No issues detected in ${safePhotoCount} of ${safeTotal} analyzed photos. Very limited coverage — most of the vehicle was not inspected.`,
-        signals: { hasMeaningfulIssues: true, visualMaxScore: 65 },
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 65, visualCoverage },
       }
     }
 
-    if (coverageRatio < 0.5) {
+    if (visualCoverage === 'PARTIAL' && safePhotoCount < 4) {
       // 3 of 8 photos analyzed — less than half the vehicle covered.
       return {
         label: 'AI Photo Analysis',
         score: 72,
         weight: SCORE_WEIGHTS.ai,
         explanation: `No issues detected in ${safePhotoCount} of ${safeTotal} analyzed photos. Partial coverage — results may not reflect the full vehicle condition.`,
-        signals: { hasMeaningfulIssues: true, visualMaxScore: 79, issueCount: 0, issueRatio: 0 },
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 79, issueCount: 0, issueRatio: 0, visualCoverage },
       }
     }
 
-    // coverage >= 0.5: apply the pre-existing threshold logic unchanged.
-    if (safePhotoCount < 5) {
+    if (visualCoverage === 'PARTIAL') {
+      // 4–7 of 8 photos analyzed.
       return {
         label: 'AI Photo Analysis',
         score: 82,
         weight: SCORE_WEIGHTS.ai,
         explanation: 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.',
-        signals: { hasMeaningfulIssues: true, visualMaxScore: 89, issueCount: 0, issueRatio: 0 },
+        signals: { hasMeaningfulIssues: true, visualMaxScore: 89, issueCount: 0, issueRatio: 0, visualCoverage },
       }
     }
 
@@ -438,6 +466,7 @@ function calculateAIScore(
       score: 92,
       weight: SCORE_WEIGHTS.ai,
       explanation: 'No obvious issues detected from available photos. Results are advisory only.',
+      signals: { visualCoverage },
     }
   }
 
@@ -541,6 +570,7 @@ function calculateAIScore(
       issueCount: actionableFindings.length,
       issueRatio,
       confidence: averageConfidence,
+      visualCoverage,
     },
   }
 }
@@ -1005,6 +1035,19 @@ function enforceVerdictCaps(
   return afterHistoryCap
 }
 
+/**
+ * Missing/critically-insufficient visual evidence must never support a
+ * confident purchase recommendation. Mirrors enforceVerdictCaps' pattern:
+ * a WORSE verdict already driven by real evidence elsewhere (checklist
+ * problems, VIN damage) is never softened by this cap â€” it only prevents
+ * absence-of-photo-evidence from being read as a green light.
+ */
+export function enforceVisualCoverageCap(verdict: Verdict, aiSignals: ScoreDimensionSignals | undefined): Verdict {
+  const coverage = aiSignals?.visualCoverage
+  if (coverage !== 'NOT_ASSESSED' && coverage !== 'LIMITED') return verdict
+  return verdict === 'STRONG_BUY' ? 'BUY_WITH_CAUTION' : verdict
+}
+
 // â”€â”€â”€ Reason Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateReasons(
@@ -1107,23 +1150,40 @@ function calculateAllDimensions(input: ScoreCalculationInput) {
  *   4. Enforce hard verdict caps (no history + damage â†’ HIGH_RISK)
  *   5. Generate risk flags, reasons, negotiation hints
  */
-export function calculateRiskScore(
-  vehicleId: string,
-  input: ScoreCalculationInput
-): Omit<RiskScore, 'id' | 'createdAt'> {
-  const dimensions = calculateAllDimensions(input)
-
-  // 1. Weighted average base score
-  const totalWeight = Object.values(SCORE_WEIGHTS).reduce((sum, w) => sum + w, 0)
+/**
+ * Weighted average across dimensions, EXCLUDING any dimension whose visual
+ * coverage is NOT_ASSESSED (currently: zero valid photos). Missing
+ * evidence must never be averaged in as if it were a real score â€” it is
+ * excluded and the remaining, genuinely-assessed dimensions' weights are
+ * renormalized to fill the gap. This does not penalize the vehicle (no
+ * points are subtracted for the exclusion); it simply declines to invent
+ * a number for a domain that was never examined.
+ */
+function computeWeightedBuyScore(dimensions: ReturnType<typeof calculateAllDimensions>): number {
+  const entries = Object.entries(dimensions) as Array<[string, ScoreDimension]>
+  const assessed = entries.filter(([, dim]) => dim.signals?.visualCoverage !== 'NOT_ASSESSED')
+  const totalWeight = (assessed.length > 0 ? assessed : entries).reduce((sum, [, dim]) => sum + safeNumber(dim.weight, 0), 0)
   const safeTotalWeight = safeNumber(totalWeight, 100) > 0 ? safeNumber(totalWeight, 100) : 100
-  const weightedSum = Object.entries(dimensions).reduce((sum, [key, dim]) => {
+
+  const weightedSum = (assessed.length > 0 ? assessed : entries).reduce((sum, [key, dim]) => {
     logInvalidNumber(`dimension.${key}.score`, dim.score, 50)
     logInvalidNumber(`dimension.${key}.weight`, dim.weight, 0)
     const s = clampScore(dim.score, 0, 100, 50)
     const w = safeNumber(dim.weight, 0)
     return sum + s * (w / safeTotalWeight)
   }, 0)
-  let buyScore = clampScore(weightedSum, 10, 96, 50)
+
+  return clampScore(weightedSum, 10, 96, 50)
+}
+
+export function calculateRiskScore(
+  vehicleId: string,
+  input: ScoreCalculationInput
+): Omit<RiskScore, 'id' | 'createdAt'> {
+  const dimensions = calculateAllDimensions(input)
+
+  // 1. Weighted average base score (excludes not-assessed dimensions)
+  let buyScore = computeWeightedBuyScore(dimensions)
 
   // 2. Service history modifier
   const serviceStatus = safeServiceHistoryStatus(input.serviceHistoryStatus ?? deriveServiceHistoryStatus(input.checklistItems))
@@ -1138,6 +1198,7 @@ export function calculateRiskScore(
   let verdict = determineVerdict(buyScore)
   const riskFlags = [...svcEffect.flags, ...dmgEffect.flags]
   verdict = enforceVerdictCaps(verdict, serviceStatus, input.vinData, dmgEffect.flags)
+  verdict = enforceVisualCoverageCap(verdict, dimensions.ai.signals)
 
   // 5. Reasons + negotiation hints
   const { reasonsFor, reasonsAgainst } = generateReasons(input, serviceStatus, riskFlags)
@@ -1176,10 +1237,18 @@ export function calculatePreliminaryRiskScore(
     return calculateRiskScore(vehicleId, input)
   }
 
-  const totalWeight = includedDimensions.reduce((sum, [, dim]) => sum + safeNumber(dim.weight, 0), 0)
+  // Missing evidence must never be averaged in as if it were a real score
+  // (see computeWeightedBuyScore) — applies here too, on top of the
+  // caller's own "has this section been started" filter.
+  const assessedIncludedDimensions = includedDimensions.filter(
+    ([, dim]) => dim.signals?.visualCoverage !== 'NOT_ASSESSED'
+  )
+  const scoredDimensions = assessedIncludedDimensions.length > 0 ? assessedIncludedDimensions : includedDimensions
+
+  const totalWeight = scoredDimensions.reduce((sum, [, dim]) => sum + safeNumber(dim.weight, 0), 0)
   const safeTotalWeight = safeNumber(totalWeight, 0) > 0 ? safeNumber(totalWeight, 0) : 100
 
-  const weightedSum = includedDimensions.reduce((sum, [, dim]) => {
+  const weightedSum = scoredDimensions.reduce((sum, [, dim]) => {
     return sum + clampScore(dim.score, 0, 100, 50) * (safeNumber(dim.weight, 0) / safeTotalWeight)
   }, 0)
 
@@ -1210,6 +1279,7 @@ export function calculatePreliminaryRiskScore(
     hasVinInput ? input.vinData : null,
     dmgEffect.flags,
   )
+  verdict = enforceVisualCoverageCap(verdict, dimensions.ai.signals)
 
   const reasonInput: ScoreCalculationInput = {
     ...input,

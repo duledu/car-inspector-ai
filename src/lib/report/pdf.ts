@@ -286,6 +286,10 @@ function scoreGauge(score: number, color: string): Content {
 }
 
 function dimensionBars(score: RiskScore, t: PdfTranslate): Content {
+  // AI/visual is a neutral placeholder score when zero valid photos exist
+  // (see ScoreDimensionSignals.visualCoverage) — must render as "Not
+  // assessed", never as a numeric bar implying a real result.
+  const aiNotAssessed = score.dimensions.ai.signals?.visualCoverage === 'NOT_ASSESSED'
   const items = [
     ['ai', score.dimensions.ai.score],
     ['exterior', score.dimensions.exterior.score],
@@ -298,16 +302,23 @@ function dimensionBars(score: RiskScore, t: PdfTranslate): Content {
     margin: [0, 8, 0, 0],
     table: {
       widths: [78, '*', 28],
-      body: items.map(([key, value]) => [
-        { text: t(`dim.${key}`), style: 'caption', margin: [0, 3, 6, 3] },
-        {
-          canvas: [
-            { type: 'rect', x: 0, y: 4, w: 190, h: 7, r: 4, color: '#e5e7eb' },
-            { type: 'rect', x: 0, y: 4, w: Math.round((Math.max(0, Math.min(100, value)) / 100) * 190), h: 7, r: 4, color: value >= 75 ? BRAND.green : value >= 55 ? BRAND.amber : BRAND.red },
-          ],
-        },
-        { text: String(value), style: 'caption', bold: true, alignment: 'right', margin: [0, 2, 0, 0] },
-      ]),
+      body: items.map(([key, value]) => {
+        const notAssessed = key === 'ai' && aiNotAssessed
+        return [
+          { text: t(`dim.${key}`), style: 'caption', margin: [0, 3, 6, 3] },
+          notAssessed
+            ? { canvas: [{ type: 'rect', x: 0, y: 4, w: 190, h: 7, r: 4, color: '#e5e7eb' }] }
+            : {
+                canvas: [
+                  { type: 'rect', x: 0, y: 4, w: 190, h: 7, r: 4, color: '#e5e7eb' },
+                  { type: 'rect', x: 0, y: 4, w: Math.round((Math.max(0, Math.min(100, value)) / 100) * 190), h: 7, r: 4, color: value >= 75 ? BRAND.green : value >= 55 ? BRAND.amber : BRAND.red },
+                ],
+              },
+          notAssessed
+            ? { text: t('report.visualNotAssessed'), style: 'caption', bold: true, alignment: 'right', margin: [0, 2, 0, 0], color: '#94a3b8' }
+            : { text: String(value), style: 'caption', bold: true, alignment: 'right', margin: [0, 2, 0, 0] },
+        ]
+      }),
     },
     layout: 'noBorders',
   }
@@ -374,6 +385,10 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
 
   // Guard verdict — legacy data or null in DB would otherwise make verdictColor[verdict] undefined
   const verdict = VALID_VERDICTS.has(score.verdict) ? score.verdict : 'HIGH_RISK' as const
+  // Authoritative — read from the score the scoring engine actually
+  // computed (dimensions.ai.signals), not re-derived from the client-sent
+  // photo count, so this can never disagree with what produced buyScore/verdict.
+  const visualCoverage = score.dimensions.ai.signals?.visualCoverage
 
   const sections = research.sections ?? {}
   const knownIssues = [
@@ -504,6 +519,23 @@ function createDocDefinition(input: PdfReportInput): TDocumentDefinitions {
               { text: t(`pdf.risk.${verdict}`), fontSize: 17, bold: true, color: verdictColor[verdict] },
               { text: summary.join(' '), style: 'body', margin: [0, 7, 0, 0] },
               { stack: [scoreGauge(score.buyScore, verdictColor[verdict])], margin: [0, 13, 0, 0] },
+              // Missing/critically limited visual evidence must never read
+              // as a confident recommendation — same authoritative copy and
+              // trigger condition as the on-screen report's DecisionBlock
+              // override, so the two surfaces can never contradict.
+              ...(visualCoverage === 'NOT_ASSESSED' || visualCoverage === 'LIMITED'
+                ? [
+                    { text: t('report.decision.headline.limitedAssessment'), style: 'itemTitle', color: BRAND.amber, margin: [0, 12, 0, 4] } as Content,
+                    {
+                      text: t(
+                        visualCoverage === 'NOT_ASSESSED'
+                          ? 'report.decision.body.limitedAssessmentNoPhotos'
+                          : 'report.decision.body.limitedAssessmentFewPhotos',
+                      ),
+                      style: 'body',
+                    } as Content,
+                  ]
+                : []),
             ],
           },
         ],

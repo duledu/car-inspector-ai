@@ -197,6 +197,16 @@ export interface ScoreDimensionSignals {
   issueCount?: number
   issueRatio?: number
   confidence?: number
+  /**
+   * How much of the vehicle's visual condition was actually assessed —
+   * authoritative source for report/PDF display, verdict capping, and the
+   * overall weighted score. NOT_ASSESSED means the numeric `score` on this
+   * dimension is a neutral placeholder ONLY and MUST be excluded from any
+   * weighted-average calculation and MUST render as "Not assessed" rather
+   * than a number. Currently only set on the `ai` (photo) dimension.
+   * See src/modules/scoring/scoring.logic.ts.
+   */
+  visualCoverage?: 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL'
 }
 
 export interface ScoreDimension {

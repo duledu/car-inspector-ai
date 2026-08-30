@@ -6,7 +6,7 @@
 import { prisma, isMissingTableOrColumnError } from '@/config/prisma'
 import { getInspectionCompletion, normalizeChecklistItems } from '@/lib/inspection/checklist'
 import { generateRequestId, pipelineLog } from '@/lib/logger'
-import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS } from './scoring.logic'
+import { calculateRiskScore, clampScore, AI_TOTAL_EXPECTED_PHOTOS, enforceVisualCoverageCap } from './scoring.logic'
 import type { ScoreCalculationInput, RiskScore, AIFinding } from '@/types'
 import type { AIResult, ChecklistItem } from '@prisma/client'
 
@@ -26,6 +26,28 @@ function sanitizeDimension(raw: any, label: string, weight: number, fallbackScor
     weight: clampScore(raw.weight, 0, 100, weight),
     explanation: typeof raw.explanation === 'string' ? raw.explanation : 'Score details unavailable.',
   }
+}
+
+/**
+ * Reports generated before the visualCoverage signal existed never persisted
+ * it in their `breakdown` JSON — their AI dimension carries only the old
+ * hardcoded score/explanation pairs. Infer the equivalent coverage tier from
+ * those exact legacy pairs so historical reports render "Not assessed" and
+ * lose their STRONG_BUY/"Safe to proceed" copy instead of silently keeping
+ * the pre-fix contradiction forever. This is a read-time-only inference —
+ * it never writes back to the database. Returns undefined (no correction)
+ * for any dimension that doesn't match a known legacy pair, including every
+ * row created after this fix (which always sets signals.visualCoverage).
+ */
+function inferLegacyVisualCoverage(aiDimension: any): 'NOT_ASSESSED' | 'LIMITED' | undefined {
+  const explanation = typeof aiDimension?.explanation === 'string' ? aiDimension.explanation : ''
+  if (aiDimension?.score === 68 && explanation === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') {
+    return 'NOT_ASSESSED'
+  }
+  if (aiDimension?.score === 58 && /^No issues detected in \d+ of \d+ analyzed photos\. Very limited coverage/.test(explanation)) {
+    return 'LIMITED'
+  }
+  return undefined
 }
 
 export class ScoringService {
@@ -289,12 +311,30 @@ export class ScoringService {
       testDrive: sanitizeDimension(dimensions.testDrive, 'Test Drive', 10, raw.testDriveScore ?? 72),
       documents: sanitizeDimension(dimensions.documents, 'Document Check', 2, raw.documentScore ?? 70),
     }
+
+    // Legacy reports (generated before the visualCoverage signal existed)
+    // never persisted it — infer it here, at read time only, so old
+    // zero/low-photo reports stop displaying a numeric "Visual Inspection"
+    // score and a STRONG_BUY/"Safe to proceed" verdict that contradicts
+    // their own "no photo analysis" notice. No database write occurs.
+    let verdict = raw.verdict
+    if (!safeDimensions.ai.signals?.visualCoverage) {
+      const legacyCoverage = inferLegacyVisualCoverage(safeDimensions.ai)
+      if (legacyCoverage) {
+        safeDimensions.ai = {
+          ...safeDimensions.ai,
+          signals: { ...safeDimensions.ai.signals, visualCoverage: legacyCoverage },
+        }
+        verdict = enforceVisualCoverageCap(verdict, safeDimensions.ai.signals)
+      }
+    }
+
     return {
       id:          raw.id,
       vehicleId:   raw.vehicleId,
       buyScore:    clampScore(raw.buyScore, 10, 96, 50),
       riskScore:   clampScore(raw.riskScore, 4, 90, 50),
-      verdict:     raw.verdict,
+      verdict,
       dimensions: safeDimensions,
       hasPremiumData:       raw.hasPremuimData,
       reasonsFor:           raw.reasonsFor  ?? [],

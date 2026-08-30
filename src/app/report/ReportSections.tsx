@@ -12,6 +12,8 @@ function safeT(t: Translate, key: string, fallback: string, options?: Record<str
   )
 }
 
+type VisualCoverage = 'NOT_ASSESSED' | 'LIMITED' | 'PARTIAL' | 'FULL'
+
 interface DecisionBlockProps {
   verdict: string
   riskFlagCount: number
@@ -19,6 +21,11 @@ interface DecisionBlockProps {
   verdictColor: string
   verdictBg: string
   verdictBorder: string
+  /** From riskScore.dimensions.ai.signals?.visualCoverage — missing/critically
+   * limited visual evidence must show its own explanation, not whichever
+   * verdict-keyed copy happens to apply, since "we couldn't check visually"
+   * is a materially different message from "checklist flagged minor risks". */
+  visualCoverage?: VisualCoverage
   t: Translate
 }
 
@@ -27,8 +34,34 @@ function buildDecisionContent(
   criticalCount: number,
   riskFlagCount: number,
   t: Translate,
+  visualCoverage: VisualCoverage = 'FULL',
 ): { headline: string; body: string } | null {
   const total = criticalCount + riskFlagCount
+
+  // A worse verdict already earned by real evidence elsewhere (checklist
+  // problems, VIN damage, etc.) is never softened by missing photos — this
+  // override only intercepts verdicts that would otherwise read as
+  // confident/positive despite inadequate visual evidence.
+  if (
+    (visualCoverage === 'NOT_ASSESSED' || visualCoverage === 'LIMITED')
+    && verdict !== 'HIGH_RISK' && verdict !== 'WALK_AWAY'
+  ) {
+    return {
+      headline: safeT(t, 'report.decision.headline.limitedAssessment', 'Limited assessment — visual condition not verified'),
+      body: visualCoverage === 'NOT_ASSESSED'
+        ? safeT(
+            t,
+            'report.decision.body.limitedAssessmentNoPhotos',
+            "The available checklist information did not identify major concerns, but no AI photo assessment was performed. The vehicle's visual condition has therefore not been assessed. Add the recommended photos or verify the vehicle visually before making a purchase decision.",
+          )
+        : safeT(
+            t,
+            'report.decision.body.limitedAssessmentFewPhotos',
+            "Too few photos were analyzed to reliably assess the vehicle's visual condition. Add more photos or verify the vehicle visually before making a purchase decision.",
+          ),
+    }
+  }
+
   switch (verdict) {
     case 'STRONG_BUY':
       return {
@@ -87,9 +120,10 @@ export function DecisionBlock({
   verdictColor,
   verdictBg,
   verdictBorder,
+  visualCoverage,
   t,
 }: Readonly<DecisionBlockProps>) {
-  const content = buildDecisionContent(verdict, criticalFindingCount, riskFlagCount, t)
+  const content = buildDecisionContent(verdict, criticalFindingCount, riskFlagCount, t, visualCoverage)
   if (!content) return null
 
   return (

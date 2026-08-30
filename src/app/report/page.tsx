@@ -269,8 +269,11 @@ function translateDimensionExplanationV2(key: string, text: string | undefined, 
   if (normalizedText === 'No obvious issues detected from available photos. Limited photo coverage reduces confidence.') {
     return safeReportT(t, 'report.dimExplanation.ai.limited', 'No obvious issues in available photos, but limited coverage reduces confidence.')
   }
-  if (normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.') {
-    return safeReportT(t, 'report.dimExplanation.ai.noData', 'AI photo analysis is not yet available. Add more clear photos for a reliable assessment.')
+  if (
+    normalizedText === 'No photo analysis data available. Upload more clear photos for a reliable AI assessment.'
+    || normalizedText === 'No photo analysis data available. Upload photos for a visual assessment.'
+  ) {
+    return safeReportT(t, 'report.dimExplanation.ai.noData', 'No photos were analyzed. Add photos for a visual assessment.')
   }
 
   const aiVeryLimitedMatch = normalizedText.match(/^No issues detected in (\d+) of (\d+) analyzed photos\. Very limited coverage/)
@@ -528,7 +531,34 @@ function DimBar({
   score,
   explanation,
   visualMaxScore,
-}: Readonly<{ label: string; score: number; explanation?: string; visualMaxScore?: number }>) {
+  notAssessed,
+  notAssessedLabel,
+}: Readonly<{
+  label: string
+  score: number
+  explanation?: string
+  visualMaxScore?: number
+  /** True when zero valid photos exist — the numeric score is a neutral
+   * placeholder only (see ScoreDimensionSignals.visualCoverage) and must
+   * never be shown as if it were a real result. */
+  notAssessed?: boolean
+  notAssessedLabel?: string
+}>) {
+  if (notAssessed) {
+    return (
+      <div style={{ padding: '13px 15px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '-0.1px' }}>{notAssessedLabel ?? 'Not assessed'}</span>
+        </div>
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }} />
+        {explanation && (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 7, lineHeight: 1.5 }}>{explanation}</div>
+        )}
+      </div>
+    )
+  }
+
   const severity = getDimensionSeverity(score, visualMaxScore)
   return (
     <div style={{ padding: '13px 15px', background: severity.background, border: `1px solid ${severity.border}`, borderRadius: 12 }}>
@@ -1798,12 +1828,13 @@ export default function ReportPage() {
                 verdictColor={verdict.color}
                 verdictBg={verdict.bg}
                 verdictBorder={verdict.border}
+                visualCoverage={riskScore.dimensions.ai.signals?.visualCoverage}
                 t={t}
               />
             )}
 
             <ConfidenceIndicator
-              photoCount={reportPhotoCount}
+              photoCount={reportValidPhotoCount}
               hasAIResults={latestAI !== null}
               checklistComplete={sectionProgress.isComplete}
               hasAnyChecklistData={sectionProgress.hasAnyData}
@@ -1898,6 +1929,8 @@ export default function ReportPage() {
                           score={dim.score}
                           explanation={translated}
                           visualMaxScore={vms}
+                          notAssessed={(dim as ScoreDimension).signals?.visualCoverage === 'NOT_ASSESSED'}
+                          notAssessedLabel={safeReportT(t, 'report.visualNotAssessed', 'Not assessed')}
                         />
                       )
                     }

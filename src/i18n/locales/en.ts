@@ -634,6 +634,14 @@ const en = {
   'report.decision.body.highRisk':    'Serious issues were detected. Get a professional inspection before making any decision.',
   'report.decision.headline.walkAway': 'Not recommended',
   'report.decision.body.walkAway':    'Multiple critical problems were found. The risks outweigh the value of this vehicle at the asking price.',
+  // Missing or critically limited visual evidence overrides any verdict-keyed
+  // copy above (except HIGH_RISK/WALK_AWAY, which reflect real evidence found
+  // elsewhere) — "not assessed" must never read as "clear". Shared verbatim
+  // between the on-screen report and the PDF.
+  'report.decision.headline.limitedAssessment': 'Limited assessment — visual condition not verified',
+  'report.decision.body.limitedAssessmentNoPhotos': 'The available checklist information did not identify major concerns, but no AI photo assessment was performed. The vehicle’s visual condition has therefore not been assessed. Add the recommended photos or verify the vehicle visually before making a purchase decision.',
+  'report.decision.body.limitedAssessmentFewPhotos': 'Too few photos were analyzed to reliably assess the vehicle’s visual condition. Add more photos or verify the vehicle visually before making a purchase decision.',
+  'report.visualNotAssessed': 'Not assessed',
   'report.confidenceLabel':           'Confidence',
   'report.confidence.high':           'High - sufficient data for reliable analysis',
   'report.confidence.medium':         'Moderate - partial data, results are indicative',
