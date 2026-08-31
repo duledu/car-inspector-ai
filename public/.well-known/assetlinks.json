@@ -5,8 +5,10 @@
       "namespace": "android_app",
       "package_name": "com.usedcarsdoctor.app",
       "sha256_cert_fingerprints": [
+        "ED:F1:2C:97:41:07:2F:FF:78:12:8F:6B:01:2F:0E:45:1A:A7:54:D8:73:FD:D7:56:A2:2C:B8:77:A8:AA:8D:89",
+        "32:1A:90:F3:0B:E3:29:06:B8:30:95:26:BA:1B:3D:A2:5F:E5:AF:D4:70:6F:02:36:7A:BE:16:84:47:BE:2F:4F",
         "41:B4:2C:76:BD:69:A1:C5:79:56:97:9C:70:8F:1B:AC:7E:C8:4B:13:0E:A1:AC:66:CA:DF:15:F7:28:7F:9E:63",
-        "32:1A:90:F3:0B:E3:29:06:B8:30:95:26:BA:1B:3D:A2:5F:E5:AF:D4:70:6F:02:36:7A:BE:16:84:47:BE:2F:4F"
+        "23:A3:3C:45:1A:2C:9C:54:05:EF:C7:C1:BC:52:BC:50:F1:0C:1D:78:D3:80:FB:8C:7E:A4:84:52:15:48:82:6A"
       ]
     }
   }

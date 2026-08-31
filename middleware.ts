@@ -70,6 +70,9 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons/|sw.js).*)',
+    // `.well-known` must never pass through auth/redirect middleware: Chrome's
+    // TWA origin verification fetches assetlinks.json unauthenticated, and any
+    // redirect or non-200 there silently breaks verification (URL bar appears).
+    '/((?!_next/static|_next/image|favicon.ico|icons/|sw.js|\\.well-known/).*)',
   ],
 }

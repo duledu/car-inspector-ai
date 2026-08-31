@@ -15,6 +15,22 @@ const nextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      // The TWA's Digital Asset Links verification (assetlinks.json) is only
+      // published for the apex domain. www resolving independently (rather
+      // than 404ing or redirecting) is a live, unverified origin a stray
+      // link/bookmark could land on — even though the TWA's own launch URL
+      // never references it, closing it removes that exposure entirely.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.usedcarsdoctor.com' }],
+        destination: 'https://usedcarsdoctor.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   async headers() {
     return [
       {
